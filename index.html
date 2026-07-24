@@ -4,56 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#071521">
-  <meta name="description" content="PUZZLES · Vinos, licores y destilados">
   <title>PUZZLES · Vinos y licores</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1d2d'/%3E%3Cpath d='M32 10v14c-2-2-5-3-8-3a11 11 0 1 0 8 18v15h15c-2-2-3-5-3-8a11 11 0 1 1 10-11V10H40c2 2 3 5 3 8a11 11 0 1 1-11-10v2Z' fill='none' stroke='%23f6f1e8' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E">
   <style>
-    :root {
-      color-scheme: light;
-      --navy-950:#071521;
-      --navy-900:#0b1d2d;
-      --navy-800:#12314a;
-      --burgundy:#711f3b;
-      --bone:#f6f1e8;
-      --line:#ddd5c9;
-    }
-    * { box-sizing:border-box; }
-    html,body { width:100%; height:100%; margin:0; overflow:hidden; }
-    body { background:var(--navy-950); font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; }
-    .shell { position:fixed; inset:0; display:grid; grid-template-rows:auto 1fr; background:var(--bone); }
-    .status {
-      min-height:38px; display:flex; align-items:center; justify-content:center;
-      gap:10px; padding:8px 16px; background:var(--navy-950); color:var(--bone);
-      font-size:12px; letter-spacing:.03em; text-align:center;
-    }
-    .dot { width:7px; height:7px; border-radius:50%; background:var(--burgundy); box-shadow:0 0 0 4px rgba(113,31,59,.18); }
-    iframe { width:100%; height:100%; border:0; background:var(--bone); }
-    .fallback {
-      position:fixed; right:14px; bottom:14px; z-index:3; border:1px solid var(--line);
-      border-radius:999px; padding:10px 15px; background:rgba(246,241,232,.94);
-      color:var(--navy-900); text-decoration:none; font-size:12px; font-weight:750;
-      box-shadow:0 10px 30px rgba(7,21,33,.18);
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #071521; }
+    iframe { width: 100%; height: 100%; border: 0; background: #f6f1e8; }
+    a {
+      position: fixed; right: 14px; bottom: 14px; z-index: 2;
+      padding: 10px 16px; border-radius: 999px;
+      background: #f6f1e8; color: #071521;
+      font: 700 12px system-ui, sans-serif; text-decoration: none;
+      box-shadow: 0 12px 35px rgba(0,0,0,.25);
     }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <div class="status" id="status"><span class="dot"></span>Abriendo PUZZLES…</div>
-    <iframe
-      id="puzzlesApp"
-      title="PUZZLES"
-      src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec"
-      allow="clipboard-write"
-      referrerpolicy="strict-origin-when-cross-origin"
-    ></iframe>
-  </main>
-  <a class="fallback" href="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec" target="_blank" rel="noopener">Abrir directamente</a>
-  <script>
-    const frame = document.getElementById('puzzlesApp');
-    const status = document.getElementById('status');
-    frame.addEventListener('load', () => {
-      status.textContent = 'PUZZLES';
-    });
-  </script>
+  <iframe
+    src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec"
+    title="PUZZLES"
+    allow="clipboard-write"
+    referrerpolicy="strict-origin-when-cross-origin"
+  ></iframe>
+  <a href="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec" target="_blank" rel="noopener">Abrir directamente</a>
 </body>
 </html>
