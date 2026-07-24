@@ -1,3 +1,11 @@
+## URL de la Web App configurada
+
+Esta versión ya incluye la siguiente implementación de Google Apps Script en `Index.html` e `index.html`:
+
+```text
+https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec
+```
+
 ## Corrección: creación automática de hojas
 
 Esta versión incluye `crearHojasNecesarias()`.
@@ -136,13 +144,13 @@ Sigue la Opción A hasta obtener la URL que termina en `/exec`.
 Busca esta línea:
 
 ```javascript
-const GITHUB_GAS_URL = 'PEGA_AQUI_LA_URL_DE_TU_WEB_APP';
+const GITHUB_GAS_URL = 'https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec';
 ```
 
 Sustitúyela por tu URL:
 
 ```javascript
-const GITHUB_GAS_URL = 'https://script.google.com/macros/s/XXXXXXXXXXXXXXXX/exec';
+const GITHUB_GAS_URL = 'https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec';
 ```
 
 ### 3. Sube a GitHub
