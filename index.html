@@ -13,6 +13,7 @@
     content="PUZZLES · Catálogo de vinos, licores y destilados"
   >
 
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta
     name="apple-mobile-web-app-status-bar-style"
@@ -228,7 +229,7 @@
   <main class="app-shell">
     <iframe
       id="puzzlesFrame"
-      src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&v=1.5.6"
+      src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&v=1.5.7"
       title="PUZZLES"
       allow="clipboard-write"
       referrerpolicy="strict-origin-when-cross-origin"
@@ -254,11 +255,7 @@
           <button id="retryButton" class="secondary" type="button">
             Reintentar
           </button>
-
-          <button id="installButton" type="button">
-            Instalar app
-          </button>
-        </div>
+</div>
 
         <p id="technicalStatus" class="status">
           Esperando respuesta de Apps Script.
@@ -288,13 +285,9 @@
     const retryButton =
       document.getElementById('retryButton');
 
-    const installButton =
-      document.getElementById('installButton');
-
     const frame =
       document.getElementById('puzzlesFrame');
 
-    let installPrompt = null;
     let ready = false;
 
     function showError(message) {
@@ -326,7 +319,7 @@
 
       frame.src =
         APP_URL +
-        '?embed=1&v=1.5.6&t=' +
+        '?embed=1&v=1.5.7&t=' +
         Date.now();
     }
 
@@ -367,36 +360,6 @@
     retryButton.addEventListener(
       'click',
       reloadApp
-    );
-
-    window.addEventListener(
-      'beforeinstallprompt',
-      event => {
-        event.preventDefault();
-        installPrompt = event;
-        installButton.style.display = 'inline-flex';
-      }
-    );
-
-    installButton.addEventListener(
-      'click',
-      async () => {
-        if (!installPrompt) return;
-
-        installPrompt.prompt();
-        await installPrompt.userChoice;
-
-        installPrompt = null;
-        installButton.style.display = 'none';
-      }
-    );
-
-    window.addEventListener(
-      'appinstalled',
-      () => {
-        installPrompt = null;
-        installButton.style.display = 'none';
-      }
     );
 
     if ('serviceWorker' in navigator) {
