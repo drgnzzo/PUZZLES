@@ -16,7 +16,7 @@
       CUSTOMER: 'puzzles_customer_v2',
       VIEW: 'puzzles_catalog_view_v1',
       SESSION: 'puzzles_session_v1',
-      STORE: 'puzzles_store_snapshot_v1_5_8_r2'
+      STORE: 'puzzles_store_snapshot_v1_5_8_final'
     });
 
     const PUZZLES_STORAGE_MEMORY = {};
@@ -91,7 +91,14 @@
       carouselTimer: null,
       searchScores: new Map(),
       hasStoreSnapshot: false,
-      storeRefreshError: ''
+      storeRefreshError: '',
+      isAdmin: false,
+      adminPrices: {},
+      detailProductCode: '',
+      detailQuantity: 1,
+      initialLoadPromise: null,
+      initialLoadComplete: false,
+      entrySplashActive: false
     };
 
     const dom = {};
@@ -165,12 +172,17 @@
 
       const sessionRequest = restoreSession();
 
-      await Promise.allSettled([
-        storeRequest,
-        sessionRequest
-      ]);
+      state.initialLoadPromise = Promise
+        .allSettled([
+          storeRequest,
+          sessionRequest
+        ])
+        .then(function () {
+          state.initialLoadComplete = true;
+          restoreAgeGate();
+        });
 
-      restoreAgeGate();
+      await state.initialLoadPromise;
     }
 
     function cacheDom() {
@@ -195,7 +207,10 @@
         'authBackdrop','authModal','authTitle','btnCloseAuth','btnAuthLoginTab','btnAuthRegisterTab',
         'btnGoogleLogin','loginForm','loginEmail','loginPassword','loginError',
         'registerForm','registerName','registerEmail','registerPassword','registerError',
-        'accountPanel','accountName','accountEmail','btnLogout'
+        'accountPanel','accountName','accountEmail','accountRole','btnLogout',
+        'productDetailBackdrop','productDetailModal','btnCloseProductDetail','productDetailTitle','productDetailContent',
+        'imageZoomBackdrop','imageZoomModal','btnCloseImageZoom','zoomedProductImage',
+        'entrySplash','entrySplashBar'
       ].forEach(id => dom[id] = document.getElementById(id));
     }
 
@@ -306,9 +321,23 @@
       listen(dom.successBackdrop, 'click', closeSuccess);
       listen(dom.btnSuccessClose, 'click', closeSuccess);
 
+      listen(dom.productDetailBackdrop, 'click', closeProductDetail);
+      listen(dom.btnCloseProductDetail, 'click', closeProductDetail);
+      listen(dom.imageZoomBackdrop, 'click', closeImageZoom);
+      listen(dom.btnCloseImageZoom, 'click', closeImageZoom);
+
+      document.addEventListener('click', event => {
+        const trigger = event.target.closest('[data-product-detail]');
+        if (!trigger) return;
+        event.preventDefault();
+        openProductDetail(trigger.dataset.productDetail);
+      });
+
       document.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
-        if (dom.successModal.classList.contains('is-open')) closeSuccess();
+        if (dom.imageZoomModal.classList.contains('is-open')) closeImageZoom();
+        else if (dom.productDetailModal.classList.contains('is-open')) closeProductDetail();
+        else if (dom.successModal.classList.contains('is-open')) closeSuccess();
         else if (dom.authModal.classList.contains('is-open')) closeAuth();
         else if (dom.checkoutModal.classList.contains('is-open')) closeCheckout();
         else closeOverlays();
@@ -541,6 +570,7 @@
     async function backendGoogleLogin() { return gasRun('loginWithGoogleAccount'); }
     async function backendRestoreSession(token) { return gasRun('restoreUserSession', token); }
     async function backendLogout(token) { return gasRun('logoutAccount', token); }
+    async function backendGetAdminPricing(token) { return gasRun('getAdminPricing', token); }
     async function backendSaveAccountState(payload) {
       if (!state.sessionToken || !isAppsScriptHost()) return { ok: false };
       return gasRun('saveAccountState', { token: state.sessionToken, payload: payload });
@@ -655,12 +685,12 @@
       dom.announcementText.textContent = state.store.priceNotice;
       dom.footerText.textContent = state.store.footerText;
       const features = Array.isArray(state.store.features) ? state.store.features : [];
-      dom.feature1Title.textContent = (features[0] && features[0].title) || 'COLECCIÓN EN ORDEN';
-      dom.featureCatalogText.textContent = (features[0] && features[0].text) || 'Productos, presentaciones y precios organizados en una sola pieza de consulta.';
-      dom.feature2Title.textContent = (features[1] && features[1].title) || 'BÚSQUEDA QUE ENCAJA';
-      dom.feature2Text.textContent = (features[1] && features[1].text) || 'Encuentra aunque cambies el orden o escribas con variaciones menores.';
-      dom.feature3Title.textContent = (features[2] && features[2].title) || 'SELECCIÓN PERSISTENTE';
-      dom.feature3Text.textContent = (features[2] && features[2].text) || 'Tu selección permanece en su lugar mientras continúas navegando.';
+      dom.feature1Title.textContent = (features[0] && features[0].title) || 'COLECCIÓN CLARA';
+      dom.featureCatalogText.textContent = (features[0] && features[0].text) || 'Productos, presentaciones y precios organizados para comparar con facilidad.';
+      dom.feature2Title.textContent = (features[1] && features[1].title) || 'BÚSQUEDA PRECISA';
+      dom.feature2Text.textContent = (features[1] && features[1].text) || 'Filtra por categoría, marca, contenido y rango de precio.';
+      dom.feature3Title.textContent = (features[2] && features[2].title) || 'SELECCIÓN CONTINUA';
+      dom.feature3Text.textContent = (features[2] && features[2].text) || 'Tu carrito permanece disponible mientras recorres la colección.';
       dom.catalogKicker.textContent = state.store.catalogKicker || 'NUESTRA COLECCIÓN';
       dom.catalogTitle.textContent = state.store.catalogTitle || 'Explora la colección completa';
       dom.catalogDescription.textContent = state.store.catalogText || 'Elige piezas de la colección y agrégalas al carrito.';
@@ -680,27 +710,87 @@
     }
 
     function renderCarousel() {
-      const banners = Array.isArray(state.store.banners) && state.store.banners.length
-        ? state.store.banners
-        : [{ kicker:'SELECCIÓN PUZZLES', title:state.store.hero, text:'Explorar colección y arma tu pedido.', imageUrl:'' }];
-      dom.heroSlides.innerHTML = banners.map((banner,index) => {
-        const style = banner.imageUrl ? `style="background-image:url('${escapeAttr(banner.imageUrl)}')"` : '';
-        return `<article class="hero-slide ${index===state.carouselIndex?'is-active':''}" ${style}>
-          <div class="hero-slide__inner"><div class="hero-slide__content">
-            <span class="eyebrow">${escapeHtml(banner.kicker || 'SELECCIÓN PUZZLES')}</span>
-            <h1>${escapeHtml(banner.title || state.store.hero)}</h1>
-            <p class="hero-slide__text">${escapeHtml(banner.text || '')}</p>
-            <div class="hero-slide__actions">
-              <button class="btn btn--gold" type="button" data-hero-catalog>Explorar catálogo</button>
-              ${state.store.whatsapp ? '<button class="btn btn--outline-light" type="button" data-hero-whatsapp>Pedir asesoría</button>' : ''}
-            </div>
-          </div></div>
-        </article>`;
-      }).join('');
-      dom.heroDots.innerHTML = banners.map((_,index) => `<button type="button" class="${index===state.carouselIndex?'is-active':''}" data-carousel-index="${index}" aria-label="Banner ${index+1}"></button>`).join('');
-      dom.heroSlides.querySelectorAll('[data-hero-catalog]').forEach(btn => btn.addEventListener('click', () => document.getElementById('catalogo').scrollIntoView({behavior:'smooth'})));
-      dom.heroSlides.querySelectorAll('[data-hero-whatsapp]').forEach(btn => btn.addEventListener('click', openConcierge));
-      dom.heroDots.querySelectorAll('[data-carousel-index]').forEach(btn => btn.addEventListener('click', () => setCarousel(Number(btn.dataset.carouselIndex))));
+      const banners =
+        Array.isArray(state.store.banners) &&
+        state.store.banners.length
+          ? state.store.banners
+          : [];
+
+      if (!banners.length) {
+        dom.heroSlides.innerHTML = '';
+        dom.heroDots.innerHTML = '';
+        return;
+      }
+
+      dom.heroSlides.innerHTML = banners
+        .map((banner, index) => `
+          <article
+            class="hero-slide hero-slide--artwork ${index === state.carouselIndex ? 'is-active' : ''}"
+            data-hero-catalog
+            role="button"
+            tabindex="0"
+            aria-label="${escapeAttr(banner.title || 'Explorar catálogo')}"
+          >
+            <img
+              class="hero-slide__artwork"
+              src="${escapeAttr(banner.imageUrl || '')}"
+              alt="${escapeAttr(banner.title || 'Selección PUZZLES')}"
+              decoding="async"
+              fetchpriority="${index === 0 ? 'high' : 'auto'}"
+            >
+          </article>
+        `)
+        .join('');
+
+      dom.heroDots.innerHTML = banners
+        .map((_, index) => `
+          <button
+            type="button"
+            class="${index === state.carouselIndex ? 'is-active' : ''}"
+            data-carousel-index="${index}"
+            aria-label="Banner ${index + 1}"
+          ></button>
+        `)
+        .join('');
+
+      dom.heroSlides
+        .querySelectorAll('[data-hero-catalog]')
+        .forEach(slide => {
+          const open = () =>
+            document
+              .getElementById('catalogo')
+              .scrollIntoView({
+                behavior: 'smooth'
+              });
+
+          slide.addEventListener('click', open);
+
+          slide.addEventListener(
+            'keydown',
+            event => {
+              if (
+                event.key === 'Enter' ||
+                event.key === ' '
+              ) {
+                event.preventDefault();
+                open();
+              }
+            }
+          );
+        });
+
+      dom.heroDots
+        .querySelectorAll('[data-carousel-index]')
+        .forEach(btn =>
+          btn.addEventListener(
+            'click',
+            () =>
+              setCarousel(
+                Number(btn.dataset.carouselIndex)
+              )
+          )
+        );
+
       restartCarousel();
     }
 
@@ -1152,38 +1242,26 @@
     function renderGrid(products) {
       dom.gridView.innerHTML = products
         .map(product => {
-          const quantity = getDraftQuantity(
-            product.code
-          );
-
-          const cartQty = extractCartQuantity(
-            state.cart[product.code]
-          );
-
+          const quantity = getDraftQuantity(product.code);
+          const cartQty = Math.max(0, extractCartQuantity(state.cart[product.code]));
           const canBuy = Boolean(
             product.available &&
             toFiniteNumber(product.priceNet) > 0
           );
-
-          const compare = toFiniteNumber(
-            product.priceCompare
-          );
-
-          const sale = toFiniteNumber(
-            product.priceNet
-          );
-
+          const compare = toFiniteNumber(product.priceCompare);
+          const sale = toFiniteNumber(product.priceNet);
           const meta = productMetaItems(product);
+          const adminCost = getAdminCost(product.code);
 
           return `
             <article class="product-card" data-code="${escapeAttr(product.code)}">
-              <div class="product-card__visual">
+              <button class="product-card__visual product-open-button" type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver información de ${escapeAttr(product.displayName)}">
                 <div class="product-image-fallback" aria-hidden="true">
                   <span>${escapeHtml(categoryLetter(product.category))}</span>
                 </div>
                 ${productImageMarkup(product, 'product-card__image', product.displayName)}
                 <span class="product-card__category">${escapeHtml(product.category)}</span>
-              </div>
+              </button>
 
               <div class="product-card__body">
                 <div class="product-card__code">
@@ -1192,7 +1270,9 @@
                 </div>
 
                 <h3 class="product-card__name">
-                  ${escapeHtml(product.displayName)}
+                  <button class="product-title-button" type="button" data-product-detail="${escapeAttr(product.code)}">
+                    ${escapeHtml(product.displayName)}
+                  </button>
                 </h3>
 
                 <div class="product-card__meta">
@@ -1206,6 +1286,7 @@
                         : ''}
                        <div class="price-net">${money(sale)}</div>`
                     : '<div class="consult-price">Precio a consultar</div>'}
+                  ${renderAdminPrice(adminCost)}
                 </div>
 
                 <div class="product-card__actions">
@@ -1239,6 +1320,10 @@
           <span class="table-sort-indicator">${tableSortIndicator(key)}</span>
         </button>`;
 
+      const adminHeader = state.isAdmin
+        ? '<th>Precio ADMIN</th>'
+        : '';
+
       dom.tableView.innerHTML = `
         <table class="product-table">
           <thead>
@@ -1249,6 +1334,7 @@
               <th>${sortableHeader('Categoría', 'category')}</th>
               <th>${sortableHeader('Precio', 'price')}</th>
               <th>Antes</th>
+              ${adminHeader}
               <th>Acción</th>
             </tr>
           </thead>
@@ -1258,36 +1344,32 @@
                 product.available &&
                 toFiniteNumber(product.priceNet) > 0
               );
-
-              const compare = toFiniteNumber(
-                product.priceCompare
-              );
-
-              const sale = toFiniteNumber(
-                product.priceNet
-              );
+              const compare = toFiniteNumber(product.priceCompare);
+              const sale = toFiniteNumber(product.priceNet);
+              const adminCost = getAdminCost(product.code);
 
               return `
                 <tr>
                   <td class="product-table__product">
-                    <div class="product-table__product-wrap">
-                      <div class="product-table__thumb">
-                        <div class="product-image-fallback" aria-hidden="true">
+                    <button class="product-table__product-wrap product-row-button" type="button" data-product-detail="${escapeAttr(product.code)}">
+                      <span class="product-table__thumb">
+                        <span class="product-image-fallback" aria-hidden="true">
                           <span>${escapeHtml(categoryLetter(product.category))}</span>
-                        </div>
+                        </span>
                         ${productImageMarkup(product, 'product-table__image', product.displayName)}
-                      </div>
-                      <div>
+                      </span>
+                      <span>
                         <strong>${escapeHtml(product.displayName)}</strong>
                         <small>Código ${escapeHtml(product.code)}${product.upc ? ` · UPC ${escapeHtml(product.upc)}` : ''}</small>
-                      </div>
-                    </div>
+                      </span>
+                    </button>
                   </td>
                   <td>${escapeHtml(product.volume || '—')}</td>
                   <td>${escapeHtml(product.brand || '—')}</td>
                   <td><span class="table-category">${escapeHtml(product.category)}</span></td>
                   <td class="product-table__price">${canBuy ? money(sale) : 'Consultar'}</td>
                   <td>${compare > sale ? `<span class="price-compare">${money(compare)}</span>` : '—'}</td>
+                  ${state.isAdmin ? `<td>${renderAdminPrice(adminCost, true)}</td>` : ''}
                   <td>
                     <button class="table-add" type="button" data-add-one="${escapeAttr(product.code)}" ${canBuy ? '' : 'disabled'}>
                       Agregar
@@ -1303,10 +1385,10 @@
         .forEach(button =>
           button.addEventListener(
             'click',
-            () => addToCart(
-              button.dataset.addOne,
-              1
-            )
+            event => {
+              event.stopPropagation();
+              addToCart(button.dataset.addOne, 1);
+            }
           )
         );
 
@@ -1315,9 +1397,7 @@
         .forEach(button =>
           button.addEventListener(
             'click',
-            () => toggleTableSort(
-              button.dataset.tableSort
-            )
+            () => toggleTableSort(button.dataset.tableSort)
           )
         );
 
@@ -1481,41 +1561,280 @@
     }
 
     function setView(view, render = true) {
-      state.view = view === 'table' ? 'table' : 'grid';
-      puzzlesStorageSet(STORAGE_KEYS.VIEW, state.view);
-      dom.btnGridView.classList.toggle('is-active', state.view === 'grid');
-      dom.btnTableView.classList.toggle('is-active', state.view === 'table');
-      if (render && !state.loading) renderCatalog();
+      state.view =
+        view === 'table'
+          ? 'table'
+          : 'grid';
+
+      puzzlesStorageSet(
+        STORAGE_KEYS.VIEW,
+        state.view
+      );
+
+      dom.btnGridView.classList.toggle(
+        'is-active',
+        state.view === 'grid'
+      );
+
+      dom.btnTableView.classList.toggle(
+        'is-active',
+        state.view === 'table'
+      );
+
+      dom.btnGridView.setAttribute(
+        'aria-pressed',
+        state.view === 'grid'
+          ? 'true'
+          : 'false'
+      );
+
+      dom.btnTableView.setAttribute(
+        'aria-pressed',
+        state.view === 'table'
+          ? 'true'
+          : 'false'
+      );
+
+      if (render && !state.loading) {
+        renderCatalog();
+      } else {
+        showOnlyState(state.view);
+      }
     }
 
     function showOnlyState(type) {
-      const elements = [
+      const stateElements = [
         dom.loadingState,
         dom.errorState,
         dom.emptyState,
-        dom.gridView,
-        dom.tableView,
         dom.pagination
       ].filter(Boolean);
 
-      elements.forEach(element => {
+      stateElements.forEach(element => {
         element.classList.add('hidden');
+        element.hidden = true;
       });
+
+      [dom.gridView, dom.tableView]
+        .filter(Boolean)
+        .forEach(element => {
+          element.classList.add('hidden');
+          element.hidden = true;
+          element.style.display = 'none';
+        });
 
       if (type === 'error' && dom.errorState) {
         dom.errorState.classList.remove('hidden');
+        dom.errorState.hidden = false;
       }
 
       if (type === 'empty' && dom.emptyState) {
         dom.emptyState.classList.remove('hidden');
+        dom.emptyState.hidden = false;
       }
 
       if (type === 'grid' && dom.gridView) {
         dom.gridView.classList.remove('hidden');
+        dom.gridView.hidden = false;
+        dom.gridView.style.display = 'grid';
       }
 
       if (type === 'table' && dom.tableView) {
         dom.tableView.classList.remove('hidden');
+        dom.tableView.hidden = false;
+        dom.tableView.style.display = 'block';
+      }
+    }
+
+    // ==========================================================
+    // DETALLE DE PRODUCTO Y MODO ADMIN
+    // ==========================================================
+
+    function getAdminCost(code) {
+      if (!state.isAdmin) return null;
+      const value = state.adminPrices[String(code)];
+      return Number.isFinite(Number(value))
+        ? Number(value)
+        : null;
+    }
+
+    function renderAdminPrice(value, compact) {
+      if (!state.isAdmin || value === null || value === undefined) {
+        return '';
+      }
+
+      return `<div class="admin-price ${compact ? 'admin-price--compact' : ''}">
+        <span>ADMIN · COSTO</span>
+        <strong>${money(value)}</strong>
+      </div>`;
+    }
+
+    async function loadAdminPricing() {
+      state.isAdmin = Boolean(
+        state.user && state.user.isAdmin
+      );
+
+      if (!state.isAdmin || !state.sessionToken) {
+        state.adminPrices = {};
+        updateAuthUi();
+        if (!state.loading) renderCatalog();
+        return;
+      }
+
+      const result = await backendGetAdminPricing(
+        state.sessionToken
+      );
+
+      state.adminPrices = result && result.ok && result.prices
+        ? result.prices
+        : {};
+
+      updateAuthUi();
+      if (!state.loading) renderCatalog();
+
+      if (state.detailProductCode) {
+        openProductDetail(state.detailProductCode, true);
+      }
+    }
+
+    function openProductDetail(code, preserveQuantity) {
+      const product = getProduct(code);
+      if (!product) return;
+
+      state.detailProductCode = String(product.code);
+      if (!preserveQuantity) {
+        state.detailQuantity = getDraftQuantity(product.code);
+      }
+
+      const canBuy = Boolean(
+        product.available &&
+        toFiniteNumber(product.priceNet) > 0
+      );
+      const sale = toFiniteNumber(product.priceNet);
+      const compare = toFiniteNumber(product.priceCompare);
+      const adminCost = getAdminCost(product.code);
+
+      dom.productDetailTitle.textContent = product.displayName;
+      dom.productDetailContent.innerHTML = `
+        <div class="pdp-layout">
+          <div class="pdp-gallery">
+            <button class="pdp-image-button" type="button" data-pdp-zoom aria-label="Ampliar imagen de ${escapeAttr(product.displayName)}">
+              <span class="product-image-fallback" aria-hidden="true">
+                <span>${escapeHtml(categoryLetter(product.category))}</span>
+              </span>
+              ${productImageMarkup(product, 'pdp-image', product.displayName)}
+              <span class="pdp-zoom-label">Ampliar imagen</span>
+            </button>
+          </div>
+
+          <div class="pdp-info">
+            <span class="pdp-category">${escapeHtml(product.category)}</span>
+            <h3>${escapeHtml(product.displayName)}</h3>
+            <p class="pdp-description">${escapeHtml(product.description)}</p>
+
+            <dl class="pdp-specs">
+              ${pdpSpec('Código', product.code)}
+              ${pdpSpec('UPC', product.upc)}
+              ${pdpSpec('SKU', product.sku)}
+              ${pdpSpec('Marca', product.brand)}
+              ${pdpSpec('Contenido', product.volume || product.presentation)}
+              ${pdpSpec('Presentación', product.presentation)}
+              ${pdpSpec('Modelo', product.model)}
+              ${pdpSpec('Color', product.color)}
+              ${pdpSpec('Unidad', product.unit)}
+              ${pdpSpec('Disponibilidad', product.stock === null ? 'Sujeta a confirmación' : product.stock + ' disponibles')}
+            </dl>
+
+            <div class="pdp-pricing">
+              ${canBuy
+                ? `${compare > sale ? `<div class="price-compare">${money(compare)}</div>` : ''}
+                   <div class="price-net">${money(sale)}</div>`
+                : '<div class="consult-price">Precio a consultar</div>'}
+              ${renderAdminPrice(adminCost)}
+            </div>
+
+            <div class="pdp-actions">
+              <div class="qty-control pdp-qty-control">
+                <button type="button" data-pdp-minus>−</button>
+                <span id="pdpQuantityValue">${state.detailQuantity}</span>
+                <button type="button" data-pdp-plus>+</button>
+              </div>
+              <button class="add-button pdp-add-button" type="button" data-pdp-add ${canBuy ? '' : 'disabled'}>
+                ${canBuy ? 'Agregar al carrito' : 'Consultar'}
+              </button>
+            </div>
+          </div>
+        </div>`;
+
+      bindProductImageFallbacks(dom.productDetailContent);
+
+      const zoomButton = dom.productDetailContent.querySelector('[data-pdp-zoom]');
+      const minus = dom.productDetailContent.querySelector('[data-pdp-minus]');
+      const plus = dom.productDetailContent.querySelector('[data-pdp-plus]');
+      const add = dom.productDetailContent.querySelector('[data-pdp-add]');
+
+      listen(zoomButton, 'click', () => openImageZoom(product));
+      listen(minus, 'click', () => changeDetailQuantity(-1));
+      listen(plus, 'click', () => changeDetailQuantity(1));
+      listen(add, 'click', () => {
+        addToCart(product.code, state.detailQuantity);
+        state.detailQuantity = 1;
+        const value = document.getElementById('pdpQuantityValue');
+        if (value) value.textContent = '1';
+      });
+
+      dom.productDetailModal.classList.add('is-open');
+      dom.productDetailBackdrop.classList.add('is-open');
+      document.body.classList.add('no-scroll');
+    }
+
+    function pdpSpec(label, value) {
+      const clean = String(value || '').trim();
+      if (!clean) return '';
+      return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(clean)}</dd></div>`;
+    }
+
+    function changeDetailQuantity(delta) {
+      state.detailQuantity = Math.max(
+        1,
+        Math.min(99, state.detailQuantity + delta)
+      );
+      const value = document.getElementById('pdpQuantityValue');
+      if (value) value.textContent = state.detailQuantity;
+    }
+
+    function closeProductDetail() {
+      dom.productDetailModal.classList.remove('is-open');
+      dom.productDetailBackdrop.classList.remove('is-open');
+      state.detailProductCode = '';
+      if (!document.querySelector('.modal.is-open, .drawer.is-open, .image-zoom-modal.is-open')) {
+        document.body.classList.remove('no-scroll');
+      }
+    }
+
+    function openImageZoom(product) {
+      if (!product || !product.imageUrl) return;
+      dom.zoomedProductImage.src = product.imageDisplayUrl || product.imageUrl;
+      dom.zoomedProductImage.dataset.originalSrc = product.imageUrl;
+      dom.zoomedProductImage.alt = product.displayName;
+      dom.imageZoomModal.classList.add('is-open');
+      dom.imageZoomBackdrop.classList.add('is-open');
+      document.body.classList.add('no-scroll');
+
+      dom.zoomedProductImage.onerror = function () {
+        if (this.dataset.originalTried === 'true') return;
+        this.dataset.originalTried = 'true';
+        this.src = this.dataset.originalSrc || '';
+      };
+    }
+
+    function closeImageZoom() {
+      dom.imageZoomModal.classList.remove('is-open');
+      dom.imageZoomBackdrop.classList.remove('is-open');
+      dom.zoomedProductImage.removeAttribute('src');
+      dom.zoomedProductImage.dataset.originalTried = '';
+      if (!dom.productDetailModal.classList.contains('is-open')) {
+        document.body.classList.remove('no-scroll');
       }
     }
 
@@ -1961,6 +2280,9 @@
         dom.accountName.textContent = state.user.name || 'Usuario';
         dom.accountEmail.textContent = state.user.email || '';
       }
+      if (dom.accountRole) {
+        dom.accountRole.classList.toggle('hidden', !state.isAdmin);
+      }
     }
     async function submitLogin(event) {
       event.preventDefault();
@@ -1984,6 +2306,7 @@
       if (!result || !result.ok) { showAuthError(errorElement, (result && result.error) || 'No se pudo iniciar sesión.'); return; }
       state.sessionToken = result.token;
       state.user = result.user;
+      state.isAdmin = Boolean(result.user && result.user.isAdmin);
       puzzlesStorageSet(STORAGE_KEYS.SESSION, state.sessionToken);
       const serverCart = result.cart && typeof result.cart === 'object' ? result.cart : {};
       const merged = Object.assign({}, serverCart, state.cart);
@@ -2001,6 +2324,7 @@
       }
       restoreAgeGate();
       updateAuthUi();
+      loadAdminPricing().catch(() => {});
       toast('Sesión iniciada. Tu carrito quedó guardado.', 'success');
       setTimeout(closeAuth, 450);
     }
@@ -2009,11 +2333,13 @@
       element.classList.toggle('is-visible', Boolean(message));
     }
     async function restoreSession() {
-      if (!state.sessionToken || !isAppsScriptHost()) { updateAuthUi(); return; }
+      if (!state.sessionToken || !isAppsScriptHost()) { state.isAdmin = false; state.adminPrices = {}; updateAuthUi(); return; }
       const result = await backendRestoreSession(state.sessionToken);
       if (!result || !result.ok) {
         state.sessionToken = '';
         state.user = null;
+        state.isAdmin = false;
+        state.adminPrices = {};
         puzzlesStorageRemove(STORAGE_KEYS.SESSION);
         puzzlesStorageRemove(STORAGE_KEYS.AGE);
         state.ageConfirmedThisVisit = false;
@@ -2022,6 +2348,7 @@
         return;
       }
       state.user = result.user;
+      state.isAdmin = Boolean(result.user && result.user.isAdmin);
       const serverCart = result.cart && typeof result.cart === 'object' ? result.cart : {};
       if (!Object.keys(state.cart).length) state.cart = serverCart;
       if (state.user) {
@@ -2034,11 +2361,14 @@
       renderCart();
       restoreAgeGate();
       updateAuthUi();
+      await loadAdminPricing();
     }
     async function logoutUser() {
       if (state.sessionToken) await backendLogout(state.sessionToken);
       state.sessionToken = '';
       state.user = null;
+      state.isAdmin = false;
+      state.adminPrices = {};
       puzzlesStorageRemove(STORAGE_KEYS.SESSION);
       puzzlesStorageRemove(STORAGE_KEYS.AGE);
       state.ageConfirmedThisVisit = false;
@@ -2100,11 +2430,12 @@
 
       document.body.classList.toggle(
         'no-scroll',
-        !confirmed
+        !confirmed ||
+        state.entrySplashActive
       );
     }
 
-    function confirmAge() {
+    async function confirmAge() {
       state.ageConfirmedThisVisit = true;
 
       if (state.user && state.sessionToken) {
@@ -2118,7 +2449,58 @@
         );
       }
 
+      state.entrySplashActive = true;
       restoreAgeGate();
+
+      if (dom.entrySplash) {
+        dom.entrySplash.classList.remove('hidden');
+        dom.entrySplash.setAttribute('aria-hidden', 'false');
+      }
+
+      if (dom.entrySplashBar) {
+        dom.entrySplashBar.style.animation = 'none';
+        void dom.entrySplashBar.offsetWidth;
+        dom.entrySplashBar.style.animation =
+          'entrySplashProgress 5s linear forwards';
+      }
+
+      document.body.classList.add('no-scroll');
+
+      const minimumTime = new Promise(
+        resolve => setTimeout(resolve, 5000)
+      );
+
+      const initialLoad =
+        state.initialLoadPromise ||
+        Promise.resolve();
+
+      await Promise.allSettled([
+        minimumTime,
+        initialLoad
+      ]);
+
+      state.entrySplashActive = false;
+
+      if (dom.entrySplash) {
+        dom.entrySplash.classList.add('is-leaving');
+
+        setTimeout(() => {
+          dom.entrySplash.classList.add('hidden');
+          dom.entrySplash.classList.remove('is-leaving');
+          dom.entrySplash.setAttribute('aria-hidden', 'true');
+
+          if (
+            state.ageConfirmedThisVisit ||
+            (
+              state.user &&
+              state.sessionToken &&
+              puzzlesStorageGet(STORAGE_KEYS.AGE) === 'true'
+            )
+          ) {
+            document.body.classList.remove('no-scroll');
+          }
+        }, 320);
+      }
     }
 
     function denyAge() {
@@ -2187,9 +2569,12 @@
         normalized.category || 'Otros'
       ).trim();
 
+      // El título visible siempre conserva completa la descripción original.
+      // No se recortan categorías ni abreviaturas: esto protege palabras como
+      // AGUARDIENTE, TEQUILA y CHAMPAGNE en todos los productos.
       normalized.displayName = String(
-        normalized.shortName ||
         normalized.description ||
+        normalized.shortName ||
         ''
       ).trim();
 
@@ -2408,49 +2793,17 @@
           .replace(/[\u0300-\u036f]/g, '')
           .toUpperCase();
 
-        if (normalizedName.startsWith(normalizedBrand)) {
-          return name.slice(0, brand.length);
-        }
-      }
-
-      const withoutVolume = name.replace(
-        /\b\d+(?:[.,]\d+)?\s*(?:ML|L)\b.*$/i,
-        ''
-      ).trim();
-
-      const tokens = withoutVolume
-        .split(/\s+/)
-        .filter(Boolean);
-
-      if (!tokens.length) return '';
-
-      const selected = [];
-
-      for (const token of tokens) {
-        const clean = token
-          .replace(/^[^A-ZÁÉÍÓÚÑ0-9]+|[^A-ZÁÉÍÓÚÑ0-9.'&-]+$/gi, '')
-          .toUpperCase();
-
-        if (!clean) continue;
-
         if (
-          selected.length &&
-          (
-            BRAND_STOP_WORDS.has(clean) ||
-            /^\d+$/.test(clean)
-          )
+          normalizedName.includes(normalizedBrand)
         ) {
-          break;
-        }
-
-        selected.push(token);
-
-        if (selected.length >= 2) {
-          break;
+          const start = normalizedName.indexOf(normalizedBrand);
+          return name.slice(start, start + brand.length);
         }
       }
 
-      return selected.join(' ');
+      // Evita inventar marcas a partir de fragmentos como “AGU DE”,
+      // “ARDIENTE DE”, “VINO TINTO” o “CHAMPAGNE BRUT”.
+      return '';
     }
 
     function buildSquareImageUrl(value) {

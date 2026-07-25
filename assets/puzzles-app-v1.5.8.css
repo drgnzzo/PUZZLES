@@ -3357,3 +3357,579 @@
     font-size: 18px !important;
   }
 }
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · ENTREGA CONSOLIDADA
+   Ancho fluido, header sticky, lista exclusiva, PDP y modo admin.
+   ============================================================ */
+
+:root {
+  --puzzles-gold: #e3aa00;
+  --puzzles-gold-soft: #f0c24e;
+  --announcement-height: 28px;
+  --header-height: 72px;
+  --page-gutter: clamp(16px, 2.6vw, 72px);
+}
+
+.announcement {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 180 !important;
+  min-height: var(--announcement-height) !important;
+}
+
+.site-header {
+  position: sticky !important;
+  top: var(--announcement-height) !important;
+  z-index: 170 !important;
+  height: var(--header-height) !important;
+  background: rgba(0,0,0,.97) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.site-header__inner,
+.feature-strip,
+.catalog-section,
+.footer__inner,
+.footer__bottom {
+  width: calc(100% - (2 * var(--page-gutter))) !important;
+  max-width: none !important;
+  margin-inline: auto !important;
+}
+
+.feature-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  margin-top: 0 !important;
+  border-radius: 0 !important;
+}
+
+.feature {
+  min-width: 0 !important;
+  padding: clamp(18px, 1.6vw, 28px) !important;
+}
+
+.feature > div:last-child {
+  min-width: 0 !important;
+}
+
+.feature strong,
+.feature span {
+  overflow-wrap: anywhere !important;
+}
+
+/* Cuadrícula y lista son modos excluyentes. */
+#gridView.hidden,
+#tableView.hidden,
+#pagination.hidden,
+#errorState.hidden,
+#emptyState.hidden {
+  display: none !important;
+}
+
+#gridView:not(.hidden) {
+  display: grid !important;
+}
+
+#tableView:not(.hidden) {
+  display: block !important;
+}
+
+.product-open-button,
+.product-title-button,
+.product-row-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.product-open-button {
+  display: block !important;
+  padding: 0 !important;
+}
+
+.product-title-button {
+  width: 100%;
+  padding: 0;
+  line-height: inherit;
+}
+
+.product-title-button:hover,
+.product-row-button:hover strong {
+  color: var(--puzzles-gold-soft) !important;
+}
+
+.product-row-button {
+  width: 100%;
+  padding: 0;
+}
+
+.price-net {
+  color: var(--puzzles-gold) !important;
+  font-size: clamp(32px, 2.15vw, 40px) !important;
+  line-height: 1 !important;
+  font-weight: 850 !important;
+}
+
+.product-table__price,
+.summary-row--total strong,
+.checkout-summary__row--total span:last-child {
+  color: var(--puzzles-gold) !important;
+}
+
+.price-compare {
+  color: #888 !important;
+}
+
+.admin-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 9px 11px;
+  border: 1px solid #38506c;
+  background: #101923;
+  color: #c6dbef;
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+
+.admin-price span {
+  font-weight: 800;
+}
+
+.admin-price strong {
+  color: #fff;
+  font-size: 15px;
+}
+
+.admin-price--compact {
+  min-width: 150px;
+  margin: 0;
+}
+
+.account-role {
+  display: inline-flex;
+  margin: 8px 0 4px;
+  padding: 6px 9px;
+  border: 1px solid #38506c;
+  background: #101923;
+  color: #c6dbef;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+/* PDP */
+.product-detail-card {
+  width: min(1180px, calc(100vw - 34px)) !important;
+  max-height: min(90dvh, 940px) !important;
+  overflow: hidden !important;
+}
+
+.product-detail-content {
+  overflow: auto !important;
+  padding: 0 !important;
+}
+
+.pdp-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, .9fr) minmax(380px, 1.1fr);
+  min-height: 560px;
+}
+
+.pdp-gallery {
+  display: grid;
+  place-items: center;
+  padding: clamp(22px, 3vw, 48px);
+  background: #fff;
+}
+
+.pdp-image-button {
+  position: relative;
+  width: min(100%, 580px);
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: #fff;
+  cursor: zoom-in;
+}
+
+.pdp-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 6%;
+  object-fit: contain;
+  background: #fff;
+  opacity: 0;
+}
+
+.pdp-image.is-loaded {
+  opacity: 1;
+}
+
+.pdp-zoom-label {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 4;
+  padding: 8px 10px;
+  background: rgba(0,0,0,.78);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.pdp-info {
+  padding: clamp(26px, 3.4vw, 58px);
+  background: #171717;
+}
+
+.pdp-category {
+  display: inline-flex;
+  padding: 7px 10px;
+  border: 1px solid #5a481e;
+  color: #f0c24e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.pdp-info h3 {
+  margin: 18px 0 10px;
+  color: #fff;
+  font-family: var(--serif);
+  font-size: clamp(28px, 3vw, 48px);
+  line-height: 1.05;
+}
+
+.pdp-description {
+  color: #aaa;
+  line-height: 1.6;
+}
+
+.pdp-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 0;
+  margin: 24px 0;
+  border-top: 1px solid #303030;
+  border-left: 1px solid #303030;
+}
+
+.pdp-specs > div {
+  padding: 12px 14px;
+  border-right: 1px solid #303030;
+  border-bottom: 1px solid #303030;
+}
+
+.pdp-specs dt {
+  color: #777;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.pdp-specs dd {
+  margin: 5px 0 0;
+  color: #eee;
+  font-size: 13px;
+}
+
+.pdp-pricing {
+  margin-top: 22px;
+}
+
+.pdp-actions {
+  display: grid;
+  grid-template-columns: 142px minmax(200px, 1fr);
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.pdp-add-button {
+  min-height: 52px !important;
+}
+
+.image-zoom-backdrop {
+  z-index: 320 !important;
+}
+
+.image-zoom-modal {
+  position: fixed;
+  inset: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  z-index: 330;
+  display: none;
+  place-items: center;
+  background: rgba(255,255,255,.98);
+}
+
+.image-zoom-modal.is-open {
+  display: grid;
+}
+
+.image-zoom-modal img {
+  width: min(94vw, 1200px);
+  height: min(88dvh, 1200px);
+  object-fit: contain;
+  cursor: zoom-in;
+}
+
+.image-zoom-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  background: #000 !important;
+  color: #fff !important;
+}
+
+@media (min-width: 1700px) {
+  :root {
+    --catalog-card-min: 270px;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .feature-strip {
+    grid-template-columns: 1fr !important;
+  }
+
+  .feature {
+    border-right: 0 !important;
+    border-bottom: 1px solid #303030 !important;
+  }
+
+  .feature:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .pdp-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .pdp-gallery {
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 700px) {
+  :root {
+    --announcement-height: 32px;
+    --header-height: 60px;
+    --page-gutter: 12px;
+  }
+
+  .feature-strip {
+    width: calc(100% - 24px) !important;
+  }
+
+  .feature {
+    padding: 16px !important;
+  }
+
+  .product-detail-card {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  .product-detail-head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .pdp-gallery {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .pdp-info {
+    padding: 22px 16px 34px;
+  }
+
+  .pdp-specs {
+    grid-template-columns: 1fr;
+  }
+
+  .pdp-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .price-net {
+    font-size: 34px !important;
+  }
+}
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · AJUSTE ESTABLE
+   ============================================================ */
+
+/* Beneficios a todo lo ancho, como el banner y el catálogo. */
+.feature-strip {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-inline:
+    max(
+      var(--page-gutter),
+      env(safe-area-inset-left)
+    ) !important;
+  box-sizing: border-box !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+}
+
+.feature {
+  min-height: 104px !important;
+}
+
+/* El carrusel usa arte terminado: no superpone textos ni instrucciones. */
+.hero-slide--artwork {
+  display: block !important;
+  cursor: pointer;
+  background: #000 !important;
+}
+
+.hero-slide--artwork::after {
+  display: none !important;
+  content: none !important;
+}
+
+.hero-slide__artwork {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* La cuadrícula y la lista jamás pueden coexistir. */
+#gridView[hidden],
+#tableView[hidden],
+#gridView.hidden,
+#tableView.hidden {
+  display: none !important;
+}
+
+/* Splash posterior a la confirmación de edad. */
+.entry-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      rgba(216,154,0,.16),
+      transparent 38%
+    ),
+    #000;
+  opacity: 1;
+  transition:
+    opacity .32s ease,
+    visibility .32s ease;
+}
+
+.entry-splash.hidden {
+  display: none !important;
+}
+
+.entry-splash.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.entry-splash__inner {
+  width: min(520px, 100%);
+  text-align: center;
+}
+
+.entry-splash__logo {
+  width: min(420px, 88vw);
+  max-height: 120px;
+  margin: 0 auto 26px;
+  object-fit: contain;
+}
+
+.entry-splash__inner p {
+  margin: 0 0 18px;
+  color: #d7d7d7;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.entry-splash__track {
+  width: min(360px, 76vw);
+  height: 3px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #282828;
+}
+
+.entry-splash__track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #d89a00;
+}
+
+@keyframes entrySplashProgress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@media (max-width: 700px) {
+  .feature-strip {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    padding-inline:
+      max(
+        12px,
+        env(safe-area-inset-left)
+      ) !important;
+  }
+
+  .feature {
+    min-height: 0 !important;
+  }
+
+  .hero-carousel {
+    height: auto !important;
+    min-height: 0 !important;
+    aspect-ratio: 16 / 9;
+  }
+
+  .hero-slide__artwork {
+    object-fit: contain;
+    background: #000;
+  }
+}
