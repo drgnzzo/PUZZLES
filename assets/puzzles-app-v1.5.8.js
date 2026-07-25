@@ -2187,10 +2187,11 @@
         normalized.category || 'Otros'
       ).trim();
 
-      normalized.displayName = stripCategoryPrefix(
+      normalized.displayName = String(
         normalized.shortName ||
-        normalized.description
-      );
+        normalized.description ||
+        ''
+      ).trim();
 
       normalized.volume =
         String(
@@ -2355,13 +2356,11 @@
     ]);
 
     function stripCategoryPrefix(value) {
-      const original = String(value || '').trim();
-      const stripped = original
-        .replace(CATEGORY_PREFIX_PATTERN, '')
-        .replace(/^\s*[.\-:·/]+\s*/, '')
-        .trim();
-
-      return stripped || original;
+      // Los títulos comerciales se conservan completos.
+      // No se eliminan prefijos porque abreviaturas como TEQ, CHA o AGU
+      // también forman parte del inicio de palabras completas como
+      // TEQUILA, CHAMPAGNE y AGUARDIENTE.
+      return String(value || '').trim();
     }
 
     function extractVolumeDisplay(value) {
