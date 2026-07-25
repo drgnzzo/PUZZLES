@@ -1,4 +1,4 @@
-const CACHE_NAME = 'puzzles-shell-v1.5.7';
+const CACHE_NAME = 'puzzles-shell-v1.5.8';
 
 const SHELL_FILES = [
   './',
@@ -17,8 +17,8 @@ const SHELL_FILES = [
   './assets/banner-04-botellas.png',
   './assets/banner-05-editorial.png',
   './assets/banner-06-botellas.png',
-  './assets/puzzles-app-v1.5.7.css',
-  './assets/puzzles-app-v1.5.7.js'
+  './assets/puzzles-app-v1.5.8.css',
+  './assets/puzzles-app-v1.5.8.js'
 ];
 
 self.addEventListener('install', event => {

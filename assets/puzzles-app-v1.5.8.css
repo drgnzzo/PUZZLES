@@ -2799,7 +2799,7 @@
 
 
     /* ============================================================
-       PUZZLES v1.5.7 · SAFE AREAS + LOGO FIJO
+       PUZZLES v1.5.8 · SAFE AREAS + LOGO FIJO
        ============================================================ */
     .brand.brand--asset {
       width: auto !important;
@@ -2897,3 +2897,28 @@
           ) !important;
       }
     }
+
+
+/* PUZZLES v1.5.8 · SIN PANTALLA DE CARGA */
+#loadingState {
+  display: none !important;
+}
+
+.catalog-meta {
+  min-height: 24px;
+}
+
+#errorState {
+  min-height: 160px !important;
+  margin: 12px 0 24px !important;
+}
+
+.brand.brand--asset .brand__mark {
+  overflow: visible !important;
+}
+
+@media (max-width: 768px) {
+  .catalog-section {
+    min-height: 70vh;
+  }
+}

@@ -15,7 +15,8 @@
       AGE: 'puzzles_age_confirmed_v1',
       CUSTOMER: 'puzzles_customer_v2',
       VIEW: 'puzzles_catalog_view_v1',
-      SESSION: 'puzzles_session_v1'
+      SESSION: 'puzzles_session_v1',
+      STORE: 'puzzles_store_snapshot_v1'
     });
 
     const PUZZLES_STORAGE_MEMORY = {};
@@ -85,7 +86,9 @@
       sessionToken: puzzlesStorageGet(STORAGE_KEYS.SESSION) || '',
       carouselIndex: 0,
       carouselTimer: null,
-      searchScores: new Map()
+      searchScores: new Map(),
+      hasStoreSnapshot: false,
+      storeRefreshError: ''
     };
 
     const dom = {};
@@ -132,6 +135,7 @@
     async function init() {
       puzzlesStorageRemove('puzzles_cart_v1');
       puzzlesStorageRemove('puzzles_cart_v2');
+
       cacheDom();
       bindEvents();
       restoreAgeGate();
@@ -142,9 +146,20 @@
           new Date().getFullYear();
       }
 
+      state.loading = false;
       setView(state.view, false);
       renderCart();
-      await loadStore();
+
+      const restored = restoreStoreSnapshot();
+
+      if (!restored) {
+        showCatalogShell();
+      }
+
+      await loadStore({
+        background: restored
+      });
+
       await restoreSession();
     }
 
@@ -256,7 +271,7 @@
       listen(dom.btnTableView, 'click', () => setView('table'));
       listen(dom.btnClearFilters, 'click', clearFilters);
       listen(dom.btnEmptyClear, 'click', clearFilters);
-      listen(dom.btnRetry, 'click', loadStore);
+      listen(dom.btnRetry, 'click', () => loadStore({ background: state.hasStoreSnapshot }));
 
       listen(dom.btnMobileFilters, 'click', () => openFilters());
       listen(dom.mainBackdrop, 'click', closeOverlays);
@@ -282,6 +297,109 @@
         else if (dom.checkoutModal.classList.contains('is-open')) closeCheckout();
         else closeOverlays();
       });
+    }
+
+
+    function showCatalogShell() {
+      state.loading = false;
+
+      if (dom.loadingState) {
+        dom.loadingState.classList.add('hidden');
+      }
+
+      if (dom.errorState) {
+        dom.errorState.classList.add('hidden');
+      }
+
+      if (dom.emptyState) {
+        dom.emptyState.classList.add('hidden');
+      }
+
+      if (dom.gridView) {
+        dom.gridView.classList.remove('hidden');
+        dom.gridView.innerHTML = '';
+      }
+
+      if (dom.tableView) {
+        dom.tableView.classList.add('hidden');
+      }
+
+      if (dom.pagination) {
+        dom.pagination.classList.add('hidden');
+      }
+
+      if (dom.resultCount) {
+        dom.resultCount.textContent =
+          'Colección disponible';
+      }
+
+      if (dom.resultRange) {
+        dom.resultRange.textContent = '';
+      }
+    }
+
+    function restoreStoreSnapshot() {
+      const snapshot = loadJson(
+        STORAGE_KEYS.STORE,
+        null
+      );
+
+      if (
+        !snapshot ||
+        !snapshot.ok ||
+        !Array.isArray(snapshot.products)
+      ) {
+        return false;
+      }
+
+      hydrateStoreResult(snapshot);
+      state.hasStoreSnapshot = true;
+      return true;
+    }
+
+    function saveStoreSnapshot(result) {
+      try {
+        puzzlesStorageSet(
+          STORAGE_KEYS.STORE,
+          JSON.stringify({
+            ok: true,
+            version: result.version || '',
+            store: result.store || {},
+            products: Array.isArray(result.products)
+              ? result.products
+              : [],
+            categories: Array.isArray(result.categories)
+              ? result.categories
+              : [],
+            stats: result.stats || {},
+            savedAt: Date.now()
+          })
+        );
+      } catch (_) {}
+    }
+
+    function hydrateStoreResult(result) {
+      state.store = Object.assign(
+        {},
+        state.store,
+        result.store || {}
+      );
+
+      state.products = Array.isArray(result.products)
+        ? result.products.map(normalizeProductRecord)
+        : [];
+
+      state.categories = Array.isArray(result.categories)
+        ? result.categories
+        : [];
+
+      state.loading = false;
+
+      applyStoreConfig(result.stats || {});
+      renderCategories();
+      normalizeCartAgainstCatalog();
+      applyFilters();
+      renderCart();
     }
 
     // ==========================================================
@@ -401,53 +519,52 @@
     // CARGA Y CONFIGURACIÓN VISUAL
     // ==========================================================
 
-    async function loadStore() {
-      state.loading = true;
-      showOnlyState('loading');
+    async function loadStore(options) {
+      const background = Boolean(
+        options && options.background
+      );
+
+      state.storeRefreshError = '';
+
+      if (!background) {
+        showCatalogShell();
+      }
+
       try {
         const result = await backendGetStore();
-        if (!result || !result.ok) throw new Error((result && result.error) || 'No se recibió un catálogo válido.');
 
-        state.store = Object.assign({}, state.store, result.store || {});
-        state.products = Array.isArray(result.products) ? result.products.map(normalizeProductRecord) : [];
-        state.categories = Array.isArray(result.categories) ? result.categories : [];
-        state.loading = false;
-
-        applyStoreConfig(result.stats || {});
-        renderCategories();
-        normalizeCartAgainstCatalog();
-        applyFilters();
-        renderCart();
-
-        try {
-          window.parent.postMessage(
-            {
-              type: 'PUZZLES_READY',
-              version: result.version || '',
-              products: state.products.length
-            },
-            '*'
+        if (!result || !result.ok) {
+          throw new Error(
+            (result && result.error) ||
+            'No se recibió una colección válida.'
           );
-        } catch (_) {}
+        }
+
+        hydrateStoreResult(result);
+        saveStoreSnapshot(result);
+        state.hasStoreSnapshot = true;
 
       } catch (error) {
         state.loading = false;
-        dom.errorMessage.textContent =
-          error.message || String(error);
+        state.storeRefreshError =
+          error && error.message
+            ? error.message
+            : String(error);
+
+        if (state.hasStoreSnapshot) {
+          showToast(
+            'Se conserva la última versión disponible de la colección.',
+            'warning'
+          );
+          return;
+        }
+
+        if (dom.errorMessage) {
+          dom.errorMessage.textContent =
+            state.storeRefreshError;
+        }
 
         showOnlyState('error');
-
-        try {
-          window.parent.postMessage(
-            {
-              type: 'PUZZLES_ERROR',
-              message:
-                error.message ||
-                String(error)
-            },
-            '*'
-          );
-        } catch (_) {}
       }
     }
 
@@ -461,7 +578,8 @@
           brand.querySelector('.brand__mark');
 
         const copy =
-          brand.querySelector('.brand__copy');
+          brand.querySelector('.brand__copy') ||
+          brand.querySelector(':scope > span:not(.brand__mark)');
 
         if (!mark) return;
 
@@ -928,18 +1046,34 @@
     }
 
     function showOnlyState(type) {
-      dom.loadingState.classList.add('hidden');
-      dom.errorState.classList.add('hidden');
-      dom.emptyState.classList.add('hidden');
-      dom.gridView.classList.add('hidden');
-      dom.tableView.classList.add('hidden');
-      dom.pagination.classList.add('hidden');
+      const elements = [
+        dom.loadingState,
+        dom.errorState,
+        dom.emptyState,
+        dom.gridView,
+        dom.tableView,
+        dom.pagination
+      ].filter(Boolean);
 
-      if (type === 'loading') dom.loadingState.classList.remove('hidden');
-      if (type === 'error') dom.errorState.classList.remove('hidden');
-      if (type === 'empty') dom.emptyState.classList.remove('hidden');
-      if (type === 'grid') dom.gridView.classList.remove('hidden');
-      if (type === 'table') dom.tableView.classList.remove('hidden');
+      elements.forEach(element => {
+        element.classList.add('hidden');
+      });
+
+      if (type === 'error' && dom.errorState) {
+        dom.errorState.classList.remove('hidden');
+      }
+
+      if (type === 'empty' && dom.emptyState) {
+        dom.emptyState.classList.remove('hidden');
+      }
+
+      if (type === 'grid' && dom.gridView) {
+        dom.gridView.classList.remove('hidden');
+      }
+
+      if (type === 'table' && dom.tableView) {
+        dom.tableView.classList.remove('hidden');
+      }
     }
 
     // ==========================================================
