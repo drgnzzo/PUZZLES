@@ -4409,3 +4409,41 @@ body[data-catalog-view="table"] #tableView {
 #tableView[hidden] {
   display: none !important;
 }
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · TEXTOS EDITABLES SOBRE BANNERS
+   ============================================================ */
+
+.hero-slide--controlled::after {
+  display: none !important;
+  content: none !important;
+}
+
+.hero-slide--controlled .hero-slide__artwork {
+  z-index: 0 !important;
+}
+
+.hero-slide--controlled .hero-slide__shade {
+  z-index: 1 !important;
+  display: block !important;
+}
+
+.hero-slide--controlled .hero-slide__content {
+  z-index: 5 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.hero-slide--controlled .hero-slide__kicker,
+.hero-slide--controlled .hero-slide__content h1,
+.hero-slide--controlled .hero-slide__content p,
+.hero-slide--controlled .hero-slide__cta {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.hero-carousel__controls {
+  z-index: 8 !important;
+}

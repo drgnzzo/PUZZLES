@@ -733,6 +733,52 @@
       return safe.slice(0, index) + '<em>' + safe.slice(index) + '</em>';
     }
 
+
+    const PUZZLES_BANNER_COPY_FALLBACKS = [
+      {
+        kicker: 'MOMENTOS PARA BRINDAR',
+        title: 'Una celebración toma forma desde la primera elección.',
+        text: 'Encuentra vinos, espumosos y destilados para acompañar los momentos que merecen recordarse.',
+        ctaText: 'ARMAR MI SELECCIÓN',
+        ctaAction: 'intent:celebration'
+      },
+      {
+        kicker: 'REGALOS CON INTENCIÓN',
+        title: 'Una buena botella también puede decir mucho.',
+        text: 'Descubre etiquetas y presentaciones para agradecer, reconocer o celebrar a alguien.',
+        ctaText: 'EXPLORAR REGALOS',
+        ctaAction: 'intent:gift'
+      },
+      {
+        kicker: 'COMPLETA TU CAVA',
+        title: 'Tu colección se construye pieza por pieza.',
+        text: 'Repón tus esenciales, descubre nuevas etiquetas y mantén una selección preparada para cada ocasión.',
+        ctaText: 'VER SELECCIÓN PARA CAVA',
+        ctaAction: 'intent:cellar'
+      },
+      {
+        kicker: 'PARA COMPARTIR',
+        title: 'Cada mesa tiene una combinación que encaja.',
+        text: 'Selecciones pensadas para cenas, reuniones, sobremesas y momentos alrededor de la mesa.',
+        ctaText: 'ELEGIR PARA MI MESA',
+        ctaAction: 'intent:table'
+      },
+      {
+        kicker: 'DESCUBRE OTRA PIEZA',
+        title: 'Una nueva etiqueta puede cambiar la experiencia.',
+        text: 'Explora distintos orígenes, estilos, variedades y perfiles de sabor.',
+        ctaText: 'DESCUBRIR PRODUCTOS',
+        ctaAction: 'intent:discovery'
+      },
+      {
+        kicker: 'SELECCIONES COMPLETAS',
+        title: 'Todo lo necesario para armar el momento.',
+        text: 'Combinaciones sugeridas para celebrar, compartir, regalar o completar tu cava.',
+        ctaText: 'VER SELECCIONES',
+        ctaAction: 'intent:selections'
+      }
+    ];
+
     function renderCarousel() {
       const banners =
         Array.isArray(state.store.banners)
@@ -747,18 +793,49 @@
 
       dom.heroSlides.innerHTML = banners
         .map((banner, index) => {
+          const fallback =
+            PUZZLES_BANNER_COPY_FALLBACKS[
+              index %
+              PUZZLES_BANNER_COPY_FALLBACKS.length
+            ] || {};
+
+          const displayBanner = {
+            ...fallback,
+            ...banner,
+            kicker:
+              displayBanner.kicker ||
+              fallback.kicker ||
+              '',
+            title:
+              displayBanner.title ||
+              fallback.title ||
+              '',
+            text:
+              displayBanner.text ||
+              fallback.text ||
+              '',
+            ctaText:
+              displayBanner.ctaText ||
+              fallback.ctaText ||
+              '',
+            ctaAction:
+              displayBanner.ctaAction ||
+              fallback.ctaAction ||
+              'catalog'
+          };
+
           const align =
             ['left', 'center', 'right'].includes(
-              banner.align
+              displayBanner.align
             )
-              ? banner.align
+              ? displayBanner.align
               : 'left';
 
           const darkness = Math.max(
             0,
             Math.min(
               0.9,
-              Number(banner.darkness || 0.58)
+              Number(displayBanner.darkness || 0.58)
             )
           );
 
@@ -766,36 +843,49 @@
             0.8,
             Math.min(
               1.6,
-              Number(banner.imageZoom || 1)
+              Number(displayBanner.imageZoom || 1)
             )
           );
 
+          const showTextValue =
+            displayBanner.showText;
+
           const showText =
-            banner.showText !== false;
+            !(
+              showTextValue === false ||
+              ['false', 'no', '0', 'oculto']
+                .includes(
+                  String(
+                    showTextValue ?? ''
+                  )
+                    .trim()
+                    .toLowerCase()
+                )
+            );
 
           const content = showText
             ? `
               <div class="hero-slide__content hero-slide__content--${align}">
-                ${banner.kicker
-                  ? `<span class="hero-slide__kicker">${escapeHtml(banner.kicker)}</span>`
+                ${displayBanner.kicker
+                  ? `<span class="hero-slide__kicker">${escapeHtml(displayBanner.kicker)}</span>`
                   : ''
                 }
-                ${banner.title
-                  ? `<h1>${escapeHtml(banner.title)}</h1>`
+                ${displayBanner.title
+                  ? `<h1>${escapeHtml(displayBanner.title)}</h1>`
                   : ''
                 }
-                ${banner.text
-                  ? `<p>${escapeHtml(banner.text)}</p>`
+                ${displayBanner.text
+                  ? `<p>${escapeHtml(displayBanner.text)}</p>`
                   : ''
                 }
-                ${banner.ctaText
+                ${displayBanner.ctaText
                   ? `
                     <button
                       class="btn btn--gold hero-slide__cta"
                       type="button"
-                      data-editorial-action="${escapeAttr(banner.ctaAction || 'catalog')}"
+                      data-editorial-action="${escapeAttr(displayBanner.ctaAction || 'catalog')}"
                     >
-                      ${escapeHtml(banner.ctaText)}
+                      ${escapeHtml(displayBanner.ctaText)}
                     </button>
                   `
                   : ''
@@ -809,16 +899,16 @@
               class="hero-slide hero-slide--controlled ${index === state.carouselIndex ? 'is-active' : ''}"
               style="
                 --banner-darkness:${darkness};
-                --banner-text-color:${escapeAttr(banner.textColor || '#FFFFFF')};
+                --banner-text-color:${escapeAttr(displayBanner.textColor || '#FFFFFF')};
               "
-              aria-label="${escapeAttr(banner.title || 'Selección PUZZLES')}"
+              aria-label="${escapeAttr(displayBanner.title || 'Selección PUZZLES')}"
             >
               <img
                 class="hero-slide__artwork"
-                src="${escapeAttr(banner.imageUrl || '')}"
-                alt="${escapeAttr(banner.title || 'Selección PUZZLES')}"
+                src="${escapeAttr(displayBanner.imageUrl || '')}"
+                alt="${escapeAttr(displayBanner.title || 'Selección PUZZLES')}"
                 style="
-                  object-position:${escapeAttr(banner.imagePosition || 'center center')};
+                  object-position:${escapeAttr(displayBanner.imagePosition || 'center center')};
                   transform:scale(${zoom});
                 "
                 decoding="async"

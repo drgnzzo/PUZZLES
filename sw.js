@@ -1,4 +1,4 @@
-const CACHE_NAME = 'puzzles-shell-v1.5.8-momentos';
+const CACHE_NAME = 'puzzles-shell-v1.5.8-banner-text-fix';
 
 const SHELL_FILES = [
   './',
