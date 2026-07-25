@@ -16,7 +16,7 @@
       CUSTOMER: 'puzzles_customer_v2',
       VIEW: 'puzzles_catalog_view_v1',
       SESSION: 'puzzles_session_v1',
-      STORE: 'puzzles_store_snapshot_v1'
+      STORE: 'puzzles_store_snapshot_v1_5_8_r2'
     });
 
     const PUZZLES_STORAGE_MEMORY = {};
@@ -72,13 +72,16 @@
       filtered: [],
       search: '',
       category: 'Todas',
+      brand: 'Todas',
+      brands: [],
+      ageConfirmedThisVisit: false,
       minPrice: '',
       maxPrice: '',
       includeConsult: true,
       sort: 'featured',
       view: puzzlesStorageGet(STORAGE_KEYS.VIEW) || 'grid',
       page: 1,
-      pageSize: 48,
+      pageSize: 60,
       cart: loadJson(STORAGE_KEYS.CART, {}),
       quantities: {},
       submitting: false,
@@ -156,11 +159,18 @@
         showCatalogShell();
       }
 
-      await loadStore({
+      const storeRequest = loadStore({
         background: restored
       });
 
-      await restoreSession();
+      const sessionRequest = restoreSession();
+
+      await Promise.allSettled([
+        storeRequest,
+        sessionRequest
+      ]);
+
+      restoreAgeGate();
     }
 
     function cacheDom() {
@@ -168,7 +178,7 @@
         'ageGate','agePrompt','ageDenied','btnAgeNo','btnAgeYes','announcementText',
         'brandName','brandSubtitle','feature1Title','featureCatalogText','feature2Title','feature2Text','feature3Title','feature3Text','catalogKicker','catalogTitle','catalogDescription','githubSetup',
         'heroCarousel','heroSlides','heroDots','btnHeroPrev','btnHeroNext',
-        'categoryList','priceMin','priceMax','includeConsult','filtersPanel','btnClearFilters',
+        'categoryList','brandFilter','priceMin','priceMax','includeConsult','filtersPanel','btnClearFilters',
         'btnMobileFilters','searchInput','sortSelect','btnGridView','btnTableView',
         'resultCount','resultRange','activeFilterWrap','loadingState','errorState','errorMessage',
         'emptyState','gridView','tableView','pagination','btnRetry','btnEmptyClear',
@@ -257,6 +267,12 @@
 
       listen(dom.includeConsult, 'change', () => {
         state.includeConsult = dom.includeConsult.checked;
+        state.page = 1;
+        applyFilters();
+      });
+
+      listen(dom.brandFilter, 'change', () => {
+        state.brand = dom.brandFilter.value || 'Todas';
         state.page = 1;
         applyFilters();
       });
@@ -393,10 +409,25 @@
         ? result.categories
         : [];
 
+      state.brands = Array.from(
+        new Set(
+          state.products
+            .map(product => product.brand)
+            .filter(Boolean)
+        )
+      ).sort((a, b) =>
+        a.localeCompare(
+          b,
+          'es',
+          { sensitivity: 'base', numeric: true }
+        )
+      );
+
       state.loading = false;
 
       applyStoreConfig(result.stats || {});
       renderCategories();
+      renderBrands();
       normalizeCartAgainstCatalog();
       applyFilters();
       renderCart();
@@ -733,33 +764,133 @@
       });
     }
 
+    function renderBrands() {
+      if (!dom.brandFilter) return;
+
+      const options = ['Todas'].concat(
+        state.brands || []
+      );
+
+      if (
+        state.brand !== 'Todas' &&
+        !options.includes(state.brand)
+      ) {
+        state.brand = 'Todas';
+      }
+
+      dom.brandFilter.innerHTML = options
+        .map(brand =>
+          '<option value="' +
+          escapeAttr(brand) +
+          '">' +
+          escapeHtml(
+            brand === 'Todas'
+              ? 'Todas las marcas'
+              : brand
+          ) +
+          '</option>'
+        )
+        .join('');
+
+      dom.brandFilter.value = state.brand;
+    }
+
     function applyFilters() {
       const queryInfo = prepareSearchQuery(state.search);
-      const min = state.minPrice === '' ? null : Number(state.minPrice);
-      const max = state.maxPrice === '' ? null : Number(state.maxPrice);
+
+      const min = state.minPrice === ''
+        ? null
+        : Number(state.minPrice);
+
+      const max = state.maxPrice === ''
+        ? null
+        : Number(state.maxPrice);
+
       state.searchScores = new Map();
 
       let products = state.products.filter(product => {
-        if (state.category !== 'Todas' && product.category !== state.category) return false;
-        if (!state.includeConsult && Number(product.priceNet) <= 0) return false;
-        if (min !== null && Number(product.priceNet) < min) return false;
-        if (max !== null && Number(product.priceNet) > max) return false;
-        if (queryInfo.tokens.length) {
-          const score = fuzzyProductScore(product, queryInfo);
-          if (score < queryInfo.minimumScore) return false;
-          state.searchScores.set(product.code, score);
+        if (
+          state.category !== 'Todas' &&
+          product.category !== state.category
+        ) {
+          return false;
         }
+
+        if (
+          state.brand !== 'Todas' &&
+          product.brand !== state.brand
+        ) {
+          return false;
+        }
+
+        if (
+          !state.includeConsult &&
+          Number(product.priceNet) <= 0
+        ) {
+          return false;
+        }
+
+        if (
+          min !== null &&
+          Number(product.priceNet) < min
+        ) {
+          return false;
+        }
+
+        if (
+          max !== null &&
+          Number(product.priceNet) > max
+        ) {
+          return false;
+        }
+
+        if (queryInfo.tokens.length) {
+          const score = fuzzyProductScore(
+            product,
+            queryInfo
+          );
+
+          if (score < queryInfo.minimumScore) {
+            return false;
+          }
+
+          state.searchScores.set(
+            product.code,
+            score
+          );
+        }
+
         return true;
       });
 
-      if (queryInfo.tokens.length && state.sort === 'featured') {
-        products.sort((a,b) => (state.searchScores.get(b.code)||0) - (state.searchScores.get(a.code)||0));
+      if (
+        queryInfo.tokens.length &&
+        state.sort === 'featured'
+      ) {
+        products.sort((a, b) =>
+          (state.searchScores.get(b.code) || 0) -
+          (state.searchScores.get(a.code) || 0)
+        );
       } else {
-        products = sortProducts(products, state.sort);
+        products = sortProducts(
+          products,
+          state.sort
+        );
       }
+
       state.filtered = products;
-      const totalPages = Math.max(1, Math.ceil(products.length / state.pageSize));
-      if (state.page > totalPages) state.page = totalPages;
+
+      const totalPages = Math.max(
+        1,
+        Math.ceil(
+          products.length / state.pageSize
+        )
+      );
+
+      if (state.page > totalPages) {
+        state.page = totalPages;
+      }
+
       renderCatalog();
     }
 
@@ -822,30 +953,104 @@
 
     function sortProducts(products, mode) {
       const copy = products.slice();
-      const byName = (a, b) => String(a.description).localeCompare(String(b.description), 'es', { sensitivity: 'base', numeric: true });
-      const byCode = (a, b) => String(a.code).localeCompare(String(b.code), 'es', { sensitivity: 'base', numeric: true });
+
+      const compareText = (left, right) =>
+        String(left || '').localeCompare(
+          String(right || ''),
+          'es',
+          {
+            sensitivity: 'base',
+            numeric: true
+          }
+        );
+
+      const byName = (a, b) =>
+        compareText(a.displayName, b.displayName);
+
+      const byCode = (a, b) =>
+        compareText(a.code, b.code);
+
+      const bySource = (a, b) =>
+        Number(a.rowNumber || 0) -
+        Number(b.rowNumber || 0);
 
       switch (mode) {
-        case 'nameAsc': return copy.sort(byName);
-        case 'nameDesc': return copy.sort((a,b) => byName(b,a));
-        case 'priceAsc': return copy.sort((a,b) => {
-          const av = Number(a.priceNet) <= 0 ? Number.POSITIVE_INFINITY : Number(a.priceNet);
-          const bv = Number(b.priceNet) <= 0 ? Number.POSITIVE_INFINITY : Number(b.priceNet);
-          return av - bv || byName(a,b);
-        });
-        case 'priceDesc': return copy.sort((a,b) => Number(b.priceNet) - Number(a.priceNet) || byName(a,b));
-        case 'codeAsc': return copy.sort(byCode);
-        default:
-          return copy.sort((a,b) => {
-            const ac = String(a.category).localeCompare(String(b.category), 'es', { sensitivity: 'base' });
-            return ac || byName(a,b);
+        case 'nameAsc':
+          return copy.sort(byName);
+
+        case 'nameDesc':
+          return copy.sort((a, b) => byName(b, a));
+
+        case 'categoryAsc':
+          return copy.sort((a, b) =>
+            compareText(a.category, b.category) ||
+            byName(a, b)
+          );
+
+        case 'categoryDesc':
+          return copy.sort((a, b) =>
+            compareText(b.category, a.category) ||
+            byName(a, b)
+          );
+
+        case 'brandAsc':
+          return copy.sort((a, b) =>
+            compareText(a.brand, b.brand) ||
+            byName(a, b)
+          );
+
+        case 'brandDesc':
+          return copy.sort((a, b) =>
+            compareText(b.brand, a.brand) ||
+            byName(a, b)
+          );
+
+        case 'volumeAsc':
+          return copy.sort((a, b) =>
+            volumeToMl(a.volume) -
+            volumeToMl(b.volume) ||
+            byName(a, b)
+          );
+
+        case 'volumeDesc':
+          return copy.sort((a, b) =>
+            volumeToMl(b.volume) -
+            volumeToMl(a.volume) ||
+            byName(a, b)
+          );
+
+        case 'priceAsc':
+          return copy.sort((a, b) => {
+            const av = Number(a.priceNet) <= 0
+              ? Number.POSITIVE_INFINITY
+              : Number(a.priceNet);
+
+            const bv = Number(b.priceNet) <= 0
+              ? Number.POSITIVE_INFINITY
+              : Number(b.priceNet);
+
+            return av - bv || byName(a, b);
           });
+
+        case 'priceDesc':
+          return copy.sort((a, b) =>
+            Number(b.priceNet) -
+            Number(a.priceNet) ||
+            byName(a, b)
+          );
+
+        case 'codeAsc':
+          return copy.sort(byCode);
+
+        default:
+          return copy.sort(bySource);
       }
     }
 
     function clearFilters() {
       state.search = '';
       state.category = 'Todas';
+      state.brand = 'Todas';
       state.minPrice = '';
       state.maxPrice = '';
       state.includeConsult = true;
@@ -857,7 +1062,13 @@
       dom.priceMax.value = '';
       dom.includeConsult.checked = true;
       dom.sortSelect.value = 'featured';
+
+      if (dom.brandFilter) {
+        dom.brandFilter.value = 'Todas';
+      }
+
       renderCategories();
+      renderBrands();
       applyFilters();
     }
 
@@ -891,14 +1102,35 @@
 
     function renderActiveFilter() {
       const labels = [];
-      if (state.category !== 'Todas') labels.push(state.category);
-      if (state.search.trim()) labels.push('“' + state.search.trim() + '”');
-      if (state.minPrice !== '') labels.push('Desde ' + money(state.minPrice));
-      if (state.maxPrice !== '') labels.push('Hasta ' + money(state.maxPrice));
-      if (!state.includeConsult) labels.push('Sólo con precio');
+
+      if (state.category !== 'Todas') {
+        labels.push(state.category);
+      }
+
+      if (state.brand !== 'Todas') {
+        labels.push('Marca: ' + state.brand);
+      }
+
+      if (state.search.trim()) {
+        labels.push('“' + state.search.trim() + '”');
+      }
+
+      if (state.minPrice !== '') {
+        labels.push('Desde ' + money(state.minPrice));
+      }
+
+      if (state.maxPrice !== '') {
+        labels.push('Hasta ' + money(state.maxPrice));
+      }
+
+      if (!state.includeConsult) {
+        labels.push('Sólo con precio');
+      }
 
       dom.activeFilterWrap.innerHTML = labels.length
-        ? '<span class="active-filter">' + escapeHtml(labels.join(' · ')) + '</span>'
+        ? '<span class="active-filter">' +
+          escapeHtml(labels.join(' · ')) +
+          '</span>'
         : '';
     }
 
@@ -918,55 +1150,266 @@
     }
 
     function renderGrid(products) {
-      dom.gridView.innerHTML = products.map(product => {
-        const quantity = getDraftQuantity(product.code);
-        const cartQty = extractCartQuantity(state.cart[product.code]);
-        const canBuy = Boolean(product.available && toFiniteNumber(product.priceNet) > 0);
-        const imageStyle = `--img-zoom:${Number(product.imageZoom||0.92)};--img-x:${Number(product.imageX||0)}%;--img-y:${Number(product.imageY||0)}%`;
-        const image = product.imageUrl
-          ? `<img class="product-card__image" style="${imageStyle}" src="${escapeAttr(product.imageUrl)}" alt="${escapeAttr(product.description)}" loading="lazy" onerror="this.style.display='none'">`
-          : `<div class="bottle-mark" data-letter="${escapeAttr(categoryLetter(product.category))}"></div>`;
-        const compare = toFiniteNumber(product.priceCompare);
-        const sale = toFiniteNumber(product.priceNet);
-        const discount = compare > sale && sale > 0 ? Math.round((1 - sale / compare) * 100) : 0;
-        const meta = productMetaItems(product);
-        const displayName = product.shortName || product.description;
-        const secondaryName = product.shortName && normalize(product.shortName) !== normalize(product.description)
-          ? product.description : '';
+      dom.gridView.innerHTML = products
+        .map(product => {
+          const quantity = getDraftQuantity(
+            product.code
+          );
 
-        return `<article class="product-card" data-code="${escapeAttr(product.code)}">
-          <div class="product-card__visual">
-            <span class="product-card__category">${escapeHtml(product.category)}</span>${image}
-          </div>
-          <div class="product-card__body">
-            <div class="product-card__code">CÓDIGO ${escapeHtml(product.code)}${product.upc ? ` · UPC ${escapeHtml(product.upc)}` : ''}</div>
-            <h3 class="product-card__name">${escapeHtml(displayName)}</h3>
-            ${secondaryName ? `<p class="product-card__description">${escapeHtml(secondaryName)}</p>` : ''}
-            <div class="product-card__meta">${meta.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div>
-            <div class="product-card__price-block">
-              ${canBuy ? `${compare > sale ? `<div class="price-compare">${money(compare)}${discount ? `<span class="discount-badge">-${discount}%</span>` : ''}</div>` : ''}<div class="price-net">${money(sale)}</div>` : `<div class="consult-price">Precio a consultar</div>`}
-            </div>
-            <div class="product-card__actions">
-              <div class="qty-control"><button type="button" data-qty-minus="${escapeAttr(product.code)}">−</button><span data-qty-value="${escapeAttr(product.code)}">${quantity}</span><button type="button" data-qty-plus="${escapeAttr(product.code)}">+</button></div>
-              <button class="add-button" type="button" data-add="${escapeAttr(product.code)}" ${canBuy?'':'disabled'}>${canBuy?'Agregar al carrito':'Consultar'}</button>
-            </div>
-            ${cartQty>0?`<div class="in-cart-note">${cartQty} ${cartQty===1?'unidad':'unidades'} en el carrito</div>`:''}
-          </div>
-        </article>`;
-      }).join('');
+          const cartQty = extractCartQuantity(
+            state.cart[product.code]
+          );
+
+          const canBuy = Boolean(
+            product.available &&
+            toFiniteNumber(product.priceNet) > 0
+          );
+
+          const compare = toFiniteNumber(
+            product.priceCompare
+          );
+
+          const sale = toFiniteNumber(
+            product.priceNet
+          );
+
+          const meta = productMetaItems(product);
+
+          return `
+            <article class="product-card" data-code="${escapeAttr(product.code)}">
+              <div class="product-card__visual">
+                <div class="product-image-fallback" aria-hidden="true">
+                  <span>${escapeHtml(categoryLetter(product.category))}</span>
+                </div>
+                ${productImageMarkup(product, 'product-card__image', product.displayName)}
+                <span class="product-card__category">${escapeHtml(product.category)}</span>
+              </div>
+
+              <div class="product-card__body">
+                <div class="product-card__code">
+                  CÓDIGO ${escapeHtml(product.code)}
+                  ${product.upc ? ` · UPC ${escapeHtml(product.upc)}` : ''}
+                </div>
+
+                <h3 class="product-card__name">
+                  ${escapeHtml(product.displayName)}
+                </h3>
+
+                <div class="product-card__meta">
+                  ${meta.map(item => `<span>${escapeHtml(item)}</span>`).join('')}
+                </div>
+
+                <div class="product-card__price-block">
+                  ${canBuy
+                    ? `${compare > sale
+                        ? `<div class="price-compare">${money(compare)}</div>`
+                        : ''}
+                       <div class="price-net">${money(sale)}</div>`
+                    : '<div class="consult-price">Precio a consultar</div>'}
+                </div>
+
+                <div class="product-card__actions">
+                  <div class="qty-control">
+                    <button type="button" data-qty-minus="${escapeAttr(product.code)}">−</button>
+                    <span data-qty-value="${escapeAttr(product.code)}">${quantity}</span>
+                    <button type="button" data-qty-plus="${escapeAttr(product.code)}">+</button>
+                  </div>
+
+                  <button class="add-button" type="button" data-add="${escapeAttr(product.code)}" ${canBuy ? '' : 'disabled'}>
+                    ${canBuy ? 'Agregar al carrito' : 'Consultar'}
+                  </button>
+                </div>
+
+                ${cartQty > 0
+                  ? `<div class="in-cart-note">${cartQty} ${cartQty === 1 ? 'unidad' : 'unidades'} en el carrito</div>`
+                  : ''}
+              </div>
+            </article>`;
+        })
+        .join('');
+
       bindProductControls(dom.gridView);
+      bindProductImageFallbacks(dom.gridView);
     }
 
     function renderTable(products) {
-      dom.tableView.innerHTML = `<table class="product-table"><thead><tr>
-        <th>Código</th><th>Producto</th><th>Marca</th><th>Presentación</th><th>Precio</th><th>Antes</th><th>Acción</th>
-      </tr></thead><tbody>${products.map(product => {
-        const canBuy = Boolean(product.available && toFiniteNumber(product.priceNet)>0);
-        const compare = toFiniteNumber(product.priceCompare);
-        const sale = toFiniteNumber(product.priceNet);
-        return `<tr><td><strong>${escapeHtml(product.code)}</strong>${product.upc?`<br><small>UPC ${escapeHtml(product.upc)}</small>`:''}</td><td class="product-table__description">${escapeHtml(product.shortName||product.description)}</td><td>${escapeHtml(product.brand||'—')}</td><td>${escapeHtml(product.presentation||product.volume||product.unit||'—')}</td><td class="product-table__price">${canBuy?money(sale):'Consultar'}</td><td>${compare>sale?`<span class="price-compare">${money(compare)}</span>`:'—'}</td><td><button class="table-add" type="button" data-add-one="${escapeAttr(product.code)}" ${canBuy?'':'disabled'}>Agregar</button></td></tr>`;
-      }).join('')}</tbody></table>`;
-      dom.tableView.querySelectorAll('[data-add-one]').forEach(button => button.addEventListener('click',()=>addToCart(button.dataset.addOne,1)));
+      const sortableHeader = (label, key) => `
+        <button class="table-sort-button" type="button" data-table-sort="${escapeAttr(key)}">
+          <span>${escapeHtml(label)}</span>
+          <span class="table-sort-indicator">${tableSortIndicator(key)}</span>
+        </button>`;
+
+      dom.tableView.innerHTML = `
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th>${sortableHeader('Producto', 'name')}</th>
+              <th>${sortableHeader('Contenido', 'volume')}</th>
+              <th>${sortableHeader('Marca', 'brand')}</th>
+              <th>${sortableHeader('Categoría', 'category')}</th>
+              <th>${sortableHeader('Precio', 'price')}</th>
+              <th>Antes</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${products.map(product => {
+              const canBuy = Boolean(
+                product.available &&
+                toFiniteNumber(product.priceNet) > 0
+              );
+
+              const compare = toFiniteNumber(
+                product.priceCompare
+              );
+
+              const sale = toFiniteNumber(
+                product.priceNet
+              );
+
+              return `
+                <tr>
+                  <td class="product-table__product">
+                    <div class="product-table__product-wrap">
+                      <div class="product-table__thumb">
+                        <div class="product-image-fallback" aria-hidden="true">
+                          <span>${escapeHtml(categoryLetter(product.category))}</span>
+                        </div>
+                        ${productImageMarkup(product, 'product-table__image', product.displayName)}
+                      </div>
+                      <div>
+                        <strong>${escapeHtml(product.displayName)}</strong>
+                        <small>Código ${escapeHtml(product.code)}${product.upc ? ` · UPC ${escapeHtml(product.upc)}` : ''}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>${escapeHtml(product.volume || '—')}</td>
+                  <td>${escapeHtml(product.brand || '—')}</td>
+                  <td><span class="table-category">${escapeHtml(product.category)}</span></td>
+                  <td class="product-table__price">${canBuy ? money(sale) : 'Consultar'}</td>
+                  <td>${compare > sale ? `<span class="price-compare">${money(compare)}</span>` : '—'}</td>
+                  <td>
+                    <button class="table-add" type="button" data-add-one="${escapeAttr(product.code)}" ${canBuy ? '' : 'disabled'}>
+                      Agregar
+                    </button>
+                  </td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+
+      dom.tableView
+        .querySelectorAll('[data-add-one]')
+        .forEach(button =>
+          button.addEventListener(
+            'click',
+            () => addToCart(
+              button.dataset.addOne,
+              1
+            )
+          )
+        );
+
+      dom.tableView
+        .querySelectorAll('[data-table-sort]')
+        .forEach(button =>
+          button.addEventListener(
+            'click',
+            () => toggleTableSort(
+              button.dataset.tableSort
+            )
+          )
+        );
+
+      bindProductImageFallbacks(dom.tableView);
+    }
+
+    const TABLE_SORT_MODES = Object.freeze({
+      name: ['nameAsc', 'nameDesc'],
+      volume: ['volumeAsc', 'volumeDesc'],
+      brand: ['brandAsc', 'brandDesc'],
+      category: ['categoryAsc', 'categoryDesc'],
+      price: ['priceAsc', 'priceDesc']
+    });
+
+    function toggleTableSort(key) {
+      const modes = TABLE_SORT_MODES[key];
+      if (!modes) return;
+
+      state.sort = state.sort === modes[0]
+        ? modes[1]
+        : modes[0];
+
+      state.page = 1;
+
+      if (dom.sortSelect) {
+        dom.sortSelect.value = state.sort;
+      }
+
+      applyFilters();
+    }
+
+    function tableSortIndicator(key) {
+      const modes = TABLE_SORT_MODES[key];
+      if (!modes || !modes.includes(state.sort)) {
+        return '↕';
+      }
+
+      return state.sort === modes[0]
+        ? '↑'
+        : '↓';
+    }
+
+    function productImageMarkup(product, className, alt) {
+      if (!product || !product.imageUrl) {
+        return '';
+      }
+
+      const displayUrl =
+        product.imageDisplayUrl ||
+        product.imageUrl;
+
+      return `
+        <img
+          class="${escapeAttr(className)} js-product-image"
+          src="${escapeAttr(displayUrl)}"
+          data-original-src="${escapeAttr(product.imageUrl)}"
+          alt="${escapeAttr(alt || '')}"
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+        >`;
+    }
+
+    function bindProductImageFallbacks(container) {
+      if (!container) return;
+
+      container
+        .querySelectorAll('.js-product-image')
+        .forEach(image => {
+          image.addEventListener(
+            'load',
+            () => image.classList.add('is-loaded'),
+            { once: true }
+          );
+
+          image.addEventListener('error', () => {
+            const original =
+              image.dataset.originalSrc || '';
+
+            if (
+              original &&
+              image.dataset.originalTried !== 'true' &&
+              image.src !== original
+            ) {
+              image.dataset.originalTried = 'true';
+              image.src = original;
+              return;
+            }
+
+            image.classList.add('is-broken');
+          });
+        });
     }
 
     function bindProductControls(container) {
@@ -1104,14 +1547,33 @@
     }
 
     function extractCartQuantity(value) {
+      if (
+        value === undefined ||
+        value === null ||
+        value === ''
+      ) {
+        return 0;
+      }
+
       let raw = value;
 
       if (raw && typeof raw === 'object') {
-        raw = raw.quantity ?? raw.cantidad ?? raw.qty ?? raw.units ?? raw.unidades ?? 1;
+        raw =
+          raw.quantity ??
+          raw.cantidad ??
+          raw.qty ??
+          raw.units ??
+          raw.unidades ??
+          0;
       }
 
-      const quantity = Math.floor(toFiniteNumber(raw));
-      return Math.max(1, Math.min(99, quantity || 1));
+      const quantity = Math.floor(
+        toFiniteNumber(raw)
+      );
+
+      if (quantity <= 0) return 0;
+
+      return Math.min(99, quantity);
     }
 
     function addToCart(code, quantity) {
@@ -1249,6 +1711,8 @@
           <div class="cart-item__price">${money(line.lineNet)}</div>
         </article>
       `).join('');
+
+      bindProductImageFallbacks(dom.cartBody);
 
       dom.cartBody.querySelectorAll('[data-cart-minus]').forEach(button => {
         button.addEventListener('click', () => changeCartQuantity(button.dataset.cartMinus, -1));
@@ -1532,6 +1996,10 @@
       }
       normalizeCartAgainstCatalog();
       renderCart();
+      if (state.ageConfirmedThisVisit) {
+        puzzlesStorageSet(STORAGE_KEYS.AGE, 'true');
+      }
+      restoreAgeGate();
       updateAuthUi();
       toast('Sesión iniciada. Tu carrito quedó guardado.', 'success');
       setTimeout(closeAuth, 450);
@@ -1547,6 +2015,9 @@
         state.sessionToken = '';
         state.user = null;
         puzzlesStorageRemove(STORAGE_KEYS.SESSION);
+        puzzlesStorageRemove(STORAGE_KEYS.AGE);
+        state.ageConfirmedThisVisit = false;
+        restoreAgeGate();
         updateAuthUi();
         return;
       }
@@ -1561,6 +2032,7 @@
       normalizeCartAgainstCatalog();
       saveCart();
       renderCart();
+      restoreAgeGate();
       updateAuthUi();
     }
     async function logoutUser() {
@@ -1568,8 +2040,11 @@
       state.sessionToken = '';
       state.user = null;
       puzzlesStorageRemove(STORAGE_KEYS.SESSION);
+      puzzlesStorageRemove(STORAGE_KEYS.AGE);
+      state.ageConfirmedThisVisit = false;
       updateAuthUi();
       closeAuth();
+      restoreAgeGate();
       toast('Sesión cerrada.', 'success');
     }
     const scheduleAccountSync = debounce(async () => {
@@ -1586,10 +2061,27 @@
     // ==========================================================
 
     function restoreAgeGate() {
-      const confirmed =
+      const logged = Boolean(
+        state.user &&
+        state.sessionToken
+      );
+
+      const remembered = logged &&
         puzzlesStorageGet(
           STORAGE_KEYS.AGE
         ) === 'true';
+
+      const confirmed =
+        state.ageConfirmedThisVisit ||
+        remembered;
+
+      if (dom.agePrompt) {
+        dom.agePrompt.classList.remove('hidden');
+      }
+
+      if (dom.ageDenied) {
+        dom.ageDenied.classList.add('hidden');
+      }
 
       if (dom.ageGate) {
         dom.ageGate.classList.toggle(
@@ -1613,20 +2105,31 @@
     }
 
     function confirmAge() {
-      if (
-        typeof window.PUZZLES_AGE_ACCEPT ===
-        'function'
-      ) {
-        window.PUZZLES_AGE_ACCEPT();
+      state.ageConfirmedThisVisit = true;
+
+      if (state.user && state.sessionToken) {
+        puzzlesStorageSet(
+          STORAGE_KEYS.AGE,
+          'true'
+        );
+      } else {
+        puzzlesStorageRemove(
+          STORAGE_KEYS.AGE
+        );
       }
+
+      restoreAgeGate();
     }
 
     function denyAge() {
-      if (
-        typeof window.PUZZLES_AGE_DENY ===
-        'function'
-      ) {
-        window.PUZZLES_AGE_DENY();
+      state.ageConfirmedThisVisit = false;
+
+      if (dom.agePrompt) {
+        dom.agePrompt.classList.add('hidden');
+      }
+
+      if (dom.ageDenied) {
+        dom.ageDenied.classList.remove('hidden');
       }
     }
 
@@ -1667,27 +2170,305 @@
     }
 
     function normalizeProductRecord(product) {
-      const normalized = Object.assign({}, product || {});
-      normalized.code = String(normalized.code ?? '').trim();
-      normalized.description = String(normalized.description ?? '').trim();
-      normalized.priceNet = round2(toFiniteNumber(normalized.priceNet));
-      normalized.priceCompare = round2(toFiniteNumber(normalized.priceCompare));
-      normalized.priceNetText = normalized.priceNet.toFixed(2);
-      normalized.priceCompareText = normalized.priceCompare.toFixed(2);
-      normalized.imageZoom = Math.max(.65, Math.min(3, toFiniteNumber(normalized.imageZoom) || 0.92));
-      normalized.imageX = Math.max(-45, Math.min(45, toFiniteNumber(normalized.imageX)));
-      normalized.imageY = Math.max(-45, Math.min(45, toFiniteNumber(normalized.imageY)));
+      const normalized = Object.assign(
+        {},
+        product || {}
+      );
+
+      normalized.code = String(
+        normalized.code ?? ''
+      ).trim();
+
+      normalized.description = String(
+        normalized.description ?? ''
+      ).trim();
+
+      normalized.category = String(
+        normalized.category || 'Otros'
+      ).trim();
+
+      normalized.displayName = stripCategoryPrefix(
+        normalized.shortName ||
+        normalized.description
+      );
+
+      normalized.volume =
+        String(
+          normalized.presentation ||
+          normalized.volume ||
+          extractVolumeDisplay(
+            normalized.description
+          ) ||
+          ''
+        ).trim();
+
+      normalized.brand = String(
+        normalized.brand ||
+        inferBrandFromName(
+          normalized.displayName
+        ) ||
+        ''
+      ).trim();
+
+      normalized.priceNet = round2(
+        toFiniteNumber(normalized.priceNet)
+      );
+
+      normalized.priceCompare = round2(
+        toFiniteNumber(
+          normalized.priceCompare
+        )
+      );
+
+      normalized.priceNetText =
+        normalized.priceNet.toFixed(2);
+
+      normalized.priceCompareText =
+        normalized.priceCompare.toFixed(2);
+
+      normalized.imageUrl = String(
+        normalized.imageUrl || ''
+      ).trim();
+
+      normalized.imageDisplayUrl =
+        buildSquareImageUrl(
+          normalized.imageUrl
+        );
+
       normalized.searchCanonical = canonicalSearchText([
-        normalized.code, normalized.upc, normalized.sku, normalized.brand,
-        normalized.shortName, normalized.description, normalized.model,
-        normalized.color, normalized.presentation, normalized.category,
-        normalized.unit, normalized.volume
+        normalized.code,
+        normalized.upc,
+        normalized.sku,
+        normalized.brand,
+        normalized.shortName,
+        normalized.displayName,
+        normalized.description,
+        normalized.model,
+        normalized.color,
+        normalized.presentation,
+        normalized.category,
+        normalized.unit,
+        normalized.volume
       ].join(' '));
-      normalized.searchTokens = normalized.searchCanonical.split(' ').filter(Boolean);
-      if (normalized.stock === null || normalized.stock === undefined || normalized.stock === '') normalized.stock = null;
-      else normalized.stock = Math.max(0, Math.floor(toFiniteNumber(normalized.stock)));
-      normalized.available = normalized.priceNet > 0 && (normalized.stock === null || normalized.stock > 0);
+
+      normalized.searchTokens =
+        normalized.searchCanonical
+          .split(' ')
+          .filter(Boolean);
+
+      if (
+        normalized.stock === null ||
+        normalized.stock === undefined ||
+        normalized.stock === ''
+      ) {
+        normalized.stock = null;
+      } else {
+        normalized.stock = Math.max(
+          0,
+          Math.floor(
+            toFiniteNumber(normalized.stock)
+          )
+        );
+      }
+
+      normalized.available =
+        normalized.priceNet > 0 &&
+        (
+          normalized.stock === null ||
+          normalized.stock > 0
+        );
+
       return normalized;
+    }
+
+    const CATEGORY_PREFIX_PATTERN = new RegExp(
+      '^(?:' +
+      'TEQ\\.?|TEQUILA|' +
+      'MEZ\\.?|MEZCAL|' +
+      'WHI\\.?|WHISKY|WHISKEY|' +
+      'RON|' +
+      'VOD\\.?|VODKA|' +
+      'GIN\\.?|GINEBRA|' +
+      'BRA\\.?|BRANDY|' +
+      'COG\\.?|COGNAC|COÑAC|' +
+      'CHA\\.?|CHAMPAGNE|CHAMPÁN|' +
+      'LIC\\.?|LICOR(?:ES)?|' +
+      'AN[IÍ]S|' +
+      'APE\\.?|APERITIVO(?:S)?|VERMOUTH|VERMUT|' +
+      'V\\.?\\s*T\\.?|VINO\\s+TINTO|' +
+      'V\\.?\\s*B\\.?|VINO\\s+BLANCO|' +
+      'V\\.?\\s*R\\.?|VINO\\s+ROSADO|' +
+      'V\\.?\\s*E\\.?|VINO\\s+ESPUMOSO|ESPUMOSO(?:S)?|CAVA|PROSECCO|' +
+      'SIDRA|ROMPOPE|' +
+      'JER\\.?|JEREZ|' +
+      'OPO\\.?|OPORTO|' +
+      'AGU\\.?|AGUARDIENTE|' +
+      'CRE\\.?|CREMA(?:S)?|' +
+      'DESTILADO(?:S)?|' +
+      'BEBIDA(?:S)?|JARABE(?:S)?|MARGARITA|SANGRITA|' +
+      'VAP|PAQUETE(?:S)?' +
+      ')\\s*[.\\-:·/]*\\s*',
+      'i'
+    );
+
+    const KNOWN_BRANDS = [
+      'CASILLERO DEL DIABLO',
+      'JOHNNIE WALKER',
+      'JACK DANIEL’S',
+      "JACK DANIEL'S",
+      'JACK DANIELS',
+      'MOËT & CHANDON',
+      'MOET & CHANDON',
+      'CONCHA Y TORO',
+      'BOMBAY SAPPHIRE',
+      'APPLETON ESTATE',
+      'HAVANA CLUB',
+      'JOSE CUERVO',
+      'JOSÉ CUERVO',
+      'DON JULIO',
+      'CASA MADERO',
+      'LA CETTO',
+      'GRAND MARNIER',
+      'REMY MARTIN',
+      'RÉMY MARTIN',
+      'CAPTAIN MORGAN',
+      'SANTA TERESA',
+      'RON ZACAPA',
+      'VILLA MASSA',
+      'JÄGERMEISTER',
+      'JAGERMEISTER',
+      "HENDRICK'S",
+      'HENDRICKS',
+      'GREY GOOSE'
+    ];
+
+    const BRAND_STOP_WORDS = new Set([
+      'BLANCO', 'BLANCA', 'REPOSADO', 'AÑEJO',
+      'ANEJO', 'EXTRA', 'DULCE', 'SECO', 'SECA',
+      'RESERVA', 'ESPECIAL', 'PREMIUM', 'ORO',
+      'GOLD', 'PLATA', 'SILVER', 'ROJO', 'ROSSO',
+      'ROSADO', 'TINTO', 'BRUT', 'JOVEN',
+      'CRISTALINO', 'CLASICO', 'CLÁSICO',
+      'TRADICIONAL', 'IMPERIAL', 'DELUXE',
+      'SIGNATURE', 'NEGRO', 'BLACK', 'WHITE',
+      '100%', 'EDICION', 'EDICIÓN'
+    ]);
+
+    function stripCategoryPrefix(value) {
+      const original = String(value || '').trim();
+      const stripped = original
+        .replace(CATEGORY_PREFIX_PATTERN, '')
+        .replace(/^\s*[.\-:·/]+\s*/, '')
+        .trim();
+
+      return stripped || original;
+    }
+
+    function extractVolumeDisplay(value) {
+      const matches = String(value || '')
+        .toUpperCase()
+        .match(/\b\d+(?:[.,]\d+)?\s*(?:ML|L)\b/g);
+
+      if (!matches || !matches.length) {
+        return '';
+      }
+
+      return matches[matches.length - 1]
+        .replace(/\s+/g, '')
+        .replace(',', '.');
+    }
+
+    function volumeToMl(value) {
+      const match = String(value || '')
+        .toUpperCase()
+        .replace(',', '.')
+        .match(/(\d+(?:\.\d+)?)\s*(ML|L)/);
+
+      if (!match) {
+        return Number.POSITIVE_INFINITY;
+      }
+
+      const amount = Number(match[1]);
+      return match[2] === 'L'
+        ? amount * 1000
+        : amount;
+    }
+
+    function inferBrandFromName(value) {
+      const name = String(value || '').trim();
+      if (!name) return '';
+
+      const normalizedName = name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase();
+
+      for (const brand of KNOWN_BRANDS) {
+        const normalizedBrand = brand
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toUpperCase();
+
+        if (normalizedName.startsWith(normalizedBrand)) {
+          return name.slice(0, brand.length);
+        }
+      }
+
+      const withoutVolume = name.replace(
+        /\b\d+(?:[.,]\d+)?\s*(?:ML|L)\b.*$/i,
+        ''
+      ).trim();
+
+      const tokens = withoutVolume
+        .split(/\s+/)
+        .filter(Boolean);
+
+      if (!tokens.length) return '';
+
+      const selected = [];
+
+      for (const token of tokens) {
+        const clean = token
+          .replace(/^[^A-ZÁÉÍÓÚÑ0-9]+|[^A-ZÁÉÍÓÚÑ0-9.'&-]+$/gi, '')
+          .toUpperCase();
+
+        if (!clean) continue;
+
+        if (
+          selected.length &&
+          (
+            BRAND_STOP_WORDS.has(clean) ||
+            /^\d+$/.test(clean)
+          )
+        ) {
+          break;
+        }
+
+        selected.push(token);
+
+        if (selected.length >= 2) {
+          break;
+        }
+      }
+
+      return selected.join(' ');
+    }
+
+    function buildSquareImageUrl(value) {
+      const url = String(value || '').trim();
+
+      if (!/^https?:\/\//i.test(url)) {
+        return url;
+      }
+
+      if (/images\.weserv\.nl\//i.test(url)) {
+        return url;
+      }
+
+      return 'https://images.weserv.nl/?url=' +
+        encodeURIComponent(url) +
+        '&w=900&h=900&fit=contain&cbg=ffffff' +
+        '&output=webp&q=86&we=1';
     }
 
     function getProduct(code) {
@@ -1776,81 +2557,3 @@
       }, 3200);
     }
 
-/* ============================================================
-   CONTROL DE EDAD INDEPENDIENTE
-   ============================================================ */
-/*
-     * Botones de edad independientes del resto de la aplicación.
-     * Siguen funcionando aunque falle otro módulo o el navegador
-     * bloquee localStorage dentro del iframe.
-     */
-    (function () {
-      var AGE_KEY = 'puzzles_age_confirmed_v1';
-      var memory = {};
-
-      function getValue(key) {
-        try {
-          return window.puzzlesStorageGet(key);
-        } catch (_) {
-          return Object.prototype.hasOwnProperty.call(
-            memory,
-            key
-          ) ? memory[key] : null;
-        }
-      }
-
-      function setValue(key, value) {
-        memory[key] = String(value);
-        try {
-          window.puzzlesStorageSet(
-            key,
-            String(value)
-          );
-        } catch (_) {}
-      }
-
-      window.PUZZLES_AGE_ACCEPT = function () {
-        setValue(AGE_KEY, 'true');
-
-        var gate =
-          document.getElementById('ageGate');
-
-        if (gate) {
-          gate.classList.add('hidden');
-          gate.setAttribute('aria-hidden', 'true');
-          gate.style.display = 'none';
-        }
-
-        document.body.classList.remove('no-scroll');
-        return false;
-      };
-
-      window.PUZZLES_AGE_DENY = function () {
-        var prompt =
-          document.getElementById('agePrompt');
-
-        var denied =
-          document.getElementById('ageDenied');
-
-        if (prompt) {
-          prompt.classList.add('hidden');
-        }
-
-        if (denied) {
-          denied.classList.remove('hidden');
-        }
-
-        return false;
-      };
-
-      if (getValue(AGE_KEY) === 'true') {
-        var gate =
-          document.getElementById('ageGate');
-
-        if (gate) {
-          gate.classList.add('hidden');
-          gate.setAttribute('aria-hidden', 'true');
-          gate.style.display = 'none';
-        }
-      }
-    })();
