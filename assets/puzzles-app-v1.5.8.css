@@ -4447,3 +4447,239 @@ body[data-catalog-view="table"] #tableView {
 .hero-carousel__controls {
   z-index: 8 !important;
 }
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · BANNERS, MOMENTOS COMPACTOS Y DARK READER
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+}
+
+.hero-slide--controlled .hero-slide__artwork {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover !important;
+  image-rendering: auto !important;
+  backface-visibility: hidden;
+}
+
+.intent-strip {
+  width: 100%;
+  padding:
+    18px
+    max(
+      var(--page-gutter),
+      env(safe-area-inset-right)
+    )
+    20px
+    max(
+      var(--page-gutter),
+      env(safe-area-inset-left)
+    );
+  border-top: 1px solid #262626;
+  border-bottom: 1px solid #262626;
+  background: #0b0b0b;
+}
+
+.intent-strip__lead {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.intent-strip__lead .eyebrow {
+  flex: 0 0 auto;
+  color: var(--gold);
+  font-size: 9px;
+  letter-spacing: .16em;
+}
+
+.intent-strip__lead p {
+  margin: 0;
+  color: #a5a5a5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.intent-strip__moments {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 1px 0 10px;
+  scrollbar-width: thin;
+}
+
+.intent-phrase {
+  flex: 1 0 170px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid #303030;
+  border-radius: 8px;
+  background: #121212;
+  color: #fff;
+  text-align: left;
+  transition:
+    border-color .18s ease,
+    background .18s ease,
+    transform .18s ease;
+}
+
+.intent-phrase:hover {
+  transform: translateY(-1px);
+  border-color: #80631f;
+  background: #181818;
+}
+
+.intent-phrase span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--gold);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.intent-phrase strong {
+  display: block;
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.intent-strip__selections {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #252525;
+}
+
+.intent-strip__selections > span {
+  flex: 0 0 auto;
+  color: #777;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.intent-strip__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.selection-phrase {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #d3d3d3;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .04em;
+}
+
+.selection-phrase:hover {
+  color: #fff;
+}
+
+.selection-phrase span {
+  color: var(--gold);
+}
+
+.editorial-section--moments,
+.editorial-section--selections {
+  display: none !important;
+}
+
+.product-card__visual,
+.product-table__thumb,
+.cart-item__visual,
+.pdp-image-button,
+.image-zoom-modal {
+  background-color: #fff !important;
+  color-scheme: only light;
+  forced-color-adjust: none;
+  isolation: isolate;
+}
+
+.product-card__image,
+.product-table__image,
+.cart-item__image,
+.pdp-image,
+.image-zoom-modal img,
+.js-product-image {
+  background-color: #fff !important;
+  color-scheme: only light;
+  forced-color-adjust: none;
+  mix-blend-mode: normal !important;
+  filter: none !important;
+}
+
+.product-image-fallback {
+  background:
+    radial-gradient(
+      circle,
+      #f3f3f3 0,
+      #fff 66%
+    ) !important;
+  color-scheme: only light;
+  forced-color-adjust: none;
+}
+
+@media (max-width: 760px) {
+  .intent-strip {
+    padding:
+      16px
+      max(
+        12px,
+        env(safe-area-inset-right)
+      )
+      18px
+      max(
+        12px,
+        env(safe-area-inset-left)
+      );
+  }
+
+  .intent-strip__lead {
+    display: block;
+  }
+
+  .intent-strip__lead p {
+    margin-top: 5px;
+  }
+
+  .intent-phrase {
+    flex-basis: 148px;
+    min-height: 58px;
+  }
+
+  .intent-strip__selections {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .intent-strip__links {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .selection-phrase {
+    flex: 0 0 auto;
+  }
+}

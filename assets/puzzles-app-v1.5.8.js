@@ -850,9 +850,9 @@
           );
 
           const zoom = Math.max(
-            0.8,
+            0.92,
             Math.min(
-              1.6,
+              1,
               Number(displayBanner.imageZoom || 1)
             )
           );
@@ -968,20 +968,16 @@
 
       if (dom.momentGrid) {
         dom.momentGrid.innerHTML = moments
-          .map((moment, index) => `
-            <article class="moment-card">
-              <span class="moment-card__number">${String(index + 1).padStart(2, '0')}</span>
-              <span class="moment-card__eyebrow">${escapeHtml(moment.eyebrow || '')}</span>
-              <h3>${escapeHtml(moment.title || '')}</h3>
-              <p>${escapeHtml(moment.text || '')}</p>
-              <button
-                class="link-button link-button--arrow"
-                type="button"
-                data-editorial-action="${escapeAttr(moment.action || 'catalog')}"
-              >
-                Ver opciones <span aria-hidden="true">→</span>
-              </button>
-            </article>
+          .map(moment => `
+            <button
+              class="intent-phrase"
+              type="button"
+              data-editorial-action="${escapeAttr(moment.action || 'catalog')}"
+              title="${escapeAttr(moment.text || moment.title || '')}"
+            >
+              <span>${escapeHtml(moment.eyebrow || '')}</span>
+              <strong>${escapeHtml(moment.title || '')}</strong>
+            </button>
           `)
           .join('');
       }
@@ -989,19 +985,15 @@
       if (dom.selectionGrid) {
         dom.selectionGrid.innerHTML = selections
           .map(selection => `
-            <article class="selection-card">
-              <span class="selection-card__kicker">${escapeHtml(selection.kicker || '')}</span>
-              <h3>${escapeHtml(selection.title || '')}</h3>
-              <p>${escapeHtml(selection.text || '')}</p>
-              <span class="selection-card__meta">${escapeHtml(selection.meta || '')}</span>
-              <button
-                class="btn btn--outline selection-card__button"
-                type="button"
-                data-editorial-action="${escapeAttr(selection.action || 'catalog')}"
-              >
-                Explorar esta selección
-              </button>
-            </article>
+            <button
+              class="selection-phrase"
+              type="button"
+              data-editorial-action="${escapeAttr(selection.action || 'catalog')}"
+              title="${escapeAttr(selection.text || selection.title || '')}"
+            >
+              ${escapeHtml(selection.title || '')}
+              <span aria-hidden="true">→</span>
+            </button>
           `)
           .join('');
       }
@@ -2157,7 +2149,7 @@
           <div class="pdp-info">
             <span class="pdp-category">${escapeHtml(product.category)}</span>
             <h3>${escapeHtml(product.displayName)}</h3>
-            <p class="pdp-description">${escapeHtml(product.description)}</p>
+            <p class="pdp-description">${escapeHtml(product.commercialDescription || product.description)}</p>
 
             <dl class="pdp-specs">
               ${pdpSpec('Código', product.code)}
@@ -3023,6 +3015,14 @@
         ''
       ).trim();
 
+      normalized.commercialDescription = String(
+        normalized.commercialDescription ||
+        buildCommercialDescription(
+          normalized
+        ) ||
+        ''
+      ).trim();
+
       normalized.priceNet = round2(
         toFiniteNumber(normalized.priceNet)
       );
@@ -3056,6 +3056,7 @@
         normalized.shortName,
         normalized.displayName,
         normalized.description,
+        normalized.commercialDescription,
         normalized.model,
         normalized.color,
         normalized.presentation,
@@ -3125,34 +3126,130 @@
     );
 
     const KNOWN_BRANDS = [
-      'CASILLERO DEL DIABLO',
-      'JOHNNIE WALKER',
-      'JACK DANIEL’S',
-      "JACK DANIEL'S",
-      'JACK DANIELS',
-      'MOËT & CHANDON',
-      'MOET & CHANDON',
-      'CONCHA Y TORO',
-      'BOMBAY SAPPHIRE',
+      '100 AÑOS',
+      '1800',
+      '3 GENERACIONES',
+      '400 CONEJOS',
+      '7 LEGUAS',
+      'ALMA DE MAGNO',
+      'ANCHO REYES',
       'APPLETON ESTATE',
-      'HAVANA CLUB',
-      'JOSE CUERVO',
-      'JOSÉ CUERVO',
-      'DON JULIO',
+      'ARMAND DE BRIGNAC',
+      'AZTECA DE ORO',
+      'BLACK & WHITE',
+      'BLUE RHIN',
+      'BOMBAY SAPPHIRE',
+      'CAPITÁN MORGAN',
+      'CARDENAL DE MENDOZA',
+      'CASA DRAGONES',
       'CASA MADERO',
-      'LA CETTO',
+      'CASILLERO DEL DIABLO',
+      'CHATEAU DOMECQ',
+      'CHIVAS REGAL',
+      'CONCHA Y TORO',
+      'CUERVO 1800',
+      'DON JULIO',
+      'DON PEDRO',
+      'DON RAMÓN',
+      'DOM PÉRIGNON',
+      'FLOR DE CAÑA',
+      'GRAN CENTENARIO',
       'GRAND MARNIER',
-      'REMY MARTIN',
+      'HAVANA CLUB',
+      'JACK DANIELS',
+      'JOHNNIE WALKER',
+      'JOSÉ CUERVO',
+      'LA CETTO',
+      'LAMBRUSCO RIUNITE',
+      'LOS DANZANTES',
+      'LOS VASCOS',
+      'LOUIS ROEDERER',
+      'MAESTRO DOBEL',
+      'MARQUÉS DE CÁCERES',
+      'MARQUÉS DE RISCAL',
+      'MOËT & CHANDON',
+      'MONTE XANIC',
+      'OJO DE TIGRE',
+      'OLMECA ALTOS',
+      'PATA NEGRA',
+      'PERRIER JOUËT',
+      'RECUERDO DE OAXACA',
       'RÉMY MARTIN',
-      'CAPTAIN MORGAN',
-      'SANTA TERESA',
       'RON ZACAPA',
-      'VILLA MASSA',
-      'JÄGERMEISTER',
-      'JAGERMEISTER',
-      "HENDRICK'S",
+      'SANGRE DE TORO',
+      'SANTO TOMÁS',
+      'SAUZA HORNITOS',
+      'ST RÉMY',
+      'TERRAZAS DE LOS ANDES',
+      'THE DALMORE',
+      'VALLE REDONDO',
+      'VEUVE CLICQUOT',
+      'VIUDA DE ROMERO',
+      'ABSOLUT',
+      'ALACRÁN',
+      'ALIPÚS',
+      'AMARÁS',
+      'ANTILLANO',
+      'APEROL',
+      'ARZUAGA',
+      'BACARDÍ',
+      'BALLANTINES',
+      'BEEFEATER',
+      'BENEVA',
+      'BERONIA',
+      'BOMBAY',
+      'BROCKMANS',
+      'BUCHANANS',
+      'BULLDOG',
+      'BUSHMILLS',
+      'CABRITO',
+      'CADENAS',
+      'CAZADORES',
+      'CHANDON',
+      'CHINCHÓN',
+      'CINZANO',
+      'CORRALEJO',
+      'COURVOISIER',
+      'CREYENTE',
+      'CUNE',
+      'DISARONNO',
+      'ENEMIGO',
+      'FREIXENET',
+      'FUNDADOR',
+      'GLENFIDDICH',
+      'GLENLIVET',
+      'GLENMORANGIE',
       'HENDRICKS',
-      'GREY GOOSE'
+      'HENNESSY',
+      'HERRADURA',
+      'HPNOTIQ',
+      'J&B',
+      'JÄGERMEISTER',
+      'JIMADOR',
+      'JIM BEAM',
+      'LILLET',
+      'MACALLAN',
+      'MARTELL',
+      'MARTINI',
+      'MATARROMERA',
+      'MATUSALEM',
+      'MIDORI',
+      'MONTELOBOS',
+      'ORENDAIN',
+      'PATRÓN',
+      'PESQUERA',
+      'PRESIDENTE',
+      'PROTOS',
+      'RANCHO ESCONDIDO',
+      'SMIRNOFF',
+      'STOLICHNAYA',
+      'TAITTINGER',
+      'TANQUERAY',
+      'TORRES',
+      'TRAPICHE',
+      'WYBOROWA',
+      'ZAVERICH',
+      'ZIGNUM'
     ];
 
     const BRAND_STOP_WORDS = new Set([
@@ -3209,45 +3306,263 @@
       const name = String(value || '').trim();
       if (!name) return '';
 
-      const normalizedName = name
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toUpperCase();
+      const stripped = name
+        .replace(
+          CATEGORY_PREFIX_PATTERN,
+          ''
+        )
+        .trim();
 
-      for (const brand of KNOWN_BRANDS) {
-        const normalizedBrand = brand
+      const normalizedName = normalize(
+        stripped
+      );
+
+      const orderedBrands =
+        KNOWN_BRANDS
+          .slice()
+          .sort(
+            (left, right) =>
+              right.length - left.length
+          );
+
+      for (const brand of orderedBrands) {
+        if (
+          normalizedName.includes(
+            normalize(brand)
+          )
+        ) {
+          return brand;
+        }
+      }
+
+      const cleaned = stripped
+        .replace(
+          /\b\d+(?:[.,]\d+)?\s*(?:ML|L)\b/gi,
+          ' '
+        )
+        .replace(/\+\s*.*$/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const tokens = cleaned
+        .split(' ')
+        .filter(Boolean);
+
+      const leadingNoise = new Set([
+        'DE', 'DEL', 'CON', 'C',
+        'C/HIERBA', 'C/TEQ', 'ORUJO',
+        'LICOR', 'CREMA', 'ANIS',
+        'ANÍS', 'AMARETTO', 'AMARO',
+        'ESPUMOSO', 'VINO', 'WHISKY',
+        'TEQUILA', 'RON', 'AGAVE', 'MA'
+      ]);
+
+      while (tokens.length) {
+        const token = tokens[0]
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .toUpperCase();
 
         if (
-          normalizedName.includes(normalizedBrand)
+          leadingNoise.has(token) ||
+          BRAND_STOP_WORDS.has(token) ||
+          /^\d+$/.test(token)
         ) {
-          const start = normalizedName.indexOf(normalizedBrand);
-          return name.slice(start, start + brand.length);
+          tokens.shift();
+          continue;
         }
+
+        break;
       }
 
-      // Evita inventar marcas a partir de fragmentos como “AGU DE”,
-      // “ARDIENTE DE”, “VINO TINTO” o “CHAMPAGNE BRUT”.
-      return '';
+      if (!tokens.length) return '';
+
+      const output = [];
+
+      for (
+        let index = 0;
+        index < tokens.length &&
+        output.length < 3;
+        index++
+      ) {
+        const token = tokens[index];
+        const normalizedToken = token
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toUpperCase()
+          .replace(/[.,;:]+$/g, '');
+
+        if (
+          output.length &&
+          (
+            BRAND_STOP_WORDS.has(
+              normalizedToken
+            ) ||
+            /^\d/.test(normalizedToken)
+          )
+        ) {
+          break;
+        }
+
+        output.push(token);
+      }
+
+      return output
+        .join(' ')
+        .replace(/[.,;:]+$/g, '')
+        .trim();
+    }
+
+    function buildCommercialDescription(product) {
+      const title = String(
+        product.displayName ||
+        product.description ||
+        ''
+      ).trim();
+
+      const brand = String(
+        product.brand || ''
+      ).trim();
+
+      const category = String(
+        product.category || 'producto'
+      ).trim();
+
+      const volume = String(
+        product.volume ||
+        product.presentation ||
+        ''
+      ).trim();
+
+      const key = normalize(category);
+
+      const categoryNames = {
+        tequila: 'una opción de tequila',
+        mezcal: 'una opción de mezcal',
+        whisky: 'un whisky',
+        ron: 'un ron',
+        vodka: 'un vodka',
+        ginebra: 'una ginebra',
+        brandy: 'un brandy',
+        cognac: 'un cognac',
+        champagne: 'un champagne',
+        espumosos: 'un vino espumoso',
+        'vino tinto': 'un vino tinto',
+        'vino blanco': 'un vino blanco',
+        'vino rosado': 'un vino rosado',
+        licores: 'un licor',
+        cremas: 'una crema de licor',
+        anis: 'un anís',
+        'aperitivos y vermouth':
+          'un aperitivo o vermouth',
+        aguardiente: 'un aguardiente',
+        sidra: 'una sidra',
+        jerez: 'un jerez',
+        oporto: 'un oporto',
+        rompope: 'un rompope'
+      };
+
+      const usageCopy = {
+        champagne:
+          'Está pensado para brindis, celebraciones y aperitivos; sírvelo bien frío.',
+        espumosos:
+          'Está pensado para brindis, celebraciones y aperitivos; sírvelo bien frío.',
+        'vino tinto':
+          'Puede acompañar comidas, cenas y sobremesas; sirve a la temperatura indicada por el productor.',
+        'vino blanco':
+          'Puede acompañar comidas, aperitivos y reuniones; sirve a la temperatura indicada por el productor.',
+        'vino rosado':
+          'Puede acompañar comidas ligeras, aperitivos y reuniones; sirve bien frío.',
+        tequila:
+          'Puede disfrutarse solo, con hielo o como base de coctelería, de acuerdo con el estilo indicado en la etiqueta.',
+        mezcal:
+          'Puede apreciarse solo o utilizarse en coctelería, de acuerdo con el estilo indicado en la etiqueta.',
+        whisky:
+          'Puede apreciarse solo, con hielo o en coctelería, según la ocasión y la preferencia de servicio.',
+        ron:
+          'Puede servirse solo, con hielo o en coctelería, según la ocasión y la preferencia de servicio.',
+        brandy:
+          'Puede disfrutarse solo, con hielo o durante la sobremesa.',
+        cognac:
+          'Puede disfrutarse solo, con hielo o durante la sobremesa.',
+        ginebra:
+          'Puede servirse con mezcladores o utilizarse como base de coctelería.',
+        vodka:
+          'Puede servirse frío, con mezcladores o utilizarse como base de coctelería.',
+        licores:
+          'Puede servirse solo, frío, durante la sobremesa o utilizarse en coctelería.',
+        cremas:
+          'Puede servirse fría, con hielo, durante la sobremesa o utilizarse en coctelería.'
+      };
+
+      const categoryPhrase =
+        categoryNames[key] ||
+        'una presentación de la colección';
+
+      const brandPhrase = brand
+        ? ' de ' + brand
+        : '';
+
+      const volumePhrase = volume
+        ? ' en formato de ' + volume
+        : '';
+
+      return (
+        title +
+        ' es ' +
+        categoryPhrase +
+        brandPhrase +
+        volumePhrase +
+        '. ' +
+        (
+          usageCopy[key] ||
+          'Es una opción para integrar a tu selección, regalar o compartir responsablemente.'
+        ) +
+        ' Consulta la etiqueta para confirmar origen, graduación alcohólica, ingredientes y recomendaciones específicas de servicio.'
+      );
     }
 
     function buildSquareImageUrl(value) {
-      const url = String(value || '').trim();
+      const source = String(
+        value || ''
+      ).trim();
 
-      if (!/^https?:\/\//i.test(url)) {
-        return url;
+      if (!/^https?:\/\//i.test(source)) {
+        return source;
       }
 
-      if (/images\.weserv\.nl\//i.test(url)) {
-        return url;
-      }
+      try {
+        if (/images\.weserv\.nl\//i.test(source)) {
+          const proxyUrl =
+            new URL(source);
 
-      return 'https://images.weserv.nl/?url=' +
-        encodeURIComponent(url) +
-        '&w=900&h=900&fit=contain&cbg=ffffff' +
-        '&output=webp&q=86&we=1';
+          proxyUrl.searchParams.set('w', '900');
+          proxyUrl.searchParams.set('h', '900');
+          proxyUrl.searchParams.set(
+            'fit',
+            'contain'
+          );
+          proxyUrl.searchParams.set(
+            'cbg',
+            'ffffff'
+          );
+          proxyUrl.searchParams.set(
+            'output',
+            'webp'
+          );
+          proxyUrl.searchParams.set('q', '86');
+          proxyUrl.searchParams.set('we', '1');
+
+          return proxyUrl.toString();
+        }
+      } catch (_) {}
+
+      return (
+        'https://images.weserv.nl/?url=' +
+        encodeURIComponent(source) +
+        '&w=900&h=900&fit=contain' +
+        '&cbg=ffffff&output=webp&q=86&we=1'
+      );
     }
 
     function getProduct(code) {
