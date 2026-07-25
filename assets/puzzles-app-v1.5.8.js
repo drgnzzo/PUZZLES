@@ -740,42 +740,48 @@
         title: 'Una celebración toma forma desde la primera elección.',
         text: 'Encuentra vinos, espumosos y destilados para acompañar los momentos que merecen recordarse.',
         ctaText: 'ARMAR MI SELECCIÓN',
-        ctaAction: 'intent:celebration'
+        ctaAction: 'intent:celebration',
+        imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-01-editorial.png'
       },
       {
         kicker: 'REGALOS CON INTENCIÓN',
         title: 'Una buena botella también puede decir mucho.',
         text: 'Descubre etiquetas y presentaciones para agradecer, reconocer o celebrar a alguien.',
         ctaText: 'EXPLORAR REGALOS',
-        ctaAction: 'intent:gift'
+        ctaAction: 'intent:gift',
+        imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png'
       },
       {
         kicker: 'COMPLETA TU CAVA',
         title: 'Tu colección se construye pieza por pieza.',
         text: 'Repón tus esenciales, descubre nuevas etiquetas y mantén una selección preparada para cada ocasión.',
         ctaText: 'VER SELECCIÓN PARA CAVA',
-        ctaAction: 'intent:cellar'
+        ctaAction: 'intent:cellar',
+        imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-03-editorial.png'
       },
       {
         kicker: 'PARA COMPARTIR',
         title: 'Cada mesa tiene una combinación que encaja.',
         text: 'Selecciones pensadas para cenas, reuniones, sobremesas y momentos alrededor de la mesa.',
         ctaText: 'ELEGIR PARA MI MESA',
-        ctaAction: 'intent:table'
+        ctaAction: 'intent:table',
+        imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-04-botellas.png'
       },
       {
         kicker: 'DESCUBRE OTRA PIEZA',
         title: 'Una nueva etiqueta puede cambiar la experiencia.',
         text: 'Explora distintos orígenes, estilos, variedades y perfiles de sabor.',
         ctaText: 'DESCUBRIR PRODUCTOS',
-        ctaAction: 'intent:discovery'
+        ctaAction: 'intent:discovery',
+        imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-05-editorial.png'
       },
       {
         kicker: 'SELECCIONES COMPLETAS',
         title: 'Todo lo necesario para armar el momento.',
         text: 'Combinaciones sugeridas para celebrar, compartir, regalar o completar tu cava.',
         ctaText: 'VER SELECCIONES',
-        ctaAction: 'intent:selections'
+        ctaAction: 'intent:selections',
+        imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png'
       }
     ];
 
@@ -803,25 +809,29 @@
             ...fallback,
             ...banner,
             kicker:
-              displayBanner.kicker ||
+              banner.kicker ||
               fallback.kicker ||
               '',
             title:
-              displayBanner.title ||
+              banner.title ||
               fallback.title ||
               '',
             text:
-              displayBanner.text ||
+              banner.text ||
               fallback.text ||
               '',
             ctaText:
-              displayBanner.ctaText ||
+              banner.ctaText ||
               fallback.ctaText ||
               '',
             ctaAction:
-              displayBanner.ctaAction ||
+              banner.ctaAction ||
               fallback.ctaAction ||
-              'catalog'
+              'catalog',
+            imageUrl:
+              banner.imageUrl ||
+              fallback.imageUrl ||
+              ''
           };
 
           const align =
