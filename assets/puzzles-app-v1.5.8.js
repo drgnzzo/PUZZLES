@@ -16,7 +16,7 @@
       CUSTOMER: 'puzzles_customer_v2',
       VIEW: 'puzzles_catalog_view_v1',
       SESSION: 'puzzles_session_v1',
-      STORE: 'puzzles_store_snapshot_v1_5_8_final'
+      STORE: 'puzzles_store_snapshot_v1_5_8_momentos'
     });
 
     const PUZZLES_STORAGE_MEMORY = {};
@@ -57,7 +57,7 @@
       store: {
         name: 'PUZZLES',
         subtitle: 'Vinos, licores y destilados',
-        hero: 'Encuentra la pieza correcta para cada ocasión.',
+        hero: 'No eliges solamente una botella. Eliges cómo quieres vivir el momento.',
         priceNotice: 'Cada precio y disponibilidad se confirma antes de cerrar la solicitud.',
         whatsapp: '',
         currency: 'MXN',
@@ -65,7 +65,7 @@
         allowPickup: true,
         minimumOrder: 0,
         showWithoutTax: true,
-        footerText: 'Venta exclusiva para mayores de 18 años. Evita el exceso.'
+        footerText: 'Elige con intención y disfruta con responsabilidad. Venta exclusiva para mayores de 18 años.'
       },
       products: [],
       categories: [],
@@ -74,12 +74,13 @@
       category: 'Todas',
       brand: 'Todas',
       brands: [],
+      editorialIntent: null,
       ageConfirmedThisVisit: false,
       minPrice: '',
       maxPrice: '',
       includeConsult: true,
       sort: 'featured',
-      view: puzzlesStorageGet(STORAGE_KEYS.VIEW) || 'grid',
+      view: 'grid',
       page: 1,
       pageSize: 60,
       cart: loadJson(STORAGE_KEYS.CART, {}),
@@ -147,6 +148,14 @@
       puzzlesStorageRemove('puzzles_cart_v2');
 
       cacheDom();
+
+      // La tienda siempre abre en cuadrícula.
+      // Una preferencia vieja no puede forzar el modo lista.
+      puzzlesStorageRemove(
+        STORAGE_KEYS.VIEW
+      );
+
+      state.view = 'grid';
       bindEvents();
       restoreAgeGate();
       restoreCustomer();
@@ -189,7 +198,7 @@
       [
         'ageGate','agePrompt','ageDenied','btnAgeNo','btnAgeYes','announcementText',
         'brandName','brandSubtitle','feature1Title','featureCatalogText','feature2Title','feature2Text','feature3Title','feature3Text','catalogKicker','catalogTitle','catalogDescription','githubSetup',
-        'heroCarousel','heroSlides','heroDots','btnHeroPrev','btnHeroNext',
+        'heroCarousel','heroSlides','heroDots','btnHeroPrev','btnHeroNext','momentGrid','selectionGrid',
         'categoryList','brandFilter','priceMin','priceMax','includeConsult','filtersPanel','btnClearFilters',
         'btnMobileFilters','searchInput','sortSelect','btnGridView','btnTableView',
         'resultCount','resultRange','activeFilterWrap','loadingState','errorState','errorMessage',
@@ -251,6 +260,20 @@
 
       document.querySelectorAll('[data-scroll-catalog]').forEach(button => {
         button.addEventListener('click', () => document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' }));
+      });
+
+      document.querySelectorAll('[data-scroll-moments]').forEach(button => {
+        button.addEventListener('click', () => document.getElementById('momentos').scrollIntoView({ behavior: 'smooth' }));
+      });
+
+      document.addEventListener('click', event => {
+        const intentTrigger = event.target.closest('[data-editorial-action]');
+        if (!intentTrigger) return;
+
+        event.preventDefault();
+        handleEditorialAction(
+          intentTrigger.dataset.editorialAction || 'catalog'
+        );
       });
 
       listen(dom.btnSearchHeader, 'click', () => {
@@ -685,19 +708,20 @@
       dom.announcementText.textContent = state.store.priceNotice;
       dom.footerText.textContent = state.store.footerText;
       const features = Array.isArray(state.store.features) ? state.store.features : [];
-      dom.feature1Title.textContent = (features[0] && features[0].title) || 'COLECCIÓN CLARA';
-      dom.featureCatalogText.textContent = (features[0] && features[0].text) || 'Productos, presentaciones y precios organizados para comparar con facilidad.';
-      dom.feature2Title.textContent = (features[1] && features[1].title) || 'BÚSQUEDA PRECISA';
-      dom.feature2Text.textContent = (features[1] && features[1].text) || 'Filtra por categoría, marca, contenido y rango de precio.';
-      dom.feature3Title.textContent = (features[2] && features[2].title) || 'SELECCIÓN CONTINUA';
-      dom.feature3Text.textContent = (features[2] && features[2].text) || 'Tu carrito permanece disponible mientras recorres la colección.';
-      dom.catalogKicker.textContent = state.store.catalogKicker || 'NUESTRA COLECCIÓN';
-      dom.catalogTitle.textContent = state.store.catalogTitle || 'Explora la colección completa';
-      dom.catalogDescription.textContent = state.store.catalogText || 'Elige piezas de la colección y agrégalas al carrito.';
+      dom.feature1Title.textContent = (features[0] && features[0].title) || 'MOMENTOS CON INTENCIÓN';
+      dom.featureCatalogText.textContent = (features[0] && features[0].text) || 'Selecciones para celebrar, compartir, regalar, descubrir o completar tu cava.';
+      dom.feature2Title.textContent = (features[1] && features[1].title) || 'ELECCIONES MÁS CLARAS';
+      dom.feature2Text.textContent = (features[1] && features[1].text) || 'Compara categoría, marca, contenido y precio sin perder de vista la ocasión.';
+      dom.feature3Title.textContent = (features[2] && features[2].title) || 'TU SELECCIÓN, A TU RITMO';
+      dom.feature3Text.textContent = (features[2] && features[2].text) || 'Guarda lo que te interesa y continúa armando el momento cuando estés listo.';
+      dom.catalogKicker.textContent = state.store.catalogKicker || 'LA COLECCIÓN COMPLETA';
+      dom.catalogTitle.textContent = state.store.catalogTitle || 'Cuando ya sabes qué pieza estás buscando';
+      dom.catalogDescription.textContent = state.store.catalogText || 'Filtra la colección y encuentra la opción que encaja con el momento.';
       [dom.btnHeaderWhatsApp, dom.btnFooterWhatsApp].forEach(button => {
         button.style.display = state.store.whatsapp ? '' : 'none';
       });
       renderCarousel();
+      renderEditorialSections();
       renderFulfillmentOptions();
     }
 
@@ -711,8 +735,7 @@
 
     function renderCarousel() {
       const banners =
-        Array.isArray(state.store.banners) &&
-        state.store.banners.length
+        Array.isArray(state.store.banners)
           ? state.store.banners
           : [];
 
@@ -723,23 +746,89 @@
       }
 
       dom.heroSlides.innerHTML = banners
-        .map((banner, index) => `
-          <article
-            class="hero-slide hero-slide--artwork ${index === state.carouselIndex ? 'is-active' : ''}"
-            data-hero-catalog
-            role="button"
-            tabindex="0"
-            aria-label="${escapeAttr(banner.title || 'Explorar catálogo')}"
-          >
-            <img
-              class="hero-slide__artwork"
-              src="${escapeAttr(banner.imageUrl || '')}"
-              alt="${escapeAttr(banner.title || 'Selección PUZZLES')}"
-              decoding="async"
-              fetchpriority="${index === 0 ? 'high' : 'auto'}"
+        .map((banner, index) => {
+          const align =
+            ['left', 'center', 'right'].includes(
+              banner.align
+            )
+              ? banner.align
+              : 'left';
+
+          const darkness = Math.max(
+            0,
+            Math.min(
+              0.9,
+              Number(banner.darkness || 0.58)
+            )
+          );
+
+          const zoom = Math.max(
+            0.8,
+            Math.min(
+              1.6,
+              Number(banner.imageZoom || 1)
+            )
+          );
+
+          const showText =
+            banner.showText !== false;
+
+          const content = showText
+            ? `
+              <div class="hero-slide__content hero-slide__content--${align}">
+                ${banner.kicker
+                  ? `<span class="hero-slide__kicker">${escapeHtml(banner.kicker)}</span>`
+                  : ''
+                }
+                ${banner.title
+                  ? `<h1>${escapeHtml(banner.title)}</h1>`
+                  : ''
+                }
+                ${banner.text
+                  ? `<p>${escapeHtml(banner.text)}</p>`
+                  : ''
+                }
+                ${banner.ctaText
+                  ? `
+                    <button
+                      class="btn btn--gold hero-slide__cta"
+                      type="button"
+                      data-editorial-action="${escapeAttr(banner.ctaAction || 'catalog')}"
+                    >
+                      ${escapeHtml(banner.ctaText)}
+                    </button>
+                  `
+                  : ''
+                }
+              </div>
+            `
+            : '';
+
+          return `
+            <article
+              class="hero-slide hero-slide--controlled ${index === state.carouselIndex ? 'is-active' : ''}"
+              style="
+                --banner-darkness:${darkness};
+                --banner-text-color:${escapeAttr(banner.textColor || '#FFFFFF')};
+              "
+              aria-label="${escapeAttr(banner.title || 'Selección PUZZLES')}"
             >
-          </article>
-        `)
+              <img
+                class="hero-slide__artwork"
+                src="${escapeAttr(banner.imageUrl || '')}"
+                alt="${escapeAttr(banner.title || 'Selección PUZZLES')}"
+                style="
+                  object-position:${escapeAttr(banner.imagePosition || 'center center')};
+                  transform:scale(${zoom});
+                "
+                decoding="async"
+                fetchpriority="${index === 0 ? 'high' : 'auto'}"
+              >
+              <div class="hero-slide__shade" aria-hidden="true"></div>
+              ${content}
+            </article>
+          `;
+        })
         .join('');
 
       dom.heroDots.innerHTML = banners
@@ -753,45 +842,201 @@
         `)
         .join('');
 
-      dom.heroSlides
-        .querySelectorAll('[data-hero-catalog]')
-        .forEach(slide => {
-          const open = () =>
-            document
-              .getElementById('catalogo')
-              .scrollIntoView({
-                behavior: 'smooth'
-              });
-
-          slide.addEventListener('click', open);
-
-          slide.addEventListener(
-            'keydown',
-            event => {
-              if (
-                event.key === 'Enter' ||
-                event.key === ' '
-              ) {
-                event.preventDefault();
-                open();
-              }
-            }
-          );
-        });
-
       dom.heroDots
         .querySelectorAll('[data-carousel-index]')
-        .forEach(btn =>
-          btn.addEventListener(
-            'click',
-            () =>
-              setCarousel(
-                Number(btn.dataset.carouselIndex)
-              )
-          )
-        );
+        .forEach(button => {
+          button.addEventListener('click', () => {
+            setCarousel(
+              Number(button.dataset.carouselIndex)
+            );
+          });
+        });
 
       restartCarousel();
+    }
+
+    function renderEditorialSections() {
+      const moments =
+        Array.isArray(state.store.moments)
+          ? state.store.moments
+          : [];
+
+      const selections =
+        Array.isArray(state.store.selections)
+          ? state.store.selections
+          : [];
+
+      if (dom.momentGrid) {
+        dom.momentGrid.innerHTML = moments
+          .map((moment, index) => `
+            <article class="moment-card">
+              <span class="moment-card__number">${String(index + 1).padStart(2, '0')}</span>
+              <span class="moment-card__eyebrow">${escapeHtml(moment.eyebrow || '')}</span>
+              <h3>${escapeHtml(moment.title || '')}</h3>
+              <p>${escapeHtml(moment.text || '')}</p>
+              <button
+                class="link-button link-button--arrow"
+                type="button"
+                data-editorial-action="${escapeAttr(moment.action || 'catalog')}"
+              >
+                Ver opciones <span aria-hidden="true">→</span>
+              </button>
+            </article>
+          `)
+          .join('');
+      }
+
+      if (dom.selectionGrid) {
+        dom.selectionGrid.innerHTML = selections
+          .map(selection => `
+            <article class="selection-card">
+              <span class="selection-card__kicker">${escapeHtml(selection.kicker || '')}</span>
+              <h3>${escapeHtml(selection.title || '')}</h3>
+              <p>${escapeHtml(selection.text || '')}</p>
+              <span class="selection-card__meta">${escapeHtml(selection.meta || '')}</span>
+              <button
+                class="btn btn--outline selection-card__button"
+                type="button"
+                data-editorial-action="${escapeAttr(selection.action || 'catalog')}"
+              >
+                Explorar esta selección
+              </button>
+            </article>
+          `)
+          .join('');
+      }
+    }
+
+    function handleEditorialAction(action) {
+      const value = String(action || 'catalog').trim();
+
+      if (value === 'catalog') {
+        document
+          .getElementById('catalogo')
+          .scrollIntoView({ behavior: 'smooth' });
+
+        return;
+      }
+
+      if (value.startsWith('url:')) {
+        const url = value.slice(4).trim();
+
+        if (/^https:\/\//i.test(url)) {
+          window.open(
+            url,
+            '_blank',
+            'noopener,noreferrer'
+          );
+        }
+
+        return;
+      }
+
+      if (value.startsWith('category:')) {
+        state.editorialIntent = null;
+        state.category =
+          value.slice(9).trim() ||
+          'Todas';
+        state.page = 1;
+
+        renderCategories();
+        applyFilters();
+
+        document
+          .getElementById('catalogo')
+          .scrollIntoView({ behavior: 'smooth' });
+
+        return;
+      }
+
+      if (value.startsWith('intent:')) {
+        applyEditorialIntent(
+          value.slice(7).trim()
+        );
+      }
+    }
+
+    function findEditorialIntent(key) {
+      const collections = []
+        .concat(
+          Array.isArray(state.store.moments)
+            ? state.store.moments
+            : []
+        )
+        .concat(
+          Array.isArray(state.store.selections)
+            ? state.store.selections
+            : []
+        );
+
+      return collections.find(
+        item => item.key === key
+      ) || null;
+    }
+
+    function applyEditorialIntent(key) {
+      const intent =
+        findEditorialIntent(key);
+
+      state.editorialIntent = intent;
+      state.category = 'Todas';
+      state.brand = 'Todas';
+      state.search = '';
+      state.minPrice = '';
+      state.maxPrice = '';
+      state.includeConsult = true;
+      state.sort =
+        intent && intent.sort
+          ? intent.sort
+          : 'featured';
+      state.page = 1;
+
+      dom.searchInput.value = '';
+      dom.priceMin.value = '';
+      dom.priceMax.value = '';
+      dom.includeConsult.checked = true;
+      dom.sortSelect.value = state.sort;
+
+      if (dom.brandFilter) {
+        dom.brandFilter.value = 'Todas';
+      }
+
+      renderCategories();
+      renderBrands();
+      applyFilters();
+
+      document
+        .getElementById('catalogo')
+        .scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+    }
+
+    function productMatchesEditorialIntent(product) {
+      const intent =
+        state.editorialIntent;
+
+      if (
+        !intent ||
+        !Array.isArray(intent.categories) ||
+        !intent.categories.length
+      ) {
+        return true;
+      }
+
+      const productCategory =
+        normalize(product.category || '');
+
+      return intent.categories.some(category => {
+        const target = normalize(category);
+
+        return (
+          productCategory === target ||
+          productCategory.includes(target) ||
+          target.includes(productCategory)
+        );
+      });
     }
 
     function setCarousel(index) {
@@ -845,6 +1090,7 @@
 
       dom.categoryList.querySelectorAll('[data-category]').forEach(button => {
         button.addEventListener('click', () => {
+          state.editorialIntent = null;
           state.category = button.dataset.category;
           state.page = 1;
           renderCategories();
@@ -899,6 +1145,10 @@
       state.searchScores = new Map();
 
       let products = state.products.filter(product => {
+        if (!productMatchesEditorialIntent(product)) {
+          return false;
+        }
+
         if (
           state.category !== 'Todas' &&
           product.category !== state.category
@@ -1139,6 +1389,7 @@
 
     function clearFilters() {
       state.search = '';
+      state.editorialIntent = null;
       state.category = 'Todas';
       state.brand = 'Todas';
       state.minPrice = '';
@@ -1181,17 +1432,31 @@
       renderActiveFilter();
 
       if (state.view === 'table') {
+        dom.gridView.innerHTML = '';
         renderTable(pageProducts);
         showOnlyState('table');
       } else {
+        dom.tableView.innerHTML = '';
         renderGrid(pageProducts);
         showOnlyState('grid');
       }
+
       renderPagination();
+      applyCatalogViewVisibility();
     }
 
     function renderActiveFilter() {
       const labels = [];
+
+      if (
+        state.editorialIntent &&
+        state.editorialIntent.title
+      ) {
+        labels.push(
+          'Momento: ' +
+          state.editorialIntent.title
+        );
+      }
 
       if (state.category !== 'Todas') {
         labels.push(state.category);
@@ -1566,10 +1831,13 @@
           ? 'table'
           : 'grid';
 
-      puzzlesStorageSet(
-        STORAGE_KEYS.VIEW,
-        state.view
+      // No se persiste la vista: cada nueva visita inicia en cuadrícula.
+      puzzlesStorageRemove(
+        STORAGE_KEYS.VIEW
       );
+
+      document.body.dataset.catalogView =
+        state.view;
 
       dom.btnGridView.classList.toggle(
         'is-active',
@@ -1598,7 +1866,44 @@
       if (render && !state.loading) {
         renderCatalog();
       } else {
-        showOnlyState(state.view);
+        applyCatalogViewVisibility();
+      }
+    }
+
+    function applyCatalogViewVisibility() {
+      const showTable =
+        state.view === 'table';
+
+      if (dom.gridView) {
+        dom.gridView.hidden = showTable;
+        dom.gridView.classList.toggle(
+          'hidden',
+          showTable
+        );
+
+        dom.gridView.style.setProperty(
+          'display',
+          showTable
+            ? 'none'
+            : 'grid',
+          'important'
+        );
+      }
+
+      if (dom.tableView) {
+        dom.tableView.hidden = !showTable;
+        dom.tableView.classList.toggle(
+          'hidden',
+          !showTable
+        );
+
+        dom.tableView.style.setProperty(
+          'display',
+          showTable
+            ? 'block'
+            : 'none',
+          'important'
+        );
       }
     }
 
@@ -1615,34 +1920,56 @@
         element.hidden = true;
       });
 
-      [dom.gridView, dom.tableView]
-        .filter(Boolean)
-        .forEach(element => {
-          element.classList.add('hidden');
-          element.hidden = true;
-          element.style.display = 'none';
-        });
+      const isCatalogView =
+        type === 'grid' ||
+        type === 'table';
 
-      if (type === 'error' && dom.errorState) {
-        dom.errorState.classList.remove('hidden');
+      if (!isCatalogView) {
+        [dom.gridView, dom.tableView]
+          .filter(Boolean)
+          .forEach(element => {
+            element.classList.add('hidden');
+            element.hidden = true;
+            element.style.setProperty(
+              'display',
+              'none',
+              'important'
+            );
+          });
+      }
+
+      if (
+        type === 'error' &&
+        dom.errorState
+      ) {
+        dom.errorState.classList.remove(
+          'hidden'
+        );
+
         dom.errorState.hidden = false;
       }
 
-      if (type === 'empty' && dom.emptyState) {
-        dom.emptyState.classList.remove('hidden');
+      if (
+        type === 'empty' &&
+        dom.emptyState
+      ) {
+        dom.emptyState.classList.remove(
+          'hidden'
+        );
+
         dom.emptyState.hidden = false;
       }
 
-      if (type === 'grid' && dom.gridView) {
-        dom.gridView.classList.remove('hidden');
-        dom.gridView.hidden = false;
-        dom.gridView.style.display = 'grid';
-      }
+      if (isCatalogView) {
+        state.view =
+          type === 'table'
+            ? 'table'
+            : 'grid';
 
-      if (type === 'table' && dom.tableView) {
-        dom.tableView.classList.remove('hidden');
-        dom.tableView.hidden = false;
-        dom.tableView.style.display = 'block';
+        document.body.dataset.catalogView =
+          state.view;
+
+        applyCatalogViewVisibility();
       }
     }
 
