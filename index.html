@@ -1,2 +1,411 @@
-<!DOCTYPE html>
-<html lang="es-MX"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><title>PUZZLES</title><style>*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000}iframe{width:100%;height:100%;border:0;background:#000}</style></head><body><iframe src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec" title="PUZZLES" allow="clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#000000">
+  <meta name="background-color" content="#000000">
+  <meta
+    name="description"
+    content="PUZZLES · Catálogo de vinos, licores y destilados"
+  >
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="black-translucent"
+  >
+  <meta name="apple-mobile-web-app-title" content="PUZZLES">
+
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link
+    rel="apple-touch-icon"
+    href="./assets/apple-touch-icon.png"
+  >
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="192x192"
+    href="./assets/icon-192.png"
+  >
+
+  <title>PUZZLES</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --gold: #d89a00;
+      --gold-dark: #a66f00;
+      --surface: #111111;
+      --line: #343434;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    body {
+      padding:
+        env(safe-area-inset-top)
+        env(safe-area-inset-right)
+        env(safe-area-inset-bottom)
+        env(safe-area-inset-left);
+    }
+
+    .app-shell {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 100dvh;
+      background: #000;
+    }
+
+    iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #000;
+    }
+
+    .splash {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(
+          circle at 70% 20%,
+          rgba(216,154,0,.15),
+          transparent 34%
+        ),
+        #000;
+      transition:
+        opacity .25s ease,
+        visibility .25s ease;
+    }
+
+    .splash.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-card {
+      width: min(460px, 100%);
+      padding: 28px;
+      text-align: center;
+      border: 1px solid var(--line);
+      border-top-color: var(--gold);
+      background: rgba(17,17,17,.97);
+    }
+
+    .splash-logo {
+      width: min(330px, 82vw);
+      margin: 0 auto 22px;
+      display: block;
+    }
+
+    .loader {
+      width: 46px;
+      height: 46px;
+      margin: 0 auto 18px;
+      border: 3px solid #2d2d2d;
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    p {
+      margin: 0;
+      color: #bdbdbd;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      min-height: 44px;
+      padding: 0 18px;
+      border: 1px solid var(--gold);
+      border-radius: 0;
+      background: var(--gold);
+      color: #000;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: #fff;
+      border-color: #555;
+    }
+
+    #installButton {
+      display: none;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #303030;
+      color: #d2d2d2;
+      font-size: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .splash {
+        align-items: end;
+        padding:
+          max(12px, env(safe-area-inset-top))
+          max(12px, env(safe-area-inset-right))
+          max(12px, env(safe-area-inset-bottom))
+          max(12px, env(safe-area-inset-left));
+      }
+
+      .splash-card {
+        padding: 22px 16px;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app-shell">
+    <iframe
+      id="puzzlesFrame"
+      src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&v=1.5.6"
+      title="PUZZLES"
+      allow="clipboard-write"
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></iframe>
+
+    <section id="splash" class="splash" aria-live="polite">
+      <div class="splash-card">
+        <img
+          class="splash-logo"
+          src="./assets/logo-puzzles-header.png"
+          alt="PUZZLES · Vinos, licores y destilados"
+        >
+
+        <div id="loader" class="loader" aria-hidden="true"></div>
+
+        <h1 id="statusTitle">Armando la colección</h1>
+
+        <p id="statusText">
+          Estamos conectando las piezas del catálogo.
+        </p>
+
+        <div class="actions">
+          <button id="retryButton" class="secondary" type="button">
+            Reintentar
+          </button>
+
+          <button id="installButton" type="button">
+            Instalar app
+          </button>
+        </div>
+
+        <p id="technicalStatus" class="status">
+          Esperando respuesta de Apps Script.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const APP_URL = "https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec";
+
+    const splash =
+      document.getElementById('splash');
+
+    const loader =
+      document.getElementById('loader');
+
+    const statusTitle =
+      document.getElementById('statusTitle');
+
+    const statusText =
+      document.getElementById('statusText');
+
+    const technicalStatus =
+      document.getElementById('technicalStatus');
+
+    const retryButton =
+      document.getElementById('retryButton');
+
+    const installButton =
+      document.getElementById('installButton');
+
+    const frame =
+      document.getElementById('puzzlesFrame');
+
+    let installPrompt = null;
+    let ready = false;
+
+    function showError(message) {
+      ready = false;
+      loader.style.display = 'none';
+
+      statusTitle.textContent =
+        'No se pudo conectar la colección';
+
+      statusText.textContent =
+        message ||
+        'La implementación de Apps Script no respondió.';
+
+      technicalStatus.textContent =
+        'Revisa que la Web App esté ejecutándose como tú ' +
+        'y que el acceso sea “Cualquier persona”.';
+    }
+
+    function reloadApp() {
+      ready = false;
+      loader.style.display = '';
+      statusTitle.textContent =
+        'Armando la colección';
+      statusText.textContent =
+        'Estamos conectando las piezas del catálogo.';
+      technicalStatus.textContent =
+        'Esperando respuesta de Apps Script.';
+      splash.classList.remove('is-hidden');
+
+      frame.src =
+        APP_URL +
+        '?embed=1&v=1.5.6&t=' +
+        Date.now();
+    }
+
+    window.addEventListener('message', event => {
+      const data = event.data || {};
+
+      if (data.type === 'PUZZLES_READY') {
+        ready = true;
+
+        technicalStatus.textContent =
+          'Colección lista: ' +
+          (data.products || 0) +
+          ' productos.';
+
+        window.setTimeout(() => {
+          splash.classList.add('is-hidden');
+        }, 250);
+      }
+
+      if (data.type === 'PUZZLES_ERROR') {
+        showError(
+          data.message ||
+          'Apps Script devolvió un error.'
+        );
+      }
+    });
+
+    window.setTimeout(() => {
+      if (!ready) {
+        showError(
+          'La Web App sigue sin entregar el catálogo. ' +
+          'La causa más común es una implementación privada ' +
+          'o una versión antigua todavía publicada.'
+        );
+      }
+    }, 30000);
+
+    retryButton.addEventListener(
+      'click',
+      reloadApp
+    );
+
+    window.addEventListener(
+      'beforeinstallprompt',
+      event => {
+        event.preventDefault();
+        installPrompt = event;
+        installButton.style.display = 'inline-flex';
+      }
+    );
+
+    installButton.addEventListener(
+      'click',
+      async () => {
+        if (!installPrompt) return;
+
+        installPrompt.prompt();
+        await installPrompt.userChoice;
+
+        installPrompt = null;
+        installButton.style.display = 'none';
+      }
+    );
+
+    window.addEventListener(
+      'appinstalled',
+      () => {
+        installPrompt = null;
+        installButton.style.display = 'none';
+      }
+    );
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('./sw.js')
+          .catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
