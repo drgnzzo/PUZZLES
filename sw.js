@@ -1,10 +1,11 @@
-const CACHE_NAME = 'puzzles-shell-v1.5.8-logo-unificado';
+const CACHE_NAME = 'puzzles-shell-v1.5.8-logo-final';
 
 const SHELL_FILES = [
   './',
   './index.html',
   './offline.html',
   './manifest.webmanifest',
+  './assets/puzzles_logo.png',
   './assets/logo-puzzles-header.png',
   './assets/logo-puzzles-icon.png',
   './assets/icon-192.png',

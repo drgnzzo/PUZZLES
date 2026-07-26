@@ -1,5 +1,8 @@
 'use strict';
 
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-logo-final';
+    const PUZZLES_OFFICIAL_ICON_URL = 'https://drgnzzo.github.io/PUZZLES/assets/icon-192.png?v=1.5.8-logo-final';
+
     /**
      * Para GitHub Pages:
      * 1) Implementa Code.gs como Aplicación web.
@@ -150,13 +153,18 @@
 
       cacheDom();
 
-      // La tienda siempre abre en cuadrícula.
-      // Una preferencia vieja no puede forzar el modo lista.
+      // La vista inicial depende del dispositivo:
+      // móvil abre en lista y escritorio abre en cuadrícula.
+      // No se recuperan preferencias antiguas.
       puzzlesStorageRemove(
         STORAGE_KEYS.VIEW
       );
 
-      state.view = 'grid';
+      state.view = window.matchMedia(
+        '(max-width: 760px)'
+      ).matches
+        ? 'table'
+        : 'grid';
       bindEvents();
       restoreAgeGate();
       restoreCustomer();
@@ -686,50 +694,52 @@
     }
 
 
-    function applyBrandLogos(logoUrl) {
-      logoUrl = FIXED_PUZZLES_LOGO;
+    function applyBrandLogos() {
       const brands =
         document.querySelectorAll('.brand');
 
       brands.forEach(brand => {
-        const mark =
-          brand.querySelector('.brand__mark');
+        brand.classList.add(
+          'brand--official'
+        );
 
-        const copy =
-          brand.querySelector('.brand__copy') ||
-          brand.querySelector(':scope > span:not(.brand__mark)');
+        let officialImage =
+          brand.querySelector(
+            '.brand__official-logo'
+          );
 
-        if (!mark) return;
+        if (!officialImage) {
+          officialImage =
+            document.createElement('img');
 
-        if (!mark.dataset.originalHtml) {
-          mark.dataset.originalHtml =
-            mark.innerHTML;
+          officialImage.className =
+            'brand__official-logo';
+
+          officialImage.alt =
+            'PUZZLES · Vinos, licores y destilados';
+
+          brand.prepend(officialImage);
         }
 
-        if (logoUrl) {
-          brand.classList.add(
-            'brand--asset'
+        officialImage.src =
+          PUZZLES_OFFICIAL_LOGO_URL;
+
+        const oldMark =
+          brand.querySelector(
+            '.brand__mark'
           );
 
-          mark.innerHTML =
-            '<img src="' +
-            escapeHtml(logoUrl) +
-            '" alt="PUZZLES · Vinos, licores y destilados">';
+        if (oldMark) {
+          oldMark.remove();
+        }
 
-          if (copy) {
-            copy.hidden = true;
-          }
-        } else {
-          brand.classList.remove(
-            'brand--asset'
+        const copy =
+          brand.querySelector(
+            '.brand__copy, :scope > span:not(.brand__mark)'
           );
 
-          mark.innerHTML =
-            mark.dataset.originalHtml;
-
-          if (copy) {
-            copy.hidden = false;
-          }
+        if (copy) {
+          copy.hidden = true;
         }
       });
     }
@@ -738,7 +748,7 @@
       document.title = state.store.name + ' · Vinos y licores';
       dom.brandName.textContent = state.store.name;
       dom.brandSubtitle.textContent = state.store.subtitle;
-      applyBrandLogos(FIXED_PUZZLES_LOGO);
+      applyBrandLogos();
       dom.announcementText.textContent = state.store.priceNotice;
       dom.footerText.textContent = state.store.footerText;
       const features = Array.isArray(state.store.features) ? state.store.features : [];
@@ -1714,8 +1724,8 @@
 
           return `
             <article class="product-card" data-code="${escapeAttr(product.code)}">
-              <button class="product-card__visual product-open-button" type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver información de ${escapeAttr(product.displayName)}">
-                <div class="product-image-fallback" aria-hidden="true">
+              <button class="product-card__visual product-open-button" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver información de ${escapeAttr(product.displayName)}">
+                <div class="product-image-fallback" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" aria-hidden="true">
                   <span>${escapeHtml(categoryLetter(product.category))}</span>
                 </div>
                 ${productImageMarkup(product, 'product-card__image', product.displayName)}
@@ -1811,8 +1821,8 @@
                 <tr>
                   <td class="product-table__product">
                     <button class="product-table__product-wrap product-row-button" type="button" data-product-detail="${escapeAttr(product.code)}">
-                      <span class="product-table__thumb">
-                        <span class="product-image-fallback" aria-hidden="true">
+                      <span class="product-table__thumb" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important">
+                        <span class="product-image-fallback" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" aria-hidden="true">
                           <span>${escapeHtml(categoryLetter(product.category))}</span>
                         </span>
                         ${productImageMarkup(product, 'product-table__image', product.displayName)}
@@ -1913,10 +1923,12 @@
           class="${escapeAttr(className)} js-product-image"
           src="${escapeAttr(displayUrl)}"
           data-original-src="${escapeAttr(product.imageUrl)}"
+          data-darkreader-lock
           alt="${escapeAttr(alt || '')}"
           loading="lazy"
           decoding="async"
           referrerpolicy="no-referrer"
+          style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important;filter:none!important;mix-blend-mode:normal!important"
         >`;
     }
 
@@ -3666,10 +3678,14 @@
             'ffffff'
           );
           proxyUrl.searchParams.set(
+            'bg',
+            'ffffff'
+          );
+          proxyUrl.searchParams.set(
             'output',
             'webp'
           );
-          proxyUrl.searchParams.set('q', '86');
+          proxyUrl.searchParams.set('q', '87');
           proxyUrl.searchParams.set('we', '1');
 
           return proxyUrl.toString();
@@ -3680,7 +3696,7 @@
         'https://images.weserv.nl/?url=' +
         encodeURIComponent(source) +
         '&w=900&h=900&fit=contain' +
-        '&cbg=ffffff&output=webp&q=86&we=1'
+        '&cbg=ffffff&bg=ffffff&output=webp&q=87&we=1'
       );
     }
 
