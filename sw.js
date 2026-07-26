@@ -1,4 +1,4 @@
-const CACHE_NAME = 'puzzles-shell-v1.5.8-banner-natural-white-mobile-list';
+const CACHE_NAME = 'puzzles-shell-v1.5.8-logo-unificado';
 
 const SHELL_FILES = [
   './',

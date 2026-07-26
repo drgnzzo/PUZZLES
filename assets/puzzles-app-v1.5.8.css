@@ -4943,131 +4943,113 @@ body[data-catalog-view="table"] #tableView {
 
 
 /* ============================================================
-   PUZZLES 1.5.8 · BANNER NATURAL + MÓVIL LISTA + FONDO BLANCO
+   PUZZLES 1.5.8 · LOGO UNIFICADO (puzzles_logo)
    ============================================================ */
-
-/*
-  ESCRITORIO:
-  El arte no se amplía por encima de 1920 px.
-  El carrusel es más bajo y recorta únicamente el excedente vertical.
-*/
-@media (min-width: 761px) {
-  .hero-carousel {
-    height: clamp(380px, 27vw, 520px) !important;
-    min-height: 380px !important;
-    max-height: 520px !important;
-    overflow: hidden !important;
-    background: #000 !important;
-  }
-
-  .hero-slide--controlled {
-    overflow: hidden !important;
-    background: #000 !important;
-  }
-
-  .hero-slide--controlled .hero-slide__artwork {
-    position: absolute !important;
-    inset: auto !important;
-    top: 50% !important;
-    left: 50% !important;
-    width: min(100%, 1920px) !important;
-    height: auto !important;
-    max-width: 1920px !important;
-    max-height: none !important;
-    object-fit: contain !important;
-    transform: translate(-50%, -50%) !important;
-    image-rendering: auto !important;
-  }
-
-  .hero-slide--controlled .hero-slide__shade {
-    top: 0 !important;
-    bottom: 0 !important;
-    left: 50% !important;
-    width: min(100%, 1920px) !important;
-    transform: translateX(-50%) !important;
-  }
+.brand.brand--asset {
+  gap: 0 !important;
 }
 
-/*
-  MÓVIL:
-  El banner llena el espacio con recorte controlado y un zoom ligero.
-  Esto evita que se vea aplastado o con proporciones incorrectas.
-*/
+.brand.brand--asset .brand__mark {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+}
+
+.brand.brand--asset .brand__mark img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+
+.age-gate .brand.brand--gate {
+  width: 100% !important;
+  max-width: min(430px, 84vw) !important;
+  margin: 0 auto 24px !important;
+  justify-content: center !important;
+}
+
+.age-gate .brand.brand--gate .brand__mark {
+  width: min(430px, 84vw) !important;
+  height: clamp(90px, 18vw, 148px) !important;
+}
+
+.site-header .brand.brand--header {
+  max-width: min(360px, 28vw) !important;
+  width: 100% !important;
+  justify-self: center !important;
+}
+
+.site-header .brand.brand--header .brand__mark {
+  width: clamp(210px, 19vw, 340px) !important;
+  height: clamp(52px, 4.6vw, 78px) !important;
+}
+
+.entry-splash {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(216,154,0,.14), transparent 40%),
+    linear-gradient(180deg, rgba(255,255,255,.015), rgba(255,255,255,0)),
+    #000 !important;
+}
+
+.entry-splash__inner {
+  width: min(560px, 100%) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+.entry-splash__logo {
+  width: min(440px, 78vw) !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  height: auto !important;
+  margin: 0 auto 22px !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+
+.entry-splash__inner p {
+  margin: 0 0 16px !important;
+  font-size: 12px !important;
+  letter-spacing: .18em !important;
+  text-transform: uppercase !important;
+}
+
+.entry-splash__track {
+  width: min(360px, 70vw) !important;
+  height: 3px !important;
+}
+
 @media (max-width: 760px) {
-  .hero-carousel {
-    height: clamp(430px, 118vw, 520px) !important;
-    min-height: 430px !important;
-    max-height: 520px !important;
-    overflow: hidden !important;
-    background: #000 !important;
+  .site-header .brand.brand--header {
+    max-width: min(210px, 46vw) !important;
   }
 
-  .hero-slide--controlled .hero-slide__artwork {
-    position: absolute !important;
-    inset: auto !important;
-    top: 50% !important;
-    left: 50% !important;
-    width: auto !important;
-    height: 100% !important;
-    min-width: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
-    object-fit: cover !important;
-    object-position: 72% center !important;
-    transform:
-      translate(-50%, -50%)
-      scale(1.06) !important;
-    image-rendering: auto !important;
+  .site-header .brand.brand--header .brand__mark {
+    width: min(210px, 46vw) !important;
+    height: 46px !important;
   }
 
-  .hero-slide--controlled .hero-slide__shade {
-    inset: 0 !important;
-    width: 100% !important;
-    transform: none !important;
+  .age-gate .brand.brand--gate {
+    max-width: min(320px, 82vw) !important;
   }
-}
 
-/* Superficies de producto protegidas contra inversión automática. */
-.product-card__visual,
-.product-table__thumb,
-.cart-item__visual,
-.pdp-image-button,
-.image-zoom-modal,
-.product-image-fallback {
-  background: #fff !important;
-  background-color: #fff !important;
-  color-scheme: light !important;
-  forced-color-adjust: none !important;
-  isolation: isolate !important;
-  filter: none !important;
-}
+  .age-gate .brand.brand--gate .brand__mark {
+    width: min(320px, 82vw) !important;
+    height: 92px !important;
+  }
 
-.product-card__visual::before,
-.product-card__visual::after,
-.product-table__thumb::before,
-.product-table__thumb::after {
-  display: none !important;
-  content: none !important;
-}
-
-.product-card__image,
-.product-table__image,
-.cart-item__image,
-.pdp-image,
-.image-zoom-modal img,
-.js-product-image {
-  background: #fff !important;
-  background-color: #fff !important;
-  color-scheme: light !important;
-  forced-color-adjust: none !important;
-  mix-blend-mode: normal !important;
-  filter: none !important;
-  opacity: 1 !important;
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-}
-
-/* Dark Reader reconoce este atributo; otros extensores conservan el inline. */
-[data-darkreader-lock] {
-  forced-color-adjust: none !important;
+  .entry-splash__logo {
+    width: min(300px, 74vw) !important;
+    margin-bottom: 18px !important;
+  }
 }

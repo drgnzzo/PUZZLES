@@ -150,18 +150,13 @@
 
       cacheDom();
 
-      // La vista inicial depende del dispositivo:
-      // móvil abre en lista y escritorio abre en cuadrícula.
-      // No se recuperan preferencias antiguas.
+      // La tienda siempre abre en cuadrícula.
+      // Una preferencia vieja no puede forzar el modo lista.
       puzzlesStorageRemove(
         STORAGE_KEYS.VIEW
       );
 
-      state.view = window.matchMedia(
-        '(max-width: 760px)'
-      ).matches
-        ? 'table'
-        : 'grid';
+      state.view = 'grid';
       bindEvents();
       restoreAgeGate();
       restoreCustomer();
@@ -692,6 +687,7 @@
 
 
     function applyBrandLogos(logoUrl) {
+      logoUrl = FIXED_PUZZLES_LOGO;
       const brands =
         document.querySelectorAll('.brand');
 
@@ -742,7 +738,7 @@
       document.title = state.store.name + ' · Vinos y licores';
       dom.brandName.textContent = state.store.name;
       dom.brandSubtitle.textContent = state.store.subtitle;
-      applyBrandLogos(state.store.logoUrl || '');
+      applyBrandLogos(FIXED_PUZZLES_LOGO);
       dom.announcementText.textContent = state.store.priceNotice;
       dom.footerText.textContent = state.store.footerText;
       const features = Array.isArray(state.store.features) ? state.store.features : [];
@@ -1718,8 +1714,8 @@
 
           return `
             <article class="product-card" data-code="${escapeAttr(product.code)}">
-              <button class="product-card__visual product-open-button" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver información de ${escapeAttr(product.displayName)}">
-                <div class="product-image-fallback" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" aria-hidden="true">
+              <button class="product-card__visual product-open-button" type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver información de ${escapeAttr(product.displayName)}">
+                <div class="product-image-fallback" aria-hidden="true">
                   <span>${escapeHtml(categoryLetter(product.category))}</span>
                 </div>
                 ${productImageMarkup(product, 'product-card__image', product.displayName)}
@@ -1815,8 +1811,8 @@
                 <tr>
                   <td class="product-table__product">
                     <button class="product-table__product-wrap product-row-button" type="button" data-product-detail="${escapeAttr(product.code)}">
-                      <span class="product-table__thumb" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important">
-                        <span class="product-image-fallback" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" aria-hidden="true">
+                      <span class="product-table__thumb">
+                        <span class="product-image-fallback" aria-hidden="true">
                           <span>${escapeHtml(categoryLetter(product.category))}</span>
                         </span>
                         ${productImageMarkup(product, 'product-table__image', product.displayName)}
@@ -1917,12 +1913,10 @@
           class="${escapeAttr(className)} js-product-image"
           src="${escapeAttr(displayUrl)}"
           data-original-src="${escapeAttr(product.imageUrl)}"
-          data-darkreader-lock
           alt="${escapeAttr(alt || '')}"
           loading="lazy"
           decoding="async"
           referrerpolicy="no-referrer"
-          style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important;filter:none!important;mix-blend-mode:normal!important"
         >`;
     }
 
@@ -3672,14 +3666,10 @@
             'ffffff'
           );
           proxyUrl.searchParams.set(
-            'bg',
-            'ffffff'
-          );
-          proxyUrl.searchParams.set(
             'output',
             'webp'
           );
-          proxyUrl.searchParams.set('q', '87');
+          proxyUrl.searchParams.set('q', '86');
           proxyUrl.searchParams.set('we', '1');
 
           return proxyUrl.toString();
@@ -3690,7 +3680,7 @@
         'https://images.weserv.nl/?url=' +
         encodeURIComponent(source) +
         '&w=900&h=900&fit=contain' +
-        '&cbg=ffffff&bg=ffffff&output=webp&q=87&we=1'
+        '&cbg=ffffff&output=webp&q=86&we=1'
       );
     }
 
