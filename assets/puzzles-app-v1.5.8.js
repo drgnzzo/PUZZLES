@@ -1,7 +1,4 @@
 'use strict';
-    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-logo-stable';
-    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?v=1.5.8-logo-stable';
-    const PUZZLES_OFFICIAL_ICON_URL = 'https://drgnzzo.github.io/PUZZLES/assets/icon-192.png?v=1.5.8-logo-stable';
 
     /**
      * Para GitHub Pages:
@@ -12,6 +9,8 @@
      * google.script.run automáticamente.
      */
     const GITHUB_GAS_URL = '';
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-logo-repair-2';
+    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?v=1.5.8-logo-repair-2';
 
     const STORAGE_KEYS = Object.freeze({
       CART: 'puzzles_cart_v3',
@@ -147,10 +146,71 @@
       }
     );
 
+
+    function repairEntryStructure() {
+      let ageGate = document.getElementById('ageGate');
+
+      if (!ageGate) {
+        const legacyBrand = document.querySelector('body > .brand--gate, body > .brand.brand--official');
+        const ageTitle = document.getElementById('ageTitle');
+        const actions = document.querySelector('body > .age-gate__actions');
+        const denied = document.getElementById('ageDenied');
+
+        if (legacyBrand && ageTitle) {
+          const paragraph = ageTitle.nextElementSibling && ageTitle.nextElementSibling.tagName === 'P'
+            ? ageTitle.nextElementSibling
+            : null;
+          const prompt = document.createElement('div');
+          prompt.id = 'agePrompt';
+          prompt.appendChild(ageTitle);
+          if (paragraph) prompt.appendChild(paragraph);
+          if (actions) prompt.appendChild(actions);
+
+          const card = document.createElement('div');
+          card.className = 'age-gate__card';
+          card.appendChild(legacyBrand);
+          card.appendChild(prompt);
+          if (denied) card.appendChild(denied);
+
+          ageGate = document.createElement('div');
+          ageGate.id = 'ageGate';
+          ageGate.className = 'age-gate';
+          ageGate.setAttribute('role', 'dialog');
+          ageGate.setAttribute('aria-modal', 'true');
+          ageGate.setAttribute('aria-labelledby', 'ageTitle');
+          ageGate.appendChild(card);
+          document.body.insertBefore(ageGate, document.body.firstChild);
+        }
+      }
+
+      const legacyLogo = ageGate && ageGate.querySelector('.brand--gate img, .brand__official-logo');
+      if (legacyLogo && !document.getElementById('ageGateLogo')) {
+        legacyLogo.id = 'ageGateLogo';
+        legacyLogo.className = 'age-gate__logo';
+        const parent = legacyLogo.parentElement;
+        if (parent) parent.className = 'age-gate__logo-wrap';
+      }
+
+      const headerAccount = document.getElementById('btnAccountHeader');
+      if (headerAccount && !document.getElementById('btnLogoutHeader')) {
+        const button = document.createElement('button');
+        button.className = 'icon-button header-logout-button hidden';
+        button.id = 'btnLogoutHeader';
+        button.type = 'button';
+        button.hidden = true;
+        button.setAttribute('aria-label', 'Cerrar sesión');
+        button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 5H5v14h5"></path><path d="M13 8l4 4-4 4"></path><path d="M8 12h9"></path></svg><span class="icon-button__label">Salir</span>';
+        headerAccount.insertAdjacentElement('afterend', button);
+      }
+
+      document.body.classList.add('entry-structure-ready');
+    }
+
     async function init() {
       puzzlesStorageRemove('puzzles_cart_v1');
       puzzlesStorageRemove('puzzles_cart_v2');
 
+      repairEntryStructure();
       cacheDom();
 
       // La vista inicial depende del dispositivo:
@@ -218,7 +278,7 @@
         'btnMobileFilters','searchInput','sortSelect','btnGridView','btnTableView',
         'resultCount','resultRange','activeFilterWrap','loadingState','errorState','errorMessage',
         'emptyState','gridView','tableView','pagination','btnRetry','btnEmptyClear',
-        'btnHeaderWhatsApp','btnFooterWhatsApp','btnSearchHeader','btnAccountHeader','btnLogoutHeader','accountLabel',
+        'btnHeaderWhatsApp','btnFooterWhatsApp','btnSearchHeader','btnAccountHeader','btnLogoutHeader','accountLabel','ageGateLogo','entrySplashLogo','siteHeaderLogo','footerLogo',
         'btnCartHeader','headerCartCount','floatingCart','floatingCartCount',
         'mainBackdrop','cartDrawer','btnCloseCart','cartBody','cartFooter','cartUnits',
         'cartSubtotal','cartTotal','btnCheckout','minimumOrderNote',
@@ -696,18 +756,15 @@
 
 
     function applyBrandLogos() {
-      const logoTargets = [
-        ['ageGateLogo', PUZZLES_OFFICIAL_LOGO_URL],
-        ['entrySplashLogo', PUZZLES_OFFICIAL_LOGO_URL],
-        ['siteHeaderLogo', PUZZLES_OFFICIAL_MARK_URL],
-        ['footerLogo', PUZZLES_OFFICIAL_LOGO_URL]
+      const targets = [
+        [dom.ageGateLogo, PUZZLES_OFFICIAL_LOGO_URL],
+        [dom.entrySplashLogo, PUZZLES_OFFICIAL_LOGO_URL],
+        [dom.siteHeaderLogo, PUZZLES_OFFICIAL_MARK_URL],
+        [dom.footerLogo, PUZZLES_OFFICIAL_LOGO_URL]
       ];
 
-      logoTargets.forEach(([id, source]) => {
-        const image = document.getElementById(id);
-
+      targets.forEach(([image, source]) => {
         if (!image) return;
-
         image.src = source;
         image.removeAttribute('width');
         image.removeAttribute('height');
@@ -2790,10 +2847,7 @@
 
       if (dom.btnLogoutHeader) {
         dom.btnLogoutHeader.hidden = !logged;
-        dom.btnLogoutHeader.classList.toggle(
-          'hidden',
-          !logged
-        );
+        dom.btnLogoutHeader.classList.toggle('hidden', !logged);
       }
     }
     async function submitLogin(event) {
@@ -2908,10 +2962,14 @@
         state.sessionToken
       );
 
-      // La confirmación de edad se solicita en cada nueva carga.
-      // No se omite por caché ni por una sesión administrativa previa.
+      const remembered = logged &&
+        puzzlesStorageGet(
+          STORAGE_KEYS.AGE
+        ) === 'true';
+
       const confirmed =
-        state.ageConfirmedThisVisit;
+        state.ageConfirmedThisVisit ||
+        remembered;
 
       if (dom.agePrompt) {
         dom.agePrompt.classList.remove('hidden');
