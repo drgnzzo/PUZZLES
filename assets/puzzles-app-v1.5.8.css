@@ -5938,3 +5938,332 @@ a,
     max-width: 100vw !important;
   }
 }
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · PDP SIMPLE, ESPECÍFICO Y DESPLAZABLE
+   ============================================================ */
+.product-detail-modal {
+  padding: 18px !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+.product-detail-card {
+  display: flex !important;
+  flex-direction: column !important;
+  width: min(980px, calc(100vw - 36px)) !important;
+  height: min(88dvh, 760px) !important;
+  max-height: min(88dvh, 760px) !important;
+  overflow: hidden !important;
+  border: 1px solid #303030 !important;
+  background: #151515 !important;
+}
+
+.product-detail-head {
+  position: relative !important;
+  z-index: 5 !important;
+  flex: 0 0 auto !important;
+  min-height: 72px !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid #2d2d2d !important;
+  background: #151515 !important;
+}
+
+.product-detail-head .eyebrow {
+  margin-bottom: 3px !important;
+}
+
+#productDetailTitle {
+  margin: 0 !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+}
+
+.product-detail-content {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  scrollbar-gutter: stable !important;
+  padding: 0 !important;
+}
+
+.pdp-simple {
+  display: grid !important;
+  grid-template-columns: minmax(300px, 42%) minmax(0, 58%) !important;
+  min-height: 100% !important;
+  background: #151515 !important;
+}
+
+.pdp-simple__media {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  padding: clamp(20px, 3vw, 38px) !important;
+  border-right: 1px solid #2d2d2d !important;
+  background:
+    radial-gradient(circle at 50% 46%, #fafaf7 0%, #efefeb 62%, #e3e3de 100%) !important;
+}
+
+.pdp-simple .pdp-image-button {
+  position: relative !important;
+  display: block !important;
+  width: min(100%, 430px) !important;
+  aspect-ratio: 1 / 1 !important;
+  max-height: 430px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid #d7d7d1 !important;
+  background:
+    radial-gradient(circle at 50% 48%, #ffffff 0%, #f3f3ef 58%, #e9e9e4 100%) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.72),
+    0 18px 44px rgba(0,0,0,.12) !important;
+  cursor: zoom-in !important;
+}
+
+.pdp-simple .pdp-image {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 7% !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  filter: contrast(1.045) saturate(1.015) drop-shadow(0 12px 10px rgba(0,0,0,.11)) !important;
+  mix-blend-mode: multiply !important;
+}
+
+.pdp-image-link {
+  padding: 7px 10px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #8e711c !important;
+  background: transparent !important;
+  color: #312a18 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+
+.pdp-simple__content {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  padding: clamp(24px, 4vw, 46px) !important;
+  background: #151515 !important;
+}
+
+.pdp-simple__heading {
+  padding-bottom: 22px !important;
+  border-bottom: 1px solid #2c2c2c !important;
+}
+
+.pdp-simple .pdp-category {
+  margin-bottom: 14px !important;
+}
+
+.pdp-simple h3 {
+  margin: 0 0 16px !important;
+  color: #fff !important;
+  font-family: var(--display) !important;
+  font-size: clamp(34px, 4vw, 52px) !important;
+  font-weight: 600 !important;
+  line-height: .98 !important;
+  text-transform: uppercase !important;
+}
+
+.pdp-simple .pdp-description {
+  max-width: 64ch !important;
+  margin: 0 !important;
+  color: #bdbdbd !important;
+  font-size: 15px !important;
+  line-height: 1.7 !important;
+  white-space: normal !important;
+}
+
+.pdp-facts {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin: 20px 0 !important;
+}
+
+.pdp-facts > div {
+  min-width: 0 !important;
+  padding: 11px 12px !important;
+  border: 1px solid #2d2d2d !important;
+  background: #191919 !important;
+}
+
+.pdp-facts dt {
+  margin-bottom: 5px !important;
+  color: #7f7f7f !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+}
+
+.pdp-facts dd {
+  margin: 0 !important;
+  overflow-wrap: anywhere !important;
+  color: #f3f3f3 !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+}
+
+.pdp-purchase {
+  margin-top: auto !important;
+  padding: 18px !important;
+  border: 1px solid #343434 !important;
+  background: #101010 !important;
+}
+
+.pdp-purchase__top {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.pdp-purchase .pdp-pricing {
+  margin: 0 !important;
+}
+
+.pdp-purchase .price-net {
+  font-size: clamp(34px, 4vw, 48px) !important;
+}
+
+.pdp-purchase__meta {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px 16px !important;
+  margin: 10px 0 16px !important;
+  color: #8e8e8e !important;
+  font-size: 11px !important;
+}
+
+.pdp-simple .pdp-actions {
+  display: grid !important;
+  grid-template-columns: 132px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  margin: 0 !important;
+}
+
+.pdp-simple .pdp-add-button {
+  min-height: 54px !important;
+}
+
+@media (max-width: 760px) {
+  .product-detail-modal {
+    inset: 0 !important;
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  .product-detail-card {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .product-detail-head {
+    position: sticky !important;
+    top: 0 !important;
+    min-height: 60px !important;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      14px
+      12px !important;
+  }
+
+  #productDetailTitle {
+    font-size: 20px !important;
+  }
+
+  .product-detail-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+
+  .pdp-simple {
+    display: block !important;
+    min-height: auto !important;
+  }
+
+  .pdp-simple__media {
+    padding: 12px 16px 8px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #2d2d2d !important;
+  }
+
+  .pdp-simple .pdp-image-button {
+    width: min(100%, 420px) !important;
+    max-height: min(42dvh, 420px) !important;
+  }
+
+  .pdp-simple__content {
+    display: block !important;
+    padding: 20px 16px 0 !important;
+  }
+
+  .pdp-simple h3 {
+    font-size: 34px !important;
+    line-height: 1 !important;
+  }
+
+  .pdp-simple .pdp-description {
+    font-size: 15px !important;
+    line-height: 1.65 !important;
+  }
+
+  .pdp-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .pdp-purchase {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 4 !important;
+    margin: 22px -16px 0 !important;
+    padding:
+      14px
+      16px
+      max(14px, env(safe-area-inset-bottom)) !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    box-shadow: 0 -16px 34px rgba(0,0,0,.5) !important;
+  }
+
+  .pdp-purchase .price-net {
+    font-size: 36px !important;
+  }
+
+  .pdp-simple .pdp-actions {
+    grid-template-columns: 116px minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .pdp-facts {
+    grid-template-columns: 1fr !important;
+  }
+
+  .pdp-simple .pdp-actions {
+    grid-template-columns: 1fr !important;
+  }
+}

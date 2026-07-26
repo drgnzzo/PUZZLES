@@ -2365,103 +2365,116 @@
       const sale = toFiniteNumber(product.priceNet);
       const compare = toFiniteNumber(product.priceCompare);
       const adminCost = getAdminCost(product.code);
+      const description = String(
+        product.pdpDescription ||
+        product.commercialDescription ||
+        product.description ||
+        ''
+      ).trim();
 
-      setText(dom.productDetailTitle, product.displayName);
-      const highlights = [
-        product.brand ? `Marca: ${product.brand}` : '',
-        product.category ? `Categoría: ${product.category}` : '',
-        product.volume ? `Contenido: ${product.volume}` : '',
-        product.presentation ? `Presentación: ${product.presentation}` : ''
+      setText(dom.productDetailTitle, 'Detalle del producto');
+
+      const facts = [
+        product.brand
+          ? ['Marca', product.brand]
+          : null,
+        product.category
+          ? ['Tipo', product.category]
+          : null,
+        (product.volume || product.presentation)
+          ? ['Contenido', product.volume || product.presentation]
+          : null,
+        product.presentation && product.presentation !== product.volume
+          ? ['Presentación', product.presentation]
+          : null
       ].filter(Boolean).slice(0, 4);
 
       dom.productDetailContent.innerHTML = `
-        <div class="pdp-layout pdp-layout--amazonish">
-          <div class="pdp-gallery">
-            <div class="pdp-gallery-card">
-              <button class="pdp-image-button" type="button" data-pdp-zoom aria-label="Ampliar imagen de ${escapeAttr(product.displayName)}">
-                <span class="product-image-fallback" aria-hidden="true">
-                  <span>${escapeHtml(categoryLetter(product.category))}</span>
-                </span>
-                ${productImageMarkup(product, 'pdp-image', product.displayName)}
-              </button>
-              <div class="pdp-gallery-actions">
-                <button class="secondary-button" type="button" data-pdp-zoom>Ampliar imagen</button>
-              </div>
-            </div>
+        <article class="pdp-simple">
+          <div class="pdp-simple__media">
+            <button
+              class="pdp-image-button"
+              type="button"
+              data-pdp-zoom
+              aria-label="Ampliar imagen de ${escapeAttr(product.displayName)}"
+            >
+              <span class="product-image-fallback" aria-hidden="true">
+                <span>${escapeHtml(categoryLetter(product.category))}</span>
+              </span>
+              ${productImageMarkup(product, 'pdp-image', product.displayName)}
+            </button>
+            <button class="pdp-image-link" type="button" data-pdp-zoom>
+              Ampliar imagen
+            </button>
           </div>
 
-          <div class="pdp-main">
-            <div class="pdp-info">
-              <div class="pdp-heading-block">
-                <span class="pdp-category">${escapeHtml(product.category)}</span>
-                <h3>${escapeHtml(product.displayName)}</h3>
-                <p class="pdp-description">${escapeHtml(product.commercialDescription || product.description)}</p>
-              </div>
-
-              ${highlights.length ? `<ul class="pdp-highlights">${highlights.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
-
-              <div class="pdp-specs-card">
-                <div class="pdp-section-kicker">Datos clave</div>
-                <dl class="pdp-specs">
-                  ${pdpSpec('Código', product.code)}
-                  ${pdpSpec('UPC', product.upc)}
-                  ${pdpSpec('SKU', product.sku)}
-                  ${pdpSpec('Marca', product.brand)}
-                  ${pdpSpec('Contenido', product.volume || product.presentation)}
-                  ${pdpSpec('Presentación', product.presentation)}
-                  ${pdpSpec('Modelo', product.model)}
-                  ${pdpSpec('Color', product.color)}
-                  ${pdpSpec('Unidad', product.unit)}
-                  ${pdpSpec('Disponibilidad', product.stock === null ? 'Sujeta a confirmación' : product.stock + ' disponibles')}
-                </dl>
-              </div>
+          <div class="pdp-simple__content">
+            <div class="pdp-simple__heading">
+              <span class="pdp-category">${escapeHtml(product.category || 'Producto')}</span>
+              <h3>${escapeHtml(product.displayName)}</h3>
+              <p class="pdp-description">${escapeHtml(description)}</p>
             </div>
 
-            <aside class="pdp-buybox">
-              <div class="pdp-buybox__card">
-                <div class="pdp-buybox__head">
-                  <div class="pdp-section-kicker">Selección</div>
-                  <div class="pdp-buybox__status">${canBuy ? 'Disponible para agregar' : 'Precio a consultar'}</div>
-                </div>
+            ${facts.length ? `
+              <dl class="pdp-facts">
+                ${facts.map(([label, value]) => `
+                  <div>
+                    <dt>${escapeHtml(label)}</dt>
+                    <dd>${escapeHtml(value)}</dd>
+                  </div>
+                `).join('')}
+              </dl>
+            ` : ''}
 
-                <div class="pdp-pricing pdp-pricing--buybox">
+            <div class="pdp-purchase">
+              <div class="pdp-purchase__top">
+                <div class="pdp-pricing">
                   ${canBuy
                     ? `${compare > sale ? `<div class="price-compare">${money(compare)}</div>` : ''}
                        <div class="price-net">${money(sale)}</div>`
                     : '<div class="consult-price">Precio a consultar</div>'}
-                  ${renderAdminPrice(adminCost)}
                 </div>
-
-                <div class="pdp-buybox__meta">
-                  <div><span>Marca</span><strong>${escapeHtml(product.brand || 'Por confirmar')}</strong></div>
-                  <div><span>Contenido</span><strong>${escapeHtml(product.volume || product.presentation || 'Por confirmar')}</strong></div>
-                  <div><span>Unidad</span><strong>${escapeHtml(product.unit || 'pz')}</strong></div>
-                  <div><span>Disponibilidad</span><strong>${escapeHtml(product.stock === null ? 'Sujeta a confirmación' : String(product.stock))}</strong></div>
-                </div>
-
-                <div class="pdp-actions">
-                  <div class="qty-control pdp-qty-control">
-                    <button type="button" data-pdp-minus>−</button>
-                    <span id="pdpQuantityValue">${state.detailQuantity}</span>
-                    <button type="button" data-pdp-plus>+</button>
-                  </div>
-                  <button class="add-button pdp-add-button" type="button" data-pdp-add ${canBuy ? '' : 'disabled'}>
-                    ${canBuy ? 'Agregar al carrito' : 'Consultar'}
-                  </button>
-                </div>
+                ${renderAdminPrice(adminCost)}
               </div>
-            </aside>
+
+              <div class="pdp-purchase__meta">
+                <span>Código ${escapeHtml(product.code || '—')}</span>
+                <span>${product.stock === null
+                  ? 'Disponibilidad sujeta a confirmación'
+                  : escapeHtml(String(product.stock)) + ' disponibles'}</span>
+              </div>
+
+              <div class="pdp-actions">
+                <div class="qty-control pdp-qty-control">
+                  <button type="button" data-pdp-minus aria-label="Restar una unidad">−</button>
+                  <span id="pdpQuantityValue">${state.detailQuantity}</span>
+                  <button type="button" data-pdp-plus aria-label="Agregar una unidad">+</button>
+                </div>
+                <button
+                  class="add-button pdp-add-button"
+                  type="button"
+                  data-pdp-add
+                  ${canBuy ? '' : 'disabled'}
+                >
+                  ${canBuy ? 'Agregar al carrito' : 'Consultar'}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>`;
+        </article>`;
 
       bindProductImageFallbacks(dom.productDetailContent);
 
-      const zoomButton = dom.productDetailContent.querySelector('[data-pdp-zoom]');
+      dom.productDetailContent
+        .querySelectorAll('[data-pdp-zoom]')
+        .forEach(button => {
+          listen(button, 'click', () => openImageZoom(product));
+        });
+
       const minus = dom.productDetailContent.querySelector('[data-pdp-minus]');
       const plus = dom.productDetailContent.querySelector('[data-pdp-plus]');
       const add = dom.productDetailContent.querySelector('[data-pdp-add]');
 
-      listen(zoomButton, 'click', () => openImageZoom(product));
       listen(minus, 'click', () => changeDetailQuantity(-1));
       listen(plus, 'click', () => changeDetailQuantity(1));
       listen(add, 'click', () => {
@@ -2474,6 +2487,10 @@
       dom.productDetailModal.classList.add('is-open');
       dom.productDetailBackdrop.classList.add('is-open');
       document.body.classList.add('no-scroll');
+
+      window.setTimeout(() => {
+        dom.productDetailContent.scrollTop = 0;
+      }, 0);
     }
 
     function pdpSpec(label, value) {
@@ -3352,6 +3369,11 @@
         ''
       ).trim();
 
+      normalized.pdpDescription = String(
+        normalized.pdpDescription ||
+        ''
+      ).trim();
+
       normalized.priceNet = round2(
         toFiniteNumber(normalized.priceNet)
       );
@@ -3385,6 +3407,7 @@
         normalized.shortName,
         normalized.displayName,
         normalized.description,
+        normalized.pdpDescription,
         normalized.commercialDescription,
         normalized.model,
         normalized.color,
