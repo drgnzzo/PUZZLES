@@ -4683,3 +4683,260 @@ body[data-catalog-view="table"] #tableView {
     flex: 0 0 auto;
   }
 }
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · POPUP DE MOMENTOS Y BANNER A TAMAÑO REAL
+   ============================================================ */
+
+/* Las secciones editoriales anteriores desaparecen por completo. */
+.intent-strip,
+.editorial-section--moments,
+.editorial-section--selections {
+  display: none !important;
+}
+
+/*
+  Los artes miden 1920 × 760.
+  En pantallas mayores no se estiran por encima de ese tamaño.
+*/
+.hero-carousel {
+  width: 100% !important;
+  height: clamp(
+    360px,
+    39.583vw,
+    760px
+  ) !important;
+  min-height: 0 !important;
+  max-height: 760px !important;
+  background: #000 !important;
+}
+
+.hero-slide--controlled {
+  overflow: hidden !important;
+  background: #000 !important;
+}
+
+.hero-slide--controlled .hero-slide__artwork {
+  position: absolute !important;
+  inset: auto !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: min(100%, 1920px) !important;
+  height: auto !important;
+  max-width: 1920px !important;
+  max-height: 760px !important;
+  object-fit: contain !important;
+  object-position: center center;
+  transform:
+    translate(-50%, -50%) !important;
+  image-rendering: auto !important;
+}
+
+.hero-slide--controlled .hero-slide__shade {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 50% !important;
+  width: min(100%, 1920px) !important;
+  transform:
+    translateX(-50%) !important;
+}
+
+.hero-slide--controlled .hero-slide__content {
+  width: min(720px, 42vw) !important;
+  margin-left:
+    max(
+      var(--page-gutter),
+      calc(
+        (100vw - 1920px) / 2 + 72px
+      )
+    ) !important;
+  margin-right:
+    var(--page-gutter) !important;
+}
+
+.hero-slide--controlled
+.hero-slide__content--right {
+  margin-left: auto !important;
+  margin-right:
+    max(
+      var(--page-gutter),
+      calc(
+        (100vw - 1920px) / 2 + 72px
+      )
+    ) !important;
+}
+
+/* Popup inicial: opciones rápidas, no secciones dentro de la página. */
+.intent-welcome-backdrop {
+  z-index: 1180 !important;
+  background: rgba(0, 0, 0, .76) !important;
+}
+
+.intent-welcome-modal {
+  z-index: 1190 !important;
+}
+
+.intent-welcome-card {
+  width: min(780px, 100%) !important;
+  max-height:
+    min(
+      760px,
+      calc(100dvh - 32px)
+    ) !important;
+  border: 1px solid #3a3a3a !important;
+  background: #111 !important;
+}
+
+.intent-welcome-head {
+  background:
+    rgba(17, 17, 17, .97) !important;
+}
+
+.intent-welcome-head h2 {
+  color: #fff !important;
+  font-family:
+    var(
+      --display,
+      "Barlow Condensed",
+      sans-serif
+    ) !important;
+  font-size:
+    clamp(30px, 4vw, 48px) !important;
+  line-height: 1 !important;
+  text-transform: uppercase;
+}
+
+.intent-welcome-body {
+  padding: 22px !important;
+}
+
+.intent-welcome-intro {
+  margin: 0 0 18px;
+  color: #aaa;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.intent-welcome-options {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  gap: 10px;
+}
+
+.intent-welcome-option {
+  min-height: 116px;
+  padding: 16px;
+  border: 1px solid #303030;
+  background: #171717;
+  color: #fff;
+  text-align: left;
+  transition:
+    border-color .18s ease,
+    background .18s ease,
+    transform .18s ease;
+}
+
+.intent-welcome-option:hover {
+  transform: translateY(-1px);
+  border-color: #9a751b;
+  background: #1c1c1c;
+}
+
+.intent-welcome-option span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--gold);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.intent-welcome-option strong {
+  display: block;
+  font-family:
+    var(
+      --display,
+      "Barlow Condensed",
+      sans-serif
+    );
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.intent-welcome-option small {
+  display: block;
+  margin-top: 9px;
+  color: #8f8f8f;
+  font-size: 11px;
+  line-height: 1.42;
+}
+
+.intent-welcome-catalog {
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .hero-carousel {
+    height: 500px !important;
+    max-height: 500px !important;
+  }
+
+  .hero-slide--controlled
+  .hero-slide__artwork {
+    top: 0 !important;
+    width: 100% !important;
+    max-height: none !important;
+    transform:
+      translateX(-50%) !important;
+  }
+
+  .hero-slide--controlled
+  .hero-slide__content,
+  .hero-slide--controlled
+  .hero-slide__content--right {
+    width: auto !important;
+    margin:
+      auto
+      max(
+        18px,
+        env(safe-area-inset-right)
+      )
+      62px
+      max(
+        18px,
+        env(safe-area-inset-left)
+      ) !important;
+  }
+
+  .intent-welcome-modal {
+    padding: 12px !important;
+    align-items: center !important;
+  }
+
+  .intent-welcome-card {
+    max-height:
+      calc(100dvh - 24px) !important;
+    border-radius: 12px !important;
+  }
+
+  .intent-welcome-options {
+    grid-template-columns: 1fr;
+  }
+
+  .intent-welcome-option {
+    min-height: 86px;
+  }
+
+  .intent-welcome-option small {
+    display: none;
+  }
+}

@@ -99,7 +99,8 @@
       detailQuantity: 1,
       initialLoadPromise: null,
       initialLoadComplete: false,
-      entrySplashActive: false
+      entrySplashActive: false,
+      intentWelcomeShown: false
     };
 
     const dom = {};
@@ -192,13 +193,19 @@
         });
 
       await state.initialLoadPromise;
+
+      setTimeout(
+        maybeOpenIntentWelcome,
+        220
+      );
     }
 
     function cacheDom() {
       [
         'ageGate','agePrompt','ageDenied','btnAgeNo','btnAgeYes','announcementText',
         'brandName','brandSubtitle','feature1Title','featureCatalogText','feature2Title','feature2Text','feature3Title','feature3Text','catalogKicker','catalogTitle','catalogDescription','githubSetup',
-        'heroCarousel','heroSlides','heroDots','btnHeroPrev','btnHeroNext','momentGrid','selectionGrid',
+        'heroCarousel','heroSlides','heroDots','btnHeroPrev','btnHeroNext','btnMomentsHeader',
+        'intentWelcomeBackdrop','intentWelcomeModal','btnCloseIntentWelcome','intentWelcomeOptions','btnIntentCatalog',
         'categoryList','brandFilter','priceMin','priceMax','includeConsult','filtersPanel','btnClearFilters',
         'btnMobileFilters','searchInput','sortSelect','btnGridView','btnTableView',
         'resultCount','resultRange','activeFilterWrap','loadingState','errorState','errorMessage',
@@ -262,9 +269,29 @@
         button.addEventListener('click', () => document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' }));
       });
 
-      document.querySelectorAll('[data-scroll-moments]').forEach(button => {
-        button.addEventListener('click', () => document.getElementById('momentos').scrollIntoView({ behavior: 'smooth' }));
-      });
+      listen(
+        dom.btnMomentsHeader,
+        'click',
+        () => openIntentWelcome(true)
+      );
+
+      listen(
+        dom.btnCloseIntentWelcome,
+        'click',
+        () => closeIntentWelcome(false)
+      );
+
+      listen(
+        dom.intentWelcomeBackdrop,
+        'click',
+        () => closeIntentWelcome(false)
+      );
+
+      listen(
+        dom.btnIntentCatalog,
+        'click',
+        () => closeIntentWelcome(true)
+      );
 
       document.addEventListener('click', event => {
         const intentTrigger = event.target.closest('[data-editorial-action]');
@@ -358,7 +385,13 @@
 
       document.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
-        if (dom.imageZoomModal.classList.contains('is-open')) closeImageZoom();
+        if (
+          dom.intentWelcomeModal &&
+          dom.intentWelcomeModal.classList.contains('is-open')
+        ) {
+          closeIntentWelcome(false);
+        }
+        else if (dom.imageZoomModal.classList.contains('is-open')) closeImageZoom();
         else if (dom.productDetailModal.classList.contains('is-open')) closeProductDetail();
         else if (dom.successModal.classList.contains('is-open')) closeSuccess();
         else if (dom.authModal.classList.contains('is-open')) closeAuth();
@@ -849,14 +882,6 @@
             )
           );
 
-          const zoom = Math.max(
-            0.92,
-            Math.min(
-              1,
-              Number(displayBanner.imageZoom || 1)
-            )
-          );
-
           const showTextValue =
             displayBanner.showText;
 
@@ -919,7 +944,6 @@
                 alt="${escapeAttr(displayBanner.title || 'Selección PUZZLES')}"
                 style="
                   object-position:${escapeAttr(displayBanner.imagePosition || 'center center')};
-                  transform:scale(${zoom});
                 "
                 decoding="async"
                 fetchpriority="${index === 0 ? 'high' : 'auto'}"
@@ -956,51 +980,128 @@
     }
 
     function renderEditorialSections() {
+      if (!dom.intentWelcomeOptions) {
+        return;
+      }
+
       const moments =
         Array.isArray(state.store.moments)
           ? state.store.moments
           : [];
 
-      const selections =
-        Array.isArray(state.store.selections)
-          ? state.store.selections
-          : [];
+      dom.intentWelcomeOptions.innerHTML = moments
+        .slice(0, 6)
+        .map(moment => `
+          <button
+            class="intent-welcome-option"
+            type="button"
+            data-editorial-action="${escapeAttr(moment.action || 'catalog')}"
+          >
+            <span>${escapeHtml(moment.eyebrow || '')}</span>
+            <strong>${escapeHtml(moment.title || '')}</strong>
+            <small>${escapeHtml(moment.text || '')}</small>
+          </button>
+        `)
+        .join('');
+    }
 
-      if (dom.momentGrid) {
-        dom.momentGrid.innerHTML = moments
-          .map(moment => `
-            <button
-              class="intent-phrase"
-              type="button"
-              data-editorial-action="${escapeAttr(moment.action || 'catalog')}"
-              title="${escapeAttr(moment.text || moment.title || '')}"
-            >
-              <span>${escapeHtml(moment.eyebrow || '')}</span>
-              <strong>${escapeHtml(moment.title || '')}</strong>
-            </button>
-          `)
-          .join('');
+    function isAgeConfirmed() {
+      return Boolean(
+        state.ageConfirmedThisVisit ||
+        (
+          state.user &&
+          state.sessionToken &&
+          puzzlesStorageGet(
+            STORAGE_KEYS.AGE
+          ) === 'true'
+        )
+      );
+    }
+
+    function maybeOpenIntentWelcome() {
+      if (
+        state.intentWelcomeShown ||
+        state.entrySplashActive ||
+        !state.initialLoadComplete ||
+        !isAgeConfirmed()
+      ) {
+        return;
       }
 
-      if (dom.selectionGrid) {
-        dom.selectionGrid.innerHTML = selections
-          .map(selection => `
-            <button
-              class="selection-phrase"
-              type="button"
-              data-editorial-action="${escapeAttr(selection.action || 'catalog')}"
-              title="${escapeAttr(selection.text || selection.title || '')}"
-            >
-              ${escapeHtml(selection.title || '')}
-              <span aria-hidden="true">→</span>
-            </button>
-          `)
-          .join('');
+      openIntentWelcome(false);
+    }
+
+    function openIntentWelcome(force) {
+      if (
+        !isAgeConfirmed() ||
+        (
+          state.intentWelcomeShown &&
+          !force
+        )
+      ) {
+        return;
+      }
+
+      state.intentWelcomeShown = true;
+      renderEditorialSections();
+
+      if (dom.intentWelcomeModal) {
+        dom.intentWelcomeModal.classList.add(
+          'is-open'
+        );
+      }
+
+      if (dom.intentWelcomeBackdrop) {
+        dom.intentWelcomeBackdrop.classList.add(
+          'is-open'
+        );
+      }
+
+      document.body.classList.add(
+        'no-scroll'
+      );
+    }
+
+    function closeIntentWelcome(
+      scrollToCatalog
+    ) {
+      if (dom.intentWelcomeModal) {
+        dom.intentWelcomeModal.classList.remove(
+          'is-open'
+        );
+      }
+
+      if (dom.intentWelcomeBackdrop) {
+        dom.intentWelcomeBackdrop.classList.remove(
+          'is-open'
+        );
+      }
+
+      document.body.classList.remove(
+        'no-scroll'
+      );
+
+      if (scrollToCatalog) {
+        document
+          .getElementById('catalogo')
+          .scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
       }
     }
 
     function handleEditorialAction(action) {
       const value = String(action || 'catalog').trim();
+
+      if (
+        dom.intentWelcomeModal &&
+        dom.intentWelcomeModal.classList.contains(
+          'is-open'
+        )
+      ) {
+        closeIntentWelcome(false);
+      }
 
       if (value === 'catalog') {
         document
@@ -2850,7 +2951,13 @@
       document.body.classList.toggle(
         'no-scroll',
         !confirmed ||
-        state.entrySplashActive
+        state.entrySplashActive ||
+        Boolean(
+          dom.intentWelcomeModal &&
+          dom.intentWelcomeModal.classList.contains(
+            'is-open'
+          )
+        )
       );
     }
 
@@ -2916,7 +3023,18 @@
               puzzlesStorageGet(STORAGE_KEYS.AGE) === 'true'
             )
           ) {
-            document.body.classList.remove('no-scroll');
+            openIntentWelcome(false);
+
+            if (
+              !dom.intentWelcomeModal ||
+              !dom.intentWelcomeModal.classList.contains(
+                'is-open'
+              )
+            ) {
+              document.body.classList.remove(
+                'no-scroll'
+              );
+            }
           }
         }, 320);
       }
