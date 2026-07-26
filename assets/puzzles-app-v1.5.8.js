@@ -9,8 +9,8 @@
      * google.script.run automáticamente.
      */
     const GITHUB_GAS_URL = '';
-    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-logo-repair-2';
-    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?v=1.5.8-logo-repair-2';
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-ui-hotfix-1';
+    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?v=1.5.8-ui-hotfix-1';
 
     const STORAGE_KEYS = Object.freeze({
       CART: 'puzzles_cart_v3',
@@ -147,6 +147,33 @@
     );
 
 
+
+    function cleanupLegacyBrandArtifacts() {
+      const keepIds = new Set(['ageGateLogo', 'entrySplashLogo', 'siteHeaderLogo', 'footerLogo']);
+      const keepSelectors = [
+        '#ageGate .age-gate__logo-wrap',
+        '#entrySplash .entry-splash__inner',
+        '.site-header__logo-link',
+        '.footer__logo-link'
+      ];
+
+      document.querySelectorAll('.brand--gate, .brand.brand--official, .brand.brand--asset, img.brand__official-logo').forEach(function (node) {
+        if (!node) return;
+        if (node.id && keepIds.has(node.id)) return;
+        if (keepSelectors.some(function (selector) { return node.closest(selector); })) return;
+        node.remove();
+      });
+
+      document.querySelectorAll('body > img').forEach(function (img) {
+        const src = (img.getAttribute('src') || '').toLowerCase();
+        if (src.indexOf('puzzles_logo') !== -1 || src.indexOf('logo-puzzles') !== -1) {
+          img.remove();
+        }
+      });
+
+      document.body.classList.add('logo-fix-ready');
+    }
+
     function repairEntryStructure() {
       let ageGate = document.getElementById('ageGate');
 
@@ -204,6 +231,7 @@
       }
 
       document.body.classList.add('entry-structure-ready');
+      cleanupLegacyBrandArtifacts();
     }
 
     async function init() {
@@ -211,6 +239,7 @@
       puzzlesStorageRemove('puzzles_cart_v2');
 
       repairEntryStructure();
+      cleanupLegacyBrandArtifacts();
       cacheDom();
 
       // La vista inicial depende del dispositivo:
@@ -237,6 +266,7 @@
       state.loading = false;
       setView(state.view, false);
       renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
 
       const restored = restoreStoreSnapshot();
 
@@ -585,6 +615,7 @@
       normalizeCartAgainstCatalog();
       applyFilters();
       renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
     }
 
     // ==========================================================
@@ -2276,54 +2307,90 @@
       const adminCost = getAdminCost(product.code);
 
       dom.productDetailTitle.textContent = product.displayName;
+      const highlights = [
+        product.brand ? `Marca: ${product.brand}` : '',
+        product.category ? `Categoría: ${product.category}` : '',
+        product.volume ? `Contenido: ${product.volume}` : '',
+        product.presentation ? `Presentación: ${product.presentation}` : ''
+      ].filter(Boolean).slice(0, 4);
+
       dom.productDetailContent.innerHTML = `
-        <div class="pdp-layout">
+        <div class="pdp-layout pdp-layout--amazonish">
           <div class="pdp-gallery">
-            <button class="pdp-image-button" type="button" data-pdp-zoom aria-label="Ampliar imagen de ${escapeAttr(product.displayName)}">
-              <span class="product-image-fallback" aria-hidden="true">
-                <span>${escapeHtml(categoryLetter(product.category))}</span>
-              </span>
-              ${productImageMarkup(product, 'pdp-image', product.displayName)}
-              <span class="pdp-zoom-label">Ampliar imagen</span>
-            </button>
+            <div class="pdp-gallery-card">
+              <button class="pdp-image-button" type="button" data-pdp-zoom aria-label="Ampliar imagen de ${escapeAttr(product.displayName)}">
+                <span class="product-image-fallback" aria-hidden="true">
+                  <span>${escapeHtml(categoryLetter(product.category))}</span>
+                </span>
+                ${productImageMarkup(product, 'pdp-image', product.displayName)}
+              </button>
+              <div class="pdp-gallery-actions">
+                <button class="secondary-button" type="button" data-pdp-zoom>Ampliar imagen</button>
+              </div>
+            </div>
           </div>
 
-          <div class="pdp-info">
-            <span class="pdp-category">${escapeHtml(product.category)}</span>
-            <h3>${escapeHtml(product.displayName)}</h3>
-            <p class="pdp-description">${escapeHtml(product.commercialDescription || product.description)}</p>
-
-            <dl class="pdp-specs">
-              ${pdpSpec('Código', product.code)}
-              ${pdpSpec('UPC', product.upc)}
-              ${pdpSpec('SKU', product.sku)}
-              ${pdpSpec('Marca', product.brand)}
-              ${pdpSpec('Contenido', product.volume || product.presentation)}
-              ${pdpSpec('Presentación', product.presentation)}
-              ${pdpSpec('Modelo', product.model)}
-              ${pdpSpec('Color', product.color)}
-              ${pdpSpec('Unidad', product.unit)}
-              ${pdpSpec('Disponibilidad', product.stock === null ? 'Sujeta a confirmación' : product.stock + ' disponibles')}
-            </dl>
-
-            <div class="pdp-pricing">
-              ${canBuy
-                ? `${compare > sale ? `<div class="price-compare">${money(compare)}</div>` : ''}
-                   <div class="price-net">${money(sale)}</div>`
-                : '<div class="consult-price">Precio a consultar</div>'}
-              ${renderAdminPrice(adminCost)}
-            </div>
-
-            <div class="pdp-actions">
-              <div class="qty-control pdp-qty-control">
-                <button type="button" data-pdp-minus>−</button>
-                <span id="pdpQuantityValue">${state.detailQuantity}</span>
-                <button type="button" data-pdp-plus>+</button>
+          <div class="pdp-main">
+            <div class="pdp-info">
+              <div class="pdp-heading-block">
+                <span class="pdp-category">${escapeHtml(product.category)}</span>
+                <h3>${escapeHtml(product.displayName)}</h3>
+                <p class="pdp-description">${escapeHtml(product.commercialDescription || product.description)}</p>
               </div>
-              <button class="add-button pdp-add-button" type="button" data-pdp-add ${canBuy ? '' : 'disabled'}>
-                ${canBuy ? 'Agregar al carrito' : 'Consultar'}
-              </button>
+
+              ${highlights.length ? `<ul class="pdp-highlights">${highlights.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+
+              <div class="pdp-specs-card">
+                <div class="pdp-section-kicker">Datos clave</div>
+                <dl class="pdp-specs">
+                  ${pdpSpec('Código', product.code)}
+                  ${pdpSpec('UPC', product.upc)}
+                  ${pdpSpec('SKU', product.sku)}
+                  ${pdpSpec('Marca', product.brand)}
+                  ${pdpSpec('Contenido', product.volume || product.presentation)}
+                  ${pdpSpec('Presentación', product.presentation)}
+                  ${pdpSpec('Modelo', product.model)}
+                  ${pdpSpec('Color', product.color)}
+                  ${pdpSpec('Unidad', product.unit)}
+                  ${pdpSpec('Disponibilidad', product.stock === null ? 'Sujeta a confirmación' : product.stock + ' disponibles')}
+                </dl>
+              </div>
             </div>
+
+            <aside class="pdp-buybox">
+              <div class="pdp-buybox__card">
+                <div class="pdp-buybox__head">
+                  <div class="pdp-section-kicker">Selección</div>
+                  <div class="pdp-buybox__status">${canBuy ? 'Disponible para agregar' : 'Precio a consultar'}</div>
+                </div>
+
+                <div class="pdp-pricing pdp-pricing--buybox">
+                  ${canBuy
+                    ? `${compare > sale ? `<div class="price-compare">${money(compare)}</div>` : ''}
+                       <div class="price-net">${money(sale)}</div>`
+                    : '<div class="consult-price">Precio a consultar</div>'}
+                  ${renderAdminPrice(adminCost)}
+                </div>
+
+                <div class="pdp-buybox__meta">
+                  <div><span>Marca</span><strong>${escapeHtml(product.brand || 'Por confirmar')}</strong></div>
+                  <div><span>Contenido</span><strong>${escapeHtml(product.volume || product.presentation || 'Por confirmar')}</strong></div>
+                  <div><span>Unidad</span><strong>${escapeHtml(product.unit || 'pz')}</strong></div>
+                  <div><span>Disponibilidad</span><strong>${escapeHtml(product.stock === null ? 'Sujeta a confirmación' : String(product.stock))}</strong></div>
+                </div>
+
+                <div class="pdp-actions">
+                  <div class="qty-control pdp-qty-control">
+                    <button type="button" data-pdp-minus>−</button>
+                    <span id="pdpQuantityValue">${state.detailQuantity}</span>
+                    <button type="button" data-pdp-plus>+</button>
+                  </div>
+                  <button class="add-button pdp-add-button" type="button" data-pdp-add ${canBuy ? '' : 'disabled'}>
+                    ${canBuy ? 'Agregar al carrito' : 'Consultar'}
+                  </button>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>`;
 
@@ -2487,6 +2554,7 @@
       state.cart[String(code)] = next;
       saveCart();
       renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
       if (!state.loading) renderCatalog();
       toast(product.description + ' se agregó al carrito.', 'success');
     }
@@ -2513,6 +2581,7 @@
 
       saveCart();
       renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
       if (!state.loading) renderCatalog();
     }
 
@@ -2520,6 +2589,7 @@
       delete state.cart[code];
       saveCart();
       renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
       if (!state.loading) renderCatalog();
     }
 
@@ -2628,6 +2698,7 @@
     function openCart() {
       normalizeCartAgainstCatalog();
       renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
       dom.cartDrawer.classList.add('is-open');
       dom.cartDrawer.setAttribute('aria-hidden', 'false');
       dom.mainBackdrop.classList.add('is-open');
@@ -2740,6 +2811,7 @@
         state.cart = {};
         saveCart();
         renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
         closeCheckoutForce();
         showSuccess(result);
       } catch (error) {
@@ -2885,6 +2957,7 @@
       }
       normalizeCartAgainstCatalog();
       renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
       if (state.ageConfirmedThisVisit) {
         puzzlesStorageSet(STORAGE_KEYS.AGE, 'true');
       }
@@ -2925,6 +2998,7 @@
       normalizeCartAgainstCatalog();
       saveCart();
       renderCart();
+      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
       restoreAgeGate();
       updateAuthUi();
       await loadAdminPricing();

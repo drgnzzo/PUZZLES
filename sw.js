@@ -1,12 +1,12 @@
-const CACHE_NAME = 'puzzles-shell-v1.5.8-logo-repair-2';
+const CACHE_NAME = 'puzzles-20260725a-shell-v1.5.8-ui-hotfix-1';
 
 const SHELL_FILES = [
   './',
   './index.html',
   './offline.html',
   './manifest.webmanifest',
-  './assets/logo-puzzles-header.png',
-  './assets/logo-puzzles-icon.png',
+  './assets/logo-puzzles-20260725a-header.png',
+  './assets/logo-puzzles-20260725a-icon.png',
   './assets/icon-192.png',
   './assets/icon-512.png',
   './assets/icon-maskable-512.png',
@@ -17,8 +17,8 @@ const SHELL_FILES = [
   './assets/banner-04-botellas.png',
   './assets/banner-05-editorial.png',
   './assets/banner-06-botellas.png',
-  './assets/puzzles-app-v1.5.8.css',
-  './assets/puzzles-app-v1.5.8.js'
+  './assets/puzzles-20260725a-app-v1.5.8.css',
+  './assets/puzzles-20260725a-app-v1.5.8.js'
 ];
 
 self.addEventListener('install', event => {
