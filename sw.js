@@ -1,4 +1,4 @@
-const CACHE_NAME = 'puzzles-shell-1.5.8-curation-pdp-upc-2';
+const CACHE_NAME = 'puzzles-shell-1.6.0-editorial-security';
 const SHELL_FILES = [
   './',
   './index.html',
@@ -18,8 +18,8 @@ const SHELL_FILES = [
   './assets/banner-04-botellas.png',
   './assets/banner-05-editorial.png',
   './assets/banner-06-botellas.png',
-  './assets/puzzles-app-v1.5.8.css',
-  './assets/puzzles-app-v1.5.8.js'
+  './assets/puzzles-app-v1.6.0.css',
+  './assets/puzzles-app-v1.6.0.js'
 ];
 
 self.addEventListener('install', event => {

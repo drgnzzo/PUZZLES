@@ -1,0 +1,32 @@
+PUZZLES 1.6.0 — RESUMEN DE CAMBIOS
+==================================
+
+CATÁLOGO E IDENTIDAD
+- Nombre canónico persistente en “Nombre PDP”.
+- Eliminación segura de abreviaturas completas sin cortar palabras.
+- Marca, categoría, especialidad y contenido separados.
+- Diccionario ampliado para marcas y estilos frecuentes.
+- Los productos desconocidos conservan el nombre completo y se marcan para revisión en vez de inventar una marca.
+
+PDP
+- Nuevo diseño editorial a dos columnas.
+- Imagen sin recorte.
+- Título completo, sin mayúsculas forzadas ni line-clamp dentro del PDP.
+- Resumen corto, chips de identidad, compra compacta y atributos destacados.
+- Descripción, perfil, servicio/maridaje y ficha técnica desplegables.
+- Diseño móvil de pantalla completa con compra sticky.
+
+CONTENIDO
+- Investigación con Serper por nombre/UPC/marca/contenido.
+- Redacción con OpenAI mediante salida JSON estructurada.
+- Reglas estrictas contra datos inventados y frases genéricas.
+- Fuentes, estado y fecha guardados por producto.
+- Contenido persistente: no cambia al abrir la publicación.
+- Fichas MANUAL/APROBADA protegidas contra regeneración.
+
+SEGURIDAD
+- Eliminado el correo administrador fijo y el PIN 5050.
+- Administrador configurable mediante panel.
+- Claves guardadas en Script Properties.
+- Contraseña guardada como hash con salt en USUARIOS.
+- Las claves existentes nunca vuelven al navegador desde el panel.
