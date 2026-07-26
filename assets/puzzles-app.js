@@ -2427,7 +2427,7 @@
       const sale = toFiniteNumber(product.priceNet);
       const compare = toFiniteNumber(product.priceCompare);
       const adminCost = getAdminCost(product.code);
-      const summary = String(product.pdpSummary || product.commercialDescription || '').trim();
+      const summary = String(product.pdpSummary || '').trim();
       const facts = buildPdpFacts(product);
       const highlights = normalizeEditorialList(product.pdpHighlights, 4);
       const serviceText = [product.pdpServing, product.pdpPairing]
@@ -3387,21 +3387,13 @@
           ''
         ).trim();
 
-      normalized.brand = String(
-        normalized.brand ||
-        inferBrandFromName(
-          normalized.displayName
-        ) ||
-        ''
-      ).trim();
+      // La marca debe venir curada desde la hoja. El navegador ya no intenta
+      // adivinarla porque esa lógica era la que mezclaba o cortaba nombres.
+      normalized.brand = String(normalized.brand || '').trim();
 
-      normalized.commercialDescription = String(
-        normalized.commercialDescription ||
-        buildCommercialDescription(
-          normalized
-        ) ||
-        ''
-      ).trim();
+      // No se fabrican descripciones genéricas en el frontend. El PDP muestra
+      // exclusivamente el contenido editorial persistido en Google Sheets.
+      normalized.commercialDescription = String(normalized.commercialDescription || '').trim();
 
       normalized.specialty = String(normalized.specialty || normalized.model || '').trim();
       normalized.pdpSummary = String(normalized.pdpSummary || '').trim();
@@ -3782,115 +3774,6 @@
         if (output.length >= 4) break;
       }
       return output.join(' ').replace(/[.,;:]+$/g, '').trim();
-    }
-
-    function buildCommercialDescription(product) {
-      const title = String(
-        product.displayName ||
-        product.description ||
-        ''
-      ).trim();
-
-      const brand = String(
-        product.brand || ''
-      ).trim();
-
-      const category = String(
-        product.category || 'producto'
-      ).trim();
-
-      const volume = String(
-        product.volume ||
-        product.presentation ||
-        ''
-      ).trim();
-
-      const key = normalize(category);
-
-      const categoryNames = {
-        tequila: 'una opción de tequila',
-        mezcal: 'una opción de mezcal',
-        whisky: 'un whisky',
-        ron: 'un ron',
-        vodka: 'un vodka',
-        ginebra: 'una ginebra',
-        brandy: 'un brandy',
-        cognac: 'un cognac',
-        champagne: 'un champagne',
-        espumosos: 'un vino espumoso',
-        'vino tinto': 'un vino tinto',
-        'vino blanco': 'un vino blanco',
-        'vino rosado': 'un vino rosado',
-        licores: 'un licor',
-        cremas: 'una crema de licor',
-        anis: 'un anís',
-        'aperitivos y vermouth':
-          'un aperitivo o vermouth',
-        aguardiente: 'un aguardiente',
-        sidra: 'una sidra',
-        jerez: 'un jerez',
-        oporto: 'un oporto',
-        rompope: 'un rompope'
-      };
-
-      const usageCopy = {
-        champagne:
-          'Está pensado para brindis, celebraciones y aperitivos; sírvelo bien frío.',
-        espumosos:
-          'Está pensado para brindis, celebraciones y aperitivos; sírvelo bien frío.',
-        'vino tinto':
-          'Puede acompañar comidas, cenas y sobremesas; sirve a la temperatura indicada por el productor.',
-        'vino blanco':
-          'Puede acompañar comidas, aperitivos y reuniones; sirve a la temperatura indicada por el productor.',
-        'vino rosado':
-          'Puede acompañar comidas ligeras, aperitivos y reuniones; sirve bien frío.',
-        tequila:
-          'Puede disfrutarse solo, con hielo o como base de coctelería, de acuerdo con el estilo indicado en la etiqueta.',
-        mezcal:
-          'Puede apreciarse solo o utilizarse en coctelería, de acuerdo con el estilo indicado en la etiqueta.',
-        whisky:
-          'Puede apreciarse solo, con hielo o en coctelería, según la ocasión y la preferencia de servicio.',
-        ron:
-          'Puede servirse solo, con hielo o en coctelería, según la ocasión y la preferencia de servicio.',
-        brandy:
-          'Puede disfrutarse solo, con hielo o durante la sobremesa.',
-        cognac:
-          'Puede disfrutarse solo, con hielo o durante la sobremesa.',
-        ginebra:
-          'Puede servirse con mezcladores o utilizarse como base de coctelería.',
-        vodka:
-          'Puede servirse frío, con mezcladores o utilizarse como base de coctelería.',
-        licores:
-          'Puede servirse solo, frío, durante la sobremesa o utilizarse en coctelería.',
-        cremas:
-          'Puede servirse fría, con hielo, durante la sobremesa o utilizarse en coctelería.'
-      };
-
-      const categoryPhrase =
-        categoryNames[key] ||
-        'una presentación de la colección';
-
-      const brandPhrase = brand
-        ? ' de ' + brand
-        : '';
-
-      const volumePhrase = volume
-        ? ' en formato de ' + volume
-        : '';
-
-      return (
-        title +
-        ' es ' +
-        categoryPhrase +
-        brandPhrase +
-        volumePhrase +
-        '. ' +
-        (
-          usageCopy[key] ||
-          'Es una opción para integrar a tu selección, regalar o compartir responsablemente.'
-        ) +
-        ' Consulta la etiqueta para confirmar origen, graduación alcohólica, ingredientes y recomendaciones específicas de servicio.'
-      );
     }
 
     function buildSquareImageUrl(value) {

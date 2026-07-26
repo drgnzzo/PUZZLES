@@ -1,17 +1,33 @@
 # PUZZLES — GitHub Pages
 
-Los archivos principales de interfaz tienen nombres permanentes:
+Sube el contenido de esta carpeta a la raíz del repositorio y reemplaza los archivos existentes.
+
+## Nombres permanentes
+
+La interfaz usa siempre:
 
 - `assets/puzzles-app.css`
 - `assets/puzzles-app.js`
 
-En futuras entregas se reemplazan estos mismos archivos. No se crearán archivos `puzzles-app-v...`.
+Las siguientes entregas reemplazarán esos mismos archivos; no se crearán nombres con número de versión.
 
-Puedes borrar con confianza del repositorio:
+Puedes borrar del repositorio los assets anteriores:
 
 - `assets/puzzles-app-v1.5.8.css`
 - `assets/puzzles-app-v1.5.8.js`
 - `assets/puzzles-app-v1.6.0.css`
 - `assets/puzzles-app-v1.6.0.js`
 
-Sube el contenido de este ZIP a la raíz del repositorio, reemplazando los archivos existentes. El service worker usa estrategia de red para `puzzles-app.css` y `puzzles-app.js`, por lo que seguirá leyendo los mismos nombres y actualizará su contenido.
+## Cambios incluidos
+
+- PDP editorial con información jerarquizada.
+- Títulos completos sin cortes.
+- Descripciones leídas únicamente desde Google Sheets.
+- Sin generación de párrafos genéricos en el navegador.
+- Imagen del producto contenida sin recorte.
+- Secciones desplegables para descripción, perfil, servicio, maridaje y ficha técnica.
+- Scroll corregido en los popups de escritorio y móvil.
+- Bloque de compra fijo en móvil.
+- Service Worker apuntando a los nombres permanentes.
+
+El `Index.html` de Google Apps Script ya carga estos mismos archivos estables desde GitHub Pages.

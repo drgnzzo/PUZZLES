@@ -7158,3 +7158,46 @@ a,
     grid-template-columns: 1fr !important;
   }
 }
+
+/* PUZZLES · PDP editorial estable y desplazamiento seguro */
+.product-detail-modal .modal__card {
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, calc(100vw - 32px));
+  max-height: min(94dvh, 980px);
+  overflow: hidden;
+}
+.product-detail-modal .modal__head { flex: 0 0 auto; }
+.product-detail-modal .modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.pdp-editorial__header h3 {
+  overflow-wrap: anywhere;
+  word-break: normal;
+  text-wrap: balance;
+}
+.pdp-summary,
+.pdp-accordion__body p {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.pdp-tech-grid dd { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .product-detail-modal .modal__card {
+    width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+  .product-detail-modal .modal__body { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+  .pdp-buybox {
+    position: sticky;
+    bottom: 0;
+    z-index: 12;
+    box-shadow: 0 -14px 34px rgba(0,0,0,.35);
+  }
+}
