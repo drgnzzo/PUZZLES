@@ -9,8 +9,8 @@
      * google.script.run automáticamente.
      */
     const GITHUB_GAS_URL = '';
-    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-ui-hotfix-1';
-    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?v=1.5.8-ui-hotfix-1';
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-stable-shop-1';
+    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?v=1.5.8-stable-shop-1';
 
     const STORAGE_KEYS = Object.freeze({
       CART: 'puzzles_cart_v3',
@@ -234,6 +234,40 @@
       cleanupLegacyBrandArtifacts();
     }
 
+    function setText(element, value) {
+      if (!element) return;
+      element.textContent = value == null ? '' : String(value);
+    }
+
+    function setDisplay(element, value) {
+      if (!element) return;
+      element.style.display = value;
+    }
+
+    function installInteractionFeedback() {
+      document.addEventListener('pointerdown', function (event) {
+        const control = event.target.closest('button, .btn, [role="button"], a[href]');
+        if (!control || control.disabled || control.getAttribute('aria-disabled') === 'true') return;
+        control.classList.add('is-pressing');
+      });
+
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (eventName) {
+        document.addEventListener(eventName, function (event) {
+          const control = event.target.closest && event.target.closest('button, .btn, [role="button"], a[href]');
+          if (control) control.classList.remove('is-pressing');
+        });
+      });
+
+      document.addEventListener('click', function (event) {
+        const control = event.target.closest('button, .btn, [role="button"], a[href]');
+        if (!control || control.disabled || control.getAttribute('aria-disabled') === 'true') return;
+        control.classList.remove('was-clicked');
+        void control.offsetWidth;
+        control.classList.add('was-clicked');
+        window.setTimeout(function () { control.classList.remove('was-clicked'); }, 420);
+      });
+    }
+
     async function init() {
       puzzlesStorageRemove('puzzles_cart_v1');
       puzzlesStorageRemove('puzzles_cart_v2');
@@ -241,6 +275,7 @@
       repairEntryStructure();
       cleanupLegacyBrandArtifacts();
       cacheDom();
+      installInteractionFeedback();
 
       // La vista inicial depende del dispositivo:
       // móvil abre en lista y escritorio abre en cuadrícula.
@@ -264,6 +299,7 @@
       }
 
       state.loading = false;
+      renderCarousel();
       setView(state.view, false);
       renderCart();
       window.setTimeout(cleanupLegacyBrandArtifacts, 0);
@@ -314,7 +350,7 @@
         'cartSubtotal','cartTotal','btnCheckout','minimumOrderNote',
         'checkoutBackdrop','checkoutModal','btnCloseCheckout','btnCancelCheckout',
         'checkoutForm','customerName','customerPhone','customerEmail','fulfillmentOptions',
-        'addressGroup','customerAddress','customerNotes','website','checkoutAge',
+        'addressGroup','customerAddress','customerStreet','customerExterior','customerInterior','customerNeighborhood','customerPostalCode','customerCity','customerState','customerReferences','customerNotes','website','checkoutAge',
         'checkoutItemsText','checkoutUnitsText','checkoutTotal','checkoutError','btnSubmitOrder',
         'successBackdrop','successModal','successFolio','successTotal','btnSuccessWhatsApp',
         'btnSuccessClose','footerText','footerYear','toastStack',
@@ -534,7 +570,7 @@
       }
 
       if (dom.resultRange) {
-        dom.resultRange.textContent = '';
+        setText(dom.resultRange, '');
       }
     }
 
@@ -585,9 +621,17 @@
         result.store || {}
       );
 
-      state.products = Array.isArray(result.products)
-        ? result.products.map(normalizeProductRecord)
+      const incomingProducts = Array.isArray(result.products)
+        ? result.products.map(normalizeProductRecord).filter(function (product) {
+            return product && String(product.code || '').trim();
+          })
         : [];
+
+      if (!incomingProducts.length && state.products.length) {
+        throw new Error('La actualización llegó vacía; se conserva el catálogo anterior.');
+      }
+
+      state.products = incomingProducts;
 
       state.categories = Array.isArray(result.categories)
         ? result.categories
@@ -804,25 +848,28 @@
     }
 
     function applyStoreConfig(stats) {
-      document.title = state.store.name + ' · Vinos y licores';
-      dom.brandName.textContent = state.store.name;
-      dom.brandSubtitle.textContent = state.store.subtitle;
+      document.title = (state.store.name || 'PUZZLES') + ' · Vinos y licores';
+      setText(dom.brandName, state.store.name || 'PUZZLES');
+      setText(dom.brandSubtitle, state.store.subtitle || 'Vinos · Licores · Destilados');
       applyBrandLogos();
-      dom.announcementText.textContent = state.store.priceNotice;
-      dom.footerText.textContent = state.store.footerText;
+      setText(dom.announcementText, state.store.priceNotice || 'Disponibilidad sujeta a confirmación.');
+      setText(dom.footerText, state.store.footerText || 'Venta exclusiva para mayores de 18 años. Evita el exceso.');
+
       const features = Array.isArray(state.store.features) ? state.store.features : [];
-      dom.feature1Title.textContent = (features[0] && features[0].title) || 'MOMENTOS CON INTENCIÓN';
-      dom.featureCatalogText.textContent = (features[0] && features[0].text) || 'Selecciones para celebrar, compartir, regalar, descubrir o completar tu cava.';
-      dom.feature2Title.textContent = (features[1] && features[1].title) || 'ELECCIONES MÁS CLARAS';
-      dom.feature2Text.textContent = (features[1] && features[1].text) || 'Compara categoría, marca, contenido y precio sin perder de vista la ocasión.';
-      dom.feature3Title.textContent = (features[2] && features[2].title) || 'TU SELECCIÓN, A TU RITMO';
-      dom.feature3Text.textContent = (features[2] && features[2].text) || 'Guarda lo que te interesa y continúa armando el momento cuando estés listo.';
-      dom.catalogKicker.textContent = state.store.catalogKicker || 'LA COLECCIÓN COMPLETA';
-      dom.catalogTitle.textContent = state.store.catalogTitle || 'Cuando ya sabes qué pieza estás buscando';
-      dom.catalogDescription.textContent = state.store.catalogText || 'Filtra la colección y encuentra la opción que encaja con el momento.';
-      [dom.btnHeaderWhatsApp, dom.btnFooterWhatsApp].forEach(button => {
-        button.style.display = state.store.whatsapp ? '' : 'none';
+      setText(dom.feature1Title, (features[0] && features[0].title) || 'MOMENTOS CON INTENCIÓN');
+      setText(dom.featureCatalogText, (features[0] && features[0].text) || 'Selecciones para celebrar, compartir, regalar, descubrir o completar tu cava.');
+      setText(dom.feature2Title, (features[1] && features[1].title) || 'ELECCIONES MÁS CLARAS');
+      setText(dom.feature2Text, (features[1] && features[1].text) || 'Compara categoría, marca, contenido y precio sin perder de vista la ocasión.');
+      setText(dom.feature3Title, (features[2] && features[2].title) || 'TU SELECCIÓN, A TU RITMO');
+      setText(dom.feature3Text, (features[2] && features[2].text) || 'Guarda lo que te interesa y continúa armando el momento cuando estés listo.');
+      setText(dom.catalogKicker, state.store.catalogKicker || 'LA COLECCIÓN COMPLETA');
+      setText(dom.catalogTitle, state.store.catalogTitle || 'Cuando ya sabes qué pieza estás buscando');
+      setText(dom.catalogDescription, state.store.catalogText || 'Filtra la colección y encuentra la opción que encaja con el momento.');
+
+      [dom.btnHeaderWhatsApp, dom.btnFooterWhatsApp].forEach(function (button) {
+        if (button) button.style.display = state.store.whatsapp ? '' : 'none';
       });
+
       renderCarousel();
       renderEditorialSections();
       renderFulfillmentOptions();
@@ -889,16 +936,22 @@
     ];
 
     function renderCarousel() {
-      const banners =
-        Array.isArray(state.store.banners)
-          ? state.store.banners
-          : [];
+      const configuredBanners = Array.isArray(state.store.banners)
+        ? state.store.banners.filter(Boolean)
+        : [];
 
-      if (!banners.length) {
-        dom.heroSlides.innerHTML = '';
-        dom.heroDots.innerHTML = '';
-        return;
-      }
+      const banners = configuredBanners.length
+        ? configuredBanners
+        : PUZZLES_BANNER_COPY_FALLBACKS.map(function (banner) {
+            return Object.assign({}, banner, {
+              showText: true,
+              align: 'left',
+              darkness: 0.58,
+              imagePosition: 'center center'
+            });
+          });
+
+      if (!dom.heroSlides || !dom.heroDots) return;
 
       dom.heroSlides.innerHTML = banners
         .map((banner, index) => {
@@ -1680,8 +1733,8 @@
       if (state.loading) return;
       if (!state.filtered.length) {
         showOnlyState('empty');
-        dom.resultCount.textContent = '0 resultados';
-        dom.resultRange.textContent = '';
+        setText(dom.resultCount, '0 resultados');
+        setText(dom.resultRange, '');
         renderActiveFilter();
         return;
       }
@@ -1690,8 +1743,8 @@
       const end = Math.min(start + state.pageSize, state.filtered.length);
       const pageProducts = state.filtered.slice(start, end);
 
-      dom.resultCount.textContent = state.filtered.length.toLocaleString('es-MX') + (state.filtered.length === 1 ? ' resultado' : ' resultados');
-      dom.resultRange.textContent = '· Mostrando ' + (start + 1).toLocaleString('es-MX') + '–' + end.toLocaleString('es-MX');
+      setText(dom.resultCount, state.filtered.length.toLocaleString('es-MX') + (state.filtered.length === 1 ? ' resultado' : ' resultados'));
+      setText(dom.resultRange, '· Mostrando ' + (start + 1).toLocaleString('es-MX') + '–' + end.toLocaleString('es-MX'));
       renderActiveFilter();
 
       if (state.view === 'table') {
@@ -1842,92 +1895,92 @@
     }
 
     function renderTable(products) {
-      const sortableHeader = (label, key) => `
-        <button class="table-sort-button" type="button" data-table-sort="${escapeAttr(key)}">
-          <span>${escapeHtml(label)}</span>
-          <span class="table-sort-indicator">${tableSortIndicator(key)}</span>
-        </button>`;
+      const isMobileList = window.matchMedia('(max-width: 760px)').matches;
 
-      const adminHeader = state.isAdmin
-        ? '<th>Precio ADMIN</th>'
-        : '';
+      if (isMobileList) {
+        dom.tableView.innerHTML = `
+          <div class="mobile-product-list">
+            ${products.map(function (product) {
+              const canBuy = Boolean(product.available && toFiniteNumber(product.priceNet) > 0);
+              const sale = toFiniteNumber(product.priceNet);
+              const compare = toFiniteNumber(product.priceCompare);
+              const adminCost = getAdminCost(product.code);
 
-      dom.tableView.innerHTML = `
-        <table class="product-table">
-          <thead>
-            <tr>
+              return `
+                <article class="mobile-list-card" data-code="${escapeAttr(product.code)}">
+                  <button class="mobile-list-card__visual" type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver ${escapeAttr(product.displayName)}">
+                    <span class="product-image-fallback" aria-hidden="true"><span>${escapeHtml(categoryLetter(product.category))}</span></span>
+                    ${productImageMarkup(product, 'mobile-list-card__image', product.displayName)}
+                  </button>
+
+                  <div class="mobile-list-card__body">
+                    <span class="mobile-list-card__category">${escapeHtml(product.category)}</span>
+                    <button class="mobile-list-card__title" type="button" data-product-detail="${escapeAttr(product.code)}">${escapeHtml(product.displayName)}</button>
+                    <div class="mobile-list-card__meta">
+                      ${product.brand ? `<span>${escapeHtml(product.brand)}</span>` : ''}
+                      ${product.volume ? `<span>${escapeHtml(product.volume)}</span>` : ''}
+                      <span>Código ${escapeHtml(product.code)}</span>
+                    </div>
+                    ${state.isAdmin ? renderAdminPrice(adminCost, true) : ''}
+                  </div>
+
+                  <div class="mobile-list-card__buy">
+                    ${compare > sale && canBuy ? `<span class="price-compare">${money(compare)}</span>` : ''}
+                    <strong>${canBuy ? money(sale) : 'Consultar'}</strong>
+                    <button class="table-add" type="button" data-add-one="${escapeAttr(product.code)}" ${canBuy ? '' : 'disabled'}>${canBuy ? 'Agregar' : 'Consultar'}</button>
+                  </div>
+                </article>`;
+            }).join('')}
+          </div>`;
+      } else {
+        const sortableHeader = function (label, key) {
+          return `<button class="table-sort-button" type="button" data-table-sort="${escapeAttr(key)}"><span>${escapeHtml(label)}</span><span class="table-sort-indicator">${tableSortIndicator(key)}</span></button>`;
+        };
+
+        const adminHeader = state.isAdmin ? '<th>Precio ADMIN</th>' : '';
+        dom.tableView.innerHTML = `
+          <table class="product-table">
+            <thead><tr>
               <th>${sortableHeader('Producto', 'name')}</th>
               <th>${sortableHeader('Contenido', 'volume')}</th>
               <th>${sortableHeader('Marca', 'brand')}</th>
               <th>${sortableHeader('Categoría', 'category')}</th>
               <th>${sortableHeader('Precio', 'price')}</th>
-              <th>Antes</th>
-              ${adminHeader}
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${products.map(product => {
-              const canBuy = Boolean(
-                product.available &&
-                toFiniteNumber(product.priceNet) > 0
-              );
-              const compare = toFiniteNumber(product.priceCompare);
-              const sale = toFiniteNumber(product.priceNet);
-              const adminCost = getAdminCost(product.code);
-
-              return `
-                <tr>
-                  <td class="product-table__product">
-                    <button class="product-table__product-wrap product-row-button" type="button" data-product-detail="${escapeAttr(product.code)}">
-                      <span class="product-table__thumb" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important">
-                        <span class="product-image-fallback" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" aria-hidden="true">
-                          <span>${escapeHtml(categoryLetter(product.category))}</span>
-                        </span>
-                        ${productImageMarkup(product, 'product-table__image', product.displayName)}
-                      </span>
-                      <span>
-                        <strong>${escapeHtml(product.displayName)}</strong>
-                        <small>Código ${escapeHtml(product.code)}${product.upc ? ` · UPC ${escapeHtml(product.upc)}` : ''}</small>
-                      </span>
-                    </button>
-                  </td>
+              <th>Antes</th>${adminHeader}<th>Acción</th>
+            </tr></thead>
+            <tbody>
+              ${products.map(function (product) {
+                const canBuy = Boolean(product.available && toFiniteNumber(product.priceNet) > 0);
+                const compare = toFiniteNumber(product.priceCompare);
+                const sale = toFiniteNumber(product.priceNet);
+                const adminCost = getAdminCost(product.code);
+                return `<tr>
+                  <td class="product-table__product"><button class="product-table__product-wrap product-row-button" type="button" data-product-detail="${escapeAttr(product.code)}"><span class="product-table__thumb"><span class="product-image-fallback" aria-hidden="true"><span>${escapeHtml(categoryLetter(product.category))}</span></span>${productImageMarkup(product, 'product-table__image', product.displayName)}</span><span><strong>${escapeHtml(product.displayName)}</strong><small>Código ${escapeHtml(product.code)}${product.upc ? ` · UPC ${escapeHtml(product.upc)}` : ''}</small></span></button></td>
                   <td>${escapeHtml(product.volume || '—')}</td>
                   <td>${escapeHtml(product.brand || '—')}</td>
                   <td><span class="table-category">${escapeHtml(product.category)}</span></td>
                   <td class="product-table__price">${canBuy ? money(sale) : 'Consultar'}</td>
                   <td>${compare > sale ? `<span class="price-compare">${money(compare)}</span>` : '—'}</td>
                   ${state.isAdmin ? `<td>${renderAdminPrice(adminCost, true)}</td>` : ''}
-                  <td>
-                    <button class="table-add" type="button" data-add-one="${escapeAttr(product.code)}" ${canBuy ? '' : 'disabled'}>
-                      Agregar
-                    </button>
-                  </td>
+                  <td><button class="table-add" type="button" data-add-one="${escapeAttr(product.code)}" ${canBuy ? '' : 'disabled'}>Agregar</button></td>
                 </tr>`;
-            }).join('')}
-          </tbody>
-        </table>`;
+              }).join('')}
+            </tbody>
+          </table>`;
+      }
 
-      dom.tableView
-        .querySelectorAll('[data-add-one]')
-        .forEach(button =>
-          button.addEventListener(
-            'click',
-            event => {
-              event.stopPropagation();
-              addToCart(button.dataset.addOne, 1);
-            }
-          )
-        );
+      dom.tableView.querySelectorAll('[data-add-one]').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+          event.stopPropagation();
+          addToCart(button.dataset.addOne, 1);
+        });
+      });
 
-      dom.tableView
-        .querySelectorAll('[data-table-sort]')
-        .forEach(button =>
-          button.addEventListener(
-            'click',
-            () => toggleTableSort(button.dataset.tableSort)
-          )
-        );
+      dom.tableView.querySelectorAll('[data-table-sort]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          toggleTableSort(button.dataset.tableSort);
+        });
+      });
 
       bindProductImageFallbacks(dom.tableView);
     }
@@ -2306,7 +2359,7 @@
       const compare = toFiniteNumber(product.priceCompare);
       const adminCost = getAdminCost(product.code);
 
-      dom.productDetailTitle.textContent = product.displayName;
+      setText(dom.productDetailTitle, product.displayName);
       const highlights = [
         product.brand ? `Marca: ${product.brand}` : '',
         product.category ? `Categoría: ${product.category}` : '',
@@ -2623,8 +2676,8 @@
       const lines = getCartLines();
       const totals = getCartTotals();
 
-      dom.headerCartCount.textContent = String(totals.units);
-      dom.floatingCartCount.textContent = String(totals.units);
+      setText(dom.headerCartCount, String(totals.units));
+      setText(dom.floatingCartCount, String(totals.units));
       dom.floatingCart.classList.toggle('is-visible', totals.units > 0);
 
       if (!lines.length) {
@@ -2676,9 +2729,9 @@
         button.addEventListener('click', () => removeFromCart(button.dataset.cartRemove));
       });
 
-      dom.cartUnits.textContent = totals.units.toLocaleString('es-MX');
-      dom.cartSubtotal.textContent = totals.lines.toLocaleString('es-MX');
-      dom.cartTotal.textContent = money(totals.net);
+      setText(dom.cartUnits, totals.units.toLocaleString('es-MX'));
+      setText(dom.cartSubtotal, totals.lines.toLocaleString('es-MX'));
+      setText(dom.cartTotal, money(totals.net));
       dom.cartFooter.classList.remove('hidden');
 
       const belowMinimum =
@@ -2687,7 +2740,7 @@
 
       dom.btnCheckout.disabled = belowMinimum;
       dom.minimumOrderNote.classList.toggle('hidden', !belowMinimum);
-      dom.minimumOrderNote.textContent = belowMinimum
+      if (dom.minimumOrderNote) dom.minimumOrderNote.textContent = belowMinimum
         ? 'Pedido mínimo: ' + money(state.store.minimumOrder) +
           '. Faltan ' + money(toFiniteNumber(state.store.minimumOrder) - totals.net) + '.'
         : '';
@@ -2766,16 +2819,38 @@
 
     function updateCheckoutSummary() {
       const totals = getCartTotals();
-      dom.checkoutItemsText.textContent = totals.lines + (totals.lines === 1 ? ' producto' : ' productos');
-      dom.checkoutUnitsText.textContent = totals.units + (totals.units === 1 ? ' unidad' : ' unidades');
-      dom.checkoutTotal.textContent = money(totals.net);
+      setText(dom.checkoutItemsText, totals.lines + (totals.lines === 1 ? ' producto' : ' productos'));
+      setText(dom.checkoutUnitsText, totals.units + (totals.units === 1 ? ' unidad' : ' unidades'));
+      setText(dom.checkoutTotal, money(totals.net));
     }
 
     function updateAddressVisibility() {
-      const selected = dom.fulfillmentOptions.querySelector('input[name="fulfillment"]:checked');
+      const selected = dom.fulfillmentOptions && dom.fulfillmentOptions.querySelector('input[name="fulfillment"]:checked');
       const isDelivery = selected && /entrega/i.test(selected.value);
-      dom.addressGroup.classList.toggle('hidden', !isDelivery);
-      dom.customerAddress.required = Boolean(isDelivery);
+      if (dom.addressGroup) dom.addressGroup.classList.toggle('hidden', !isDelivery);
+
+      [dom.customerStreet, dom.customerExterior, dom.customerNeighborhood, dom.customerPostalCode, dom.customerCity, dom.customerState].forEach(function (field) {
+        if (field) field.required = Boolean(isDelivery);
+      });
+    }
+
+    function composeCheckoutAddress() {
+      const parts = [];
+      const street = dom.customerStreet ? dom.customerStreet.value.trim() : '';
+      const exterior = dom.customerExterior ? dom.customerExterior.value.trim() : '';
+      const interior = dom.customerInterior ? dom.customerInterior.value.trim() : '';
+      const neighborhood = dom.customerNeighborhood ? dom.customerNeighborhood.value.trim() : '';
+      const postal = dom.customerPostalCode ? dom.customerPostalCode.value.trim() : '';
+      const city = dom.customerCity ? dom.customerCity.value.trim() : '';
+      const stateName = dom.customerState ? dom.customerState.value.trim() : '';
+      const references = dom.customerReferences ? dom.customerReferences.value.trim() : '';
+
+      if (street || exterior) parts.push([street, exterior ? 'No. ' + exterior : '', interior ? 'Int. ' + interior : ''].filter(Boolean).join(' '));
+      if (neighborhood) parts.push('Col. ' + neighborhood);
+      if (postal) parts.push('C.P. ' + postal);
+      if (city || stateName) parts.push([city, stateName].filter(Boolean).join(', '));
+      if (references) parts.push('Referencias: ' + references);
+      return parts.join(' · ');
     }
 
     async function submitOrder(event) {
@@ -2791,7 +2866,7 @@
         phone: dom.customerPhone.value.trim(),
         email: dom.customerEmail.value.trim(),
         fulfillment: fulfillmentInput ? fulfillmentInput.value : 'Por confirmar',
-        address: dom.customerAddress.value.trim(),
+        address: composeCheckoutAddress(),
         notes: dom.customerNotes.value.trim(),
         website: dom.website.value.trim(),
         ageConfirmed: dom.checkoutAge.checked,
@@ -2823,12 +2898,15 @@
 
     function setSubmitting(value) {
       state.submitting = value;
-      dom.btnSubmitOrder.disabled = value;
-      dom.btnSubmitOrder.textContent = value ? 'Registrando…' : 'Registrar pedido';
+      if (dom.btnSubmitOrder) {
+        dom.btnSubmitOrder.disabled = value;
+        dom.btnSubmitOrder.setAttribute('aria-busy', value ? 'true' : 'false');
+        dom.btnSubmitOrder.textContent = value ? 'Enviando compra…' : 'Confirmar y enviar compra';
+      }
     }
 
     function showCheckoutError(message) {
-      dom.checkoutError.textContent = message;
+      setText(dom.checkoutError, message);
       dom.checkoutError.classList.toggle('is-visible', Boolean(message));
     }
 
@@ -2838,8 +2916,8 @@
     }
 
     function showSuccess(result) {
-      dom.successFolio.textContent = result.folio || '—';
-      dom.successTotal.textContent = money(result.totalNet || 0);
+      setText(dom.successFolio, result.folio || '—');
+      setText(dom.successTotal, money(result.totalNet || 0));
       if (result.whatsappUrl) {
         dom.btnSuccessWhatsApp.href = result.whatsappUrl;
         dom.btnSuccessWhatsApp.classList.remove('hidden');
@@ -2898,20 +2976,20 @@
       dom.registerForm.classList.toggle('hidden', login);
       dom.accountPanel.classList.add('hidden');
       dom.btnGoogleLogin.classList.remove('hidden');
-      dom.authTitle.textContent = login ? 'Iniciar sesión' : 'Crear cuenta';
+      setText(dom.authTitle, login ? 'Iniciar sesión' : 'Crear cuenta');
     }
     function updateAuthUi() {
       const logged = Boolean(state.user && state.sessionToken);
-      dom.accountLabel.textContent = logged ? (state.user.name || 'Mi cuenta') : 'Ingresar';
+      setText(dom.accountLabel, logged ? (state.user.name || 'Mi cuenta') : 'Ingresar');
       dom.accountPanel.classList.toggle('hidden', !logged);
       dom.loginForm.classList.toggle('hidden', logged);
       dom.registerForm.classList.add('hidden');
       dom.btnGoogleLogin.classList.toggle('hidden', logged);
       dom.btnAuthLoginTab.parentElement.classList.toggle('hidden', logged);
-      dom.authTitle.textContent = logged ? 'Mi cuenta' : 'Iniciar sesión';
+      setText(dom.authTitle, logged ? 'Mi cuenta' : 'Iniciar sesión');
       if (logged) {
-        dom.accountName.textContent = state.user.name || 'Usuario';
-        dom.accountEmail.textContent = state.user.email || '';
+        setText(dom.accountName, state.user.name || 'Usuario');
+        setText(dom.accountEmail, state.user.email || '');
       }
       if (dom.accountRole) {
         dom.accountRole.classList.toggle('hidden', !state.isAdmin);

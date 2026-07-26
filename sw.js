@@ -1,4 +1,4 @@
-const CACHE_NAME = 'puzzles-20260725a-shell-v1.5.8-ui-hotfix-1';
+const CACHE_NAME = 'puzzles-shell-1.5.8-stable-shop-1';
 
 const SHELL_FILES = [
   './',
