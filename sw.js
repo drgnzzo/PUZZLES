@@ -1,4 +1,4 @@
-const CACHE_NAME = 'puzzles-shell-v1.5.8-logo-final';
+const CACHE_NAME = 'puzzles-shell-v1.5.8-logo-stable';
 
 const SHELL_FILES = [
   './',

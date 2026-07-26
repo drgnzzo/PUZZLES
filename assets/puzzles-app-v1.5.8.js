@@ -1,7 +1,7 @@
 'use strict';
-
-    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-logo-final';
-    const PUZZLES_OFFICIAL_ICON_URL = 'https://drgnzzo.github.io/PUZZLES/assets/icon-192.png?v=1.5.8-logo-final';
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?v=1.5.8-logo-stable';
+    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?v=1.5.8-logo-stable';
+    const PUZZLES_OFFICIAL_ICON_URL = 'https://drgnzzo.github.io/PUZZLES/assets/icon-192.png?v=1.5.8-logo-stable';
 
     /**
      * Para GitHub Pages:
@@ -218,7 +218,7 @@
         'btnMobileFilters','searchInput','sortSelect','btnGridView','btnTableView',
         'resultCount','resultRange','activeFilterWrap','loadingState','errorState','errorMessage',
         'emptyState','gridView','tableView','pagination','btnRetry','btnEmptyClear',
-        'btnHeaderWhatsApp','btnFooterWhatsApp','btnSearchHeader','btnAccountHeader','accountLabel',
+        'btnHeaderWhatsApp','btnFooterWhatsApp','btnSearchHeader','btnAccountHeader','btnLogoutHeader','accountLabel',
         'btnCartHeader','headerCartCount','floatingCart','floatingCartCount',
         'mainBackdrop','cartDrawer','btnCloseCart','cartBody','cartFooter','cartUnits',
         'cartSubtotal','cartTotal','btnCheckout','minimumOrderNote',
@@ -272,6 +272,7 @@
       listen(dom.registerForm, 'submit', submitRegister);
       listen(dom.btnGoogleLogin, 'click', submitGoogleLogin);
       listen(dom.btnLogout, 'click', logoutUser);
+      listen(dom.btnLogoutHeader, 'click', logoutUser);
 
       document.querySelectorAll('[data-scroll-catalog]').forEach(button => {
         button.addEventListener('click', () => document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' }));
@@ -695,52 +696,22 @@
 
 
     function applyBrandLogos() {
-      const brands =
-        document.querySelectorAll('.brand');
+      const logoTargets = [
+        ['ageGateLogo', PUZZLES_OFFICIAL_LOGO_URL],
+        ['entrySplashLogo', PUZZLES_OFFICIAL_LOGO_URL],
+        ['siteHeaderLogo', PUZZLES_OFFICIAL_MARK_URL],
+        ['footerLogo', PUZZLES_OFFICIAL_LOGO_URL]
+      ];
 
-      brands.forEach(brand => {
-        brand.classList.add(
-          'brand--official'
-        );
+      logoTargets.forEach(([id, source]) => {
+        const image = document.getElementById(id);
 
-        let officialImage =
-          brand.querySelector(
-            '.brand__official-logo'
-          );
+        if (!image) return;
 
-        if (!officialImage) {
-          officialImage =
-            document.createElement('img');
-
-          officialImage.className =
-            'brand__official-logo';
-
-          officialImage.alt =
-            'PUZZLES · Vinos, licores y destilados';
-
-          brand.prepend(officialImage);
-        }
-
-        officialImage.src =
-          PUZZLES_OFFICIAL_LOGO_URL;
-
-        const oldMark =
-          brand.querySelector(
-            '.brand__mark'
-          );
-
-        if (oldMark) {
-          oldMark.remove();
-        }
-
-        const copy =
-          brand.querySelector(
-            '.brand__copy, :scope > span:not(.brand__mark)'
-          );
-
-        if (copy) {
-          copy.hidden = true;
-        }
+        image.src = source;
+        image.removeAttribute('width');
+        image.removeAttribute('height');
+        image.style.transform = 'none';
       });
     }
 
@@ -2816,6 +2787,14 @@
       if (dom.accountRole) {
         dom.accountRole.classList.toggle('hidden', !state.isAdmin);
       }
+
+      if (dom.btnLogoutHeader) {
+        dom.btnLogoutHeader.hidden = !logged;
+        dom.btnLogoutHeader.classList.toggle(
+          'hidden',
+          !logged
+        );
+      }
     }
     async function submitLogin(event) {
       event.preventDefault();
@@ -2929,14 +2908,10 @@
         state.sessionToken
       );
 
-      const remembered = logged &&
-        puzzlesStorageGet(
-          STORAGE_KEYS.AGE
-        ) === 'true';
-
+      // La confirmación de edad se solicita en cada nueva carga.
+      // No se omite por caché ni por una sesión administrativa previa.
       const confirmed =
-        state.ageConfirmedThisVisit ||
-        remembered;
+        state.ageConfirmedThisVisit;
 
       if (dom.agePrompt) {
         dom.agePrompt.classList.remove('hidden');

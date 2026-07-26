@@ -5187,3 +5187,394 @@ body[data-catalog-view="table"] #tableView {
     margin-bottom: 20px !important;
   }
 }
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · CONTENCIÓN DEFINITIVA DE LOGOS
+   ============================================================ */
+.brand.brand--official {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.brand.brand--official .brand__official-logo {
+  position: static !important;
+  inset: auto !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: none !important;
+  background: transparent !important;
+}
+
+.age-gate { display: grid; place-items: center; }
+.age-gate.hidden { display: none !important; }
+
+.age-gate__card {
+  width: min(540px, calc(100vw - 32px)) !important;
+  max-height: calc(100dvh - 32px) !important;
+  overflow: auto !important;
+  text-align: center !important;
+}
+
+.age-gate .brand--gate {
+  width: min(270px, 66vw) !important;
+  height: min(270px, 36vh) !important;
+  max-width: 270px !important;
+  max-height: 270px !important;
+  margin: 0 auto 18px !important;
+}
+
+.site-header .brand--header {
+  width: 58px !important;
+  height: 58px !important;
+  max-width: 58px !important;
+  max-height: 58px !important;
+  justify-self: center !important;
+  overflow: hidden !important;
+}
+
+.entry-splash__inner {
+  width: min(460px, calc(100vw - 40px)) !important;
+  min-height: 0 !important;
+  margin: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+.entry-splash__logo {
+  position: static !important;
+  display: block !important;
+  width: min(280px, 64vw) !important;
+  height: min(280px, 44vh) !important;
+  max-width: 280px !important;
+  max-height: 280px !important;
+  margin: 0 auto 18px !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+@media (max-width: 760px) {
+  .age-gate__card {
+    width: min(420px, calc(100vw - 24px)) !important;
+    padding: 24px 18px !important;
+  }
+
+  .age-gate .brand--gate {
+    width: min(210px, 58vw) !important;
+    height: min(210px, 30vh) !important;
+    max-width: 210px !important;
+    max-height: 210px !important;
+  }
+
+  .site-header .brand--header {
+    width: 44px !important;
+    height: 44px !important;
+    max-width: 44px !important;
+    max-height: 44px !important;
+  }
+
+  .entry-splash__logo {
+    width: min(220px, 58vw) !important;
+    height: min(220px, 34vh) !important;
+    max-width: 220px !important;
+    max-height: 220px !important;
+  }
+}
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · REPARACIÓN FINAL DE LOGOS Y CAPAS DE ENTRADA
+   Los logos ya no dependen de .brand ni se insertan dinámicamente.
+   ============================================================ */
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Orden correcto: edad → splash → selector de momento → aplicación. */
+#ageGate {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 30000 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left)) !important;
+  overflow: auto !important;
+  background: rgba(0, 0, 0, .985) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#ageGate.hidden,
+#ageGate[aria-hidden="true"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+#ageGate .age-gate__card {
+  position: relative !important;
+  width: min(520px, 100%) !important;
+  max-width: 520px !important;
+  max-height: calc(100dvh - 36px) !important;
+  margin: auto !important;
+  padding: clamp(24px, 4vw, 38px) !important;
+  overflow: auto !important;
+  border: 1px solid #383838 !important;
+  border-top-color: #d89a00 !important;
+  background: #101010 !important;
+  text-align: center !important;
+  box-shadow: 0 26px 80px rgba(0,0,0,.72) !important;
+}
+
+.age-gate__logo-wrap {
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 auto 20px !important;
+  overflow: hidden !important;
+}
+
+#ageGateLogo {
+  position: static !important;
+  display: block !important;
+  width: min(230px, 54vw) !important;
+  height: auto !important;
+  max-width: 230px !important;
+  max-height: 215px !important;
+  margin: 0 auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: none !important;
+  background: transparent !important;
+}
+
+#agePrompt {
+  position: relative !important;
+  z-index: 1 !important;
+  display: block !important;
+}
+
+#agePrompt.hidden {
+  display: none !important;
+}
+
+#agePrompt h1 {
+  margin-top: 0 !important;
+}
+
+#entrySplash {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 29000 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  padding: 20px !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(
+      circle at 50% 40%,
+      rgba(216,154,0,.16),
+      transparent 34%
+    ),
+    #000 !important;
+}
+
+#entrySplash.hidden,
+#entrySplash[aria-hidden="true"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+#entrySplash .entry-splash__inner {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: min(430px, 100%) !important;
+  min-height: 0 !important;
+  margin: auto !important;
+  text-align: center !important;
+}
+
+#entrySplashLogo {
+  position: static !important;
+  display: block !important;
+  width: min(260px, 60vw) !important;
+  height: auto !important;
+  max-width: 260px !important;
+  max-height: 245px !important;
+  margin: 0 auto 20px !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: none !important;
+  background: transparent !important;
+}
+
+.intent-welcome-backdrop {
+  z-index: 28000 !important;
+}
+
+.intent-welcome-modal {
+  z-index: 28100 !important;
+}
+
+/* Header: sólo el emblema compacto, nunca el logo completo gigante. */
+.site-header__logo-link {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  min-height: 58px !important;
+  max-height: 58px !important;
+  padding: 4px !important;
+  margin: 0 auto !important;
+  overflow: hidden !important;
+  justify-self: center !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+#siteHeaderLogo {
+  position: static !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 50px !important;
+  max-height: 50px !important;
+  margin: 0 !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  filter: none !important;
+  background: transparent !important;
+}
+
+.header-logout-button {
+  border-color: #6d5520 !important;
+}
+
+.header-logout-button.hidden,
+.header-logout-button[hidden] {
+  display: none !important;
+}
+
+/* Footer. */
+.footer__logo-link {
+  display: inline-block !important;
+  width: min(190px, 50vw) !important;
+  margin-bottom: 14px !important;
+}
+
+#footerLogo {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: 150px !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+  transform: none !important;
+}
+
+/* Anular cualquier logo antiguo que pudiera quedar en HTML almacenado. */
+.brand__official-logo,
+.brand__mark {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+@media (max-width: 760px) {
+  #ageGate {
+    padding: 12px !important;
+  }
+
+  #ageGate .age-gate__card {
+    width: min(420px, 100%) !important;
+    max-height: calc(100dvh - 24px) !important;
+    padding: 22px 16px !important;
+  }
+
+  #ageGateLogo {
+    width: min(180px, 48vw) !important;
+    max-width: 180px !important;
+    max-height: 170px !important;
+  }
+
+  #entrySplashLogo {
+    width: min(200px, 54vw) !important;
+    max-width: 200px !important;
+    max-height: 190px !important;
+  }
+
+  .site-header__logo-link {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    padding: 3px !important;
+  }
+
+  #siteHeaderLogo {
+    max-width: 38px !important;
+    max-height: 38px !important;
+  }
+
+  .header-logout-button .icon-button__label {
+    display: none !important;
+  }
+
+  .header-logout-button {
+    width: 42px !important;
+    min-width: 42px !important;
+    padding-inline: 8px !important;
+  }
+}
