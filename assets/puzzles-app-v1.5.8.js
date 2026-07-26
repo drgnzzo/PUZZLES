@@ -18,7 +18,7 @@
       CUSTOMER: 'puzzles_customer_v2',
       VIEW: 'puzzles_catalog_view_v1',
       SESSION: 'puzzles_session_v1',
-      STORE: 'puzzles_store_snapshot_v1_5_8_momentos'
+      STORE: 'puzzles_store_snapshot_v1_5_8_curated_pdp_upc_2'
     });
 
     const PUZZLES_STORAGE_MEMORY = {};
@@ -1843,8 +1843,8 @@
 
           return `
             <article class="product-card" data-code="${escapeAttr(product.code)}">
-              <button class="product-card__visual product-open-button" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver información de ${escapeAttr(product.displayName)}">
-                <div class="product-image-fallback" data-darkreader-lock style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important" aria-hidden="true">
+              <button class="product-card__visual product-open-button" data-darkreader-lock type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver información de ${escapeAttr(product.displayName)}">
+                <div class="product-image-fallback" data-darkreader-lock aria-hidden="true">
                   <span>${escapeHtml(categoryLetter(product.category))}</span>
                 </div>
                 ${productImageMarkup(product, 'product-card__image', product.displayName)}
@@ -2047,7 +2047,6 @@
           loading="lazy"
           decoding="async"
           referrerpolicy="no-referrer"
-          style="background-color:#fff!important;color-scheme:light!important;forced-color-adjust:none!important;filter:none!important;mix-blend-mode:normal!important"
         >`;
     }
 
@@ -2374,21 +2373,6 @@
 
       setText(dom.productDetailTitle, 'Detalle del producto');
 
-      const facts = [
-        product.brand
-          ? ['Marca', product.brand]
-          : null,
-        product.category
-          ? ['Tipo', product.category]
-          : null,
-        (product.volume || product.presentation)
-          ? ['Contenido', product.volume || product.presentation]
-          : null,
-        product.presentation && product.presentation !== product.volume
-          ? ['Presentación', product.presentation]
-          : null
-      ].filter(Boolean).slice(0, 4);
-
       dom.productDetailContent.innerHTML = `
         <article class="pdp-simple">
           <div class="pdp-simple__media">
@@ -2415,16 +2399,10 @@
               <p class="pdp-description">${escapeHtml(description)}</p>
             </div>
 
-            ${facts.length ? `
-              <dl class="pdp-facts">
-                ${facts.map(([label, value]) => `
-                  <div>
-                    <dt>${escapeHtml(label)}</dt>
-                    <dd>${escapeHtml(value)}</dd>
-                  </div>
-                `).join('')}
-              </dl>
-            ` : ''}
+            <div class="pdp-identity-line">
+              ${product.brand ? `<span>${escapeHtml(product.brand)}</span>` : ''}
+              ${(product.volume || product.presentation) ? `<span>${escapeHtml(product.volume || product.presentation)}</span>` : ''}
+            </div>
 
             <div class="pdp-purchase">
               <div class="pdp-purchase__top">
@@ -3447,35 +3425,88 @@
       return normalized;
     }
 
-    const CATEGORY_PREFIX_PATTERN = new RegExp(
-      '^(?:' +
-      'TEQ\\.?|TEQUILA|' +
-      'MEZ\\.?|MEZCAL|' +
-      'WHI\\.?|WHISKY|WHISKEY|' +
-      'RON|' +
-      'VOD\\.?|VODKA|' +
-      'GIN\\.?|GINEBRA|' +
-      'BRA\\.?|BRANDY|' +
-      'COG\\.?|COGNAC|COÑAC|' +
-      'CHA\\.?|CHAMPAGNE|CHAMPÁN|' +
-      'LIC\\.?|LICOR(?:ES)?|' +
-      'AN[IÍ]S|' +
-      'APE\\.?|APERITIVO(?:S)?|VERMOUTH|VERMUT|' +
-      'V\\.?\\s*T\\.?|VINO\\s+TINTO|' +
-      'V\\.?\\s*B\\.?|VINO\\s+BLANCO|' +
-      'V\\.?\\s*R\\.?|VINO\\s+ROSADO|' +
-      'V\\.?\\s*E\\.?|VINO\\s+ESPUMOSO|ESPUMOSO(?:S)?|CAVA|PROSECCO|' +
-      'SIDRA|ROMPOPE|' +
-      'JER\\.?|JEREZ|' +
-      'OPO\\.?|OPORTO|' +
-      'AGU\\.?|AGUARDIENTE|' +
-      'CRE\\.?|CREMA(?:S)?|' +
-      'DESTILADO(?:S)?|' +
-      'BEBIDA(?:S)?|JARABE(?:S)?|MARGARITA|SANGRITA|' +
-      'VAP|PAQUETE(?:S)?' +
-      ')\\s*[.\\-:·/]*\\s*',
-      'i'
-    );
+    const CATEGORY_PREFIX_RULES = [
+      [/^VINO\s+TINTO\b/i, 'Vino tinto'],
+      [/^VINO\s+BLANCO\b/i, 'Vino blanco'],
+      [/^VINO\s+ROSADO\b/i, 'Vino rosado'],
+      [/^VINO\s+ESPUMOSO\b/i, 'Espumosos'],
+      [/^CHAMPAGNE\b/i, 'Champagne'],
+      [/^CHAMP[AÁ]N\b/i, 'Champagne'],
+      [/^CHA(?:\.|\s)+(?!MP)/i, 'Champagne'],
+      [/^AGUARDIENTE\b/i, 'Aguardiente'],
+      [/^AGU(?:\.|\s)+(?!ARDIENTE)/i, 'Aguardiente'],
+      [/^TEQUILA\b/i, 'Tequila'],
+      [/^TEQ(?:\.|\s)+(?!UILA)/i, 'Tequila'],
+      [/^MEZCAL\b/i, 'Mezcal'],
+      [/^MEZ(?:\.|\s)+(?!CAL)/i, 'Mezcal'],
+      [/^WHISK(?:E)?Y\b/i, 'Whisky'],
+      [/^WHI(?:\.|\s)+(?!SK)/i, 'Whisky'],
+      [/^VODKA\b/i, 'Vodka'],
+      [/^VOD(?:\.|\s)+(?!KA)/i, 'Vodka'],
+      [/^GINEBRA\b/i, 'Ginebra'],
+      [/^GIN(?:\.|\s)+(?!EBRA)/i, 'Ginebra'],
+      [/^BRANDY\b/i, 'Brandy'],
+      [/^BRA(?:\.|\s)+(?!NDY)/i, 'Brandy'],
+      [/^COGNAC\b/i, 'Cognac'],
+      [/^CO[NÑ]AC\b/i, 'Cognac'],
+      [/^LICOR(?:ES)?\b/i, 'Licores'],
+      [/^LIC(?:\.|\s)+(?!OR)/i, 'Licores'],
+      [/^CREMAS?\b/i, 'Cremas'],
+      [/^CRE(?:\.|\s)+(?!MA)/i, 'Cremas'],
+      [/^RON\b/i, 'Ron'],
+      [/^AN[IÍ]S\b/i, 'Anís']
+    ];
+
+    const BRAND_ALIAS_RULES = [
+      [/\b(?:LICOR\s+)?43(?:\s|$)/i, 'LICOR 43'],
+      [/\bCHIVAS(?:\s+REGAL)?\b/i, 'CHIVAS REGAL'],
+      [/\bSKYY\b/i, 'SKYY'],
+      [/\bLOS\s+REYES\b/i, 'LOS REYES'],
+      [/\bBYASS\b/i, 'BYASS'],
+      [/\bCARLOS\s+I\b/i, 'CARLOS I'],
+      [/\bDUQUE\s+DE\s+ALBA\b/i, 'DUQUE DE ALBA'],
+      [/\bJAIME\s+I\b/i, 'JAIME I'],
+      [/\bLEPANTO\b/i, 'LEPANTO'],
+      [/\bBOODLES\b/i, 'BOODLES'],
+      [/\bCANTERA\s+VERDE\b/i, 'CANTERA VERDE'],
+      [/\bCONDESA\b/i, 'CONDESA'],
+      [/\bDIEGA\b/i, 'DIEGA'],
+      [/\bFIFTY\s+POUNDS\b/i, 'FIFTY POUNDS'],
+      [/\bG\s*['’]?\s*VINE\b/i, 'G’VINE'],
+      [/\bLARIOS\b/i, 'LARIOS'],
+      [/\bLAS\s+CALIFORNIAS\b/i, 'LAS CALIFORNIAS'],
+      [/\bLONDON\s+N(?:O|º|°)?\s*1\b/i, 'LONDON Nº1'],
+      [/\bMARTIN\s+MILLER(?:['’´S]+)?\b/i, 'MARTIN MILLER’S'],
+      [/\bMONKEY\s+47\b/i, 'MONKEY 47'],
+      [/\bPUERTO\s+DE\s+INDIAS\b/i, 'PUERTO DE INDIAS'],
+      [/\bWINT\s*(?:Y|&|AND)\s*LILA\b/i, 'WINT & LILA'],
+      [/\bMOET(?:\s+(?:Y|ET|AND|&)\s+CHANDON|\s+CHANDON)?\b/i, 'MOËT & CHANDON'],
+      [/\bVEUVE(?:\s+DE)?\s+CLICQUOT\b/i, 'VEUVE CLICQUOT'],
+      [/\b(?:JOHNNIE|J)\s+WALKER\b/i, 'JOHNNIE WALKER'],
+      [/\bMARTIN\s+CODAX\b/i, 'MARTÍN CÓDAX'],
+      [/\bPITU\b/i, 'PITÚ'],
+      [/\bMUMM\b/i, 'MUMM'],
+      [/\bCUERVO\s+(?:ESPECIAL|TRADICIONAL|250\s+ANIV)/i, 'JOSÉ CUERVO'],
+      [/\bTERRY\b/i, 'TERRY'],
+      [/\bBRUXO\b/i, 'BRUXO'],
+      [/\bOSO\s+NEGRO\b/i, 'OSO NEGRO'],
+      [/\bPUERTO\s+DE\s+INDIAS\b/i, 'PUERTO DE INDIAS'],
+      [/\bFIREBALL\b/i, 'FIREBALL'],
+      [/\bPASSPORT\b/i, 'PASSPORT']
+    ];
+
+    function stripCategoryPrefix(value) {
+      const original = String(value || '').trim();
+      for (const [pattern, category] of CATEGORY_PREFIX_RULES) {
+        const match = original.match(pattern);
+        if (!match) continue;
+        let rest = original.slice(match[0].length).replace(/^[\s.\-:·/]+/, '').trim();
+        if (category === 'Aguardiente') rest = rest.replace(/^(?:DE\s+ORUJO(?:\s+CON\s+HIERBAS)?|DE\s+CA[NÑ]A)\b[\s.\-:·/]*/i, '');
+        if (category === 'Licores') rest = rest.replace(/^(?:(?:DE|CON)\s+(?:WHISKY|WHISKEY|TEQUILA|AGAVE|CAF[EÉ]|HIERBAS?|FRUTAS?))\b[\s.\-:·/]*/i, '');
+        return rest.trim();
+      }
+      return original;
+    }
 
     const KNOWN_BRANDS = [
       '100 AÑOS',
@@ -3616,13 +3647,6 @@
       '100%', 'EDICION', 'EDICIÓN'
     ]);
 
-    function stripCategoryPrefix(value) {
-      // Los títulos comerciales se conservan completos.
-      // No se eliminan prefijos porque abreviaturas como TEQ, CHA o AGU
-      // también forman parte del inicio de palabras completas como
-      // TEQUILA, CHAMPAGNE y AGUARDIENTE.
-      return String(value || '').trim();
-    }
 
     function extractVolumeDisplay(value) {
       const matches = String(value || '')
@@ -3658,111 +3682,38 @@
       const name = String(value || '').trim();
       if (!name) return '';
 
-      const stripped = name
-        .replace(
-          CATEGORY_PREFIX_PATTERN,
-          ''
-        )
-        .trim();
-
-      const normalizedName = normalize(
-        stripped
-      );
-
-      const orderedBrands =
-        KNOWN_BRANDS
-          .slice()
-          .sort(
-            (left, right) =>
-              right.length - left.length
-          );
-
-      for (const brand of orderedBrands) {
-        if (
-          normalizedName.includes(
-            normalize(brand)
-          )
-        ) {
-          return brand;
-        }
+      const normalizedName = normalize(name).toUpperCase();
+      for (const [pattern, brand] of BRAND_ALIAS_RULES) {
+        if (pattern.test(normalizedName)) return brand;
       }
 
-      const cleaned = stripped
-        .replace(
-          /\b\d+(?:[.,]\d+)?\s*(?:ML|L)\b/gi,
-          ' '
-        )
-        .replace(/\+\s*.*$/g, ' ')
+      const orderedBrands = KNOWN_BRANDS.slice().sort((left, right) => right.length - left.length);
+      for (const brand of orderedBrands) {
+        if (normalize(name).includes(normalize(brand))) return brand;
+      }
+
+      const stripped = stripCategoryPrefix(name)
+        .replace(/\b\d+(?:[.,]\d+)?\s*(?:ML|L)\b/gi, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+      if (!stripped) return '';
 
-      const tokens = cleaned
-        .split(' ')
-        .filter(Boolean);
-
-      const leadingNoise = new Set([
-        'DE', 'DEL', 'CON', 'C',
-        'C/HIERBA', 'C/TEQ', 'ORUJO',
-        'LICOR', 'CREMA', 'ANIS',
-        'ANÍS', 'AMARETTO', 'AMARO',
-        'ESPUMOSO', 'VINO', 'WHISKY',
-        'TEQUILA', 'RON', 'AGAVE', 'MA'
-      ]);
-
+      const tokens = stripped.split(' ').filter(Boolean);
+      const leadingNoise = new Set(['DE','DEL','CON','Y','ORUJO','HIERBAS','AGAVE','TEQUILA','WHISKY','WHISKEY','CAFE','CAFÉ']);
       while (tokens.length) {
-        const token = tokens[0]
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toUpperCase();
-
-        if (
-          leadingNoise.has(token) ||
-          BRAND_STOP_WORDS.has(token) ||
-          /^\d+$/.test(token)
-        ) {
-          tokens.shift();
-          continue;
-        }
-
-        break;
+        const first = normalize(tokens[0]).toUpperCase();
+        if (!leadingNoise.has(first) && !BRAND_STOP_WORDS.has(first)) break;
+        tokens.shift();
       }
-
-      if (!tokens.length) return '';
 
       const output = [];
-
-      for (
-        let index = 0;
-        index < tokens.length &&
-        output.length < 3;
-        index++
-      ) {
-        const token = tokens[index];
-        const normalizedToken = token
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toUpperCase()
-          .replace(/[.,;:]+$/g, '');
-
-        if (
-          output.length &&
-          (
-            BRAND_STOP_WORDS.has(
-              normalizedToken
-            ) ||
-            /^\d/.test(normalizedToken)
-          )
-        ) {
-          break;
-        }
-
+      for (const token of tokens) {
+        const normalizedToken = normalize(token).toUpperCase();
+        if (output.length && (BRAND_STOP_WORDS.has(normalizedToken) || /^\d/.test(normalizedToken))) break;
         output.push(token);
+        if (output.length >= 4) break;
       }
-
-      return output
-        .join(' ')
-        .replace(/[.,;:]+$/g, '')
-        .trim();
+      return output.join(' ').replace(/[.,;:]+$/g, '').trim();
     }
 
     function buildCommercialDescription(product) {

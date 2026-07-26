@@ -1,4 +1,4 @@
-const CACHE_NAME = 'puzzles-shell-1.5.8-pdp-specific-1';
+const CACHE_NAME = 'puzzles-shell-1.5.8-curation-pdp-upc-2';
 const SHELL_FILES = [
   './',
   './index.html',

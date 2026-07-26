@@ -6267,3 +6267,425 @@ a,
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · CURADURÍA, PDP SIN SCROLL Y SUPERFICIE PREMIUM
+   ============================================================ */
+:root {
+  --puzzles-announcement-h: 28px;
+  --puzzles-header-h: 76px;
+  --puzzles-sticky-offset: calc(var(--puzzles-announcement-h) + var(--puzzles-header-h));
+}
+
+.announcement {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1510 !important;
+  min-height: var(--puzzles-announcement-h) !important;
+}
+
+.site-header {
+  position: sticky !important;
+  top: var(--puzzles-announcement-h) !important;
+  z-index: 1500 !important;
+}
+
+@media (min-width: 961px) {
+  .catalog-layout {
+    align-items: start !important;
+  }
+
+  .filters-panel {
+    position: sticky !important;
+    top: calc(var(--puzzles-sticky-offset) + 14px) !important;
+    align-self: start !important;
+    max-height: calc(100dvh - var(--puzzles-sticky-offset) - 28px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+}
+
+/* El blanco inline fue retirado en JS; esta superficie sí se ve. */
+.product-card__visual,
+.product-table__thumb,
+.mobile-list-card__visual,
+.pdp-image-button,
+.cart-item__visual {
+  background:
+    radial-gradient(circle at 50% 40%, #f8f8f5 0%, #ecece7 58%, #ddddD6 100%) !important;
+  border-color: #d2d2ca !important;
+}
+
+.product-card__image,
+.product-table__image,
+.mobile-list-card__image,
+.pdp-image,
+.cart-item__image,
+.js-product-image {
+  background: transparent !important;
+  mix-blend-mode: multiply !important;
+  filter: contrast(1.09) brightness(.99) saturate(1.025) drop-shadow(0 7px 7px rgba(0,0,0,.16)) !important;
+}
+
+/* PDP: todo lo prioritario cabe en la ventana; no hay scroll interno. */
+.product-detail-modal {
+  padding: 10px !important;
+  overflow: hidden !important;
+}
+
+.product-detail-card {
+  width: min(1280px, calc(100vw - 20px)) !important;
+  height: min(94dvh, 820px) !important;
+  max-height: min(94dvh, 820px) !important;
+  overflow: hidden !important;
+}
+
+.product-detail-content {
+  min-height: 0 !important;
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+}
+
+.product-detail-content::-webkit-scrollbar {
+  display: none !important;
+}
+
+.pdp-simple {
+  grid-template-columns: minmax(320px, 44%) minmax(0, 56%) !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.pdp-simple__media {
+  min-height: 0 !important;
+  padding: clamp(16px, 2.6vw, 32px) !important;
+}
+
+.pdp-simple .pdp-image-button {
+  width: min(100%, 520px) !important;
+  max-height: min(62dvh, 520px) !important;
+}
+
+.pdp-simple__content {
+  min-height: 0 !important;
+  padding: clamp(18px, 2.8vw, 34px) !important;
+  overflow: hidden !important;
+}
+
+.pdp-simple__heading {
+  min-height: 0 !important;
+  padding-bottom: 14px !important;
+}
+
+.pdp-simple h3 {
+  margin-bottom: 10px !important;
+  font-size: clamp(30px, 3.4vw, 48px) !important;
+}
+
+.pdp-simple .pdp-description {
+  display: -webkit-box !important;
+  overflow: hidden !important;
+  font-size: clamp(13px, 1.05vw, 15px) !important;
+  line-height: 1.55 !important;
+  -webkit-line-clamp: 7 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+.pdp-facts {
+  gap: 7px !important;
+  margin: 12px 0 !important;
+}
+
+.pdp-facts > div {
+  padding: 8px 10px !important;
+}
+
+.pdp-purchase {
+  margin-top: auto !important;
+  padding: 13px !important;
+}
+
+.pdp-purchase__meta {
+  margin: 7px 0 10px !important;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --puzzles-announcement-h: 26px;
+    --puzzles-header-h: 58px;
+  }
+
+  .product-detail-modal {
+    padding: 0 !important;
+  }
+
+  .product-detail-card {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+
+  .product-detail-head {
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: max(10px, env(safe-area-inset-top)) 12px 8px !important;
+  }
+
+  .product-detail-content {
+    height: calc(100dvh - 56px) !important;
+    overflow: hidden !important;
+  }
+
+  .pdp-simple {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: minmax(150px, 29dvh) minmax(0, 1fr) !important;
+    height: 100% !important;
+  }
+
+  .pdp-simple__media {
+    padding: 8px 12px 5px !important;
+  }
+
+  .pdp-simple .pdp-image-button {
+    width: min(100%, 330px) !important;
+    height: 100% !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
+  }
+
+  .pdp-image-link {
+    display: none !important;
+  }
+
+  .pdp-simple__content {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 12px 13px max(10px, env(safe-area-inset-bottom)) !important;
+    overflow: hidden !important;
+  }
+
+  .pdp-simple .pdp-category {
+    margin-bottom: 6px !important;
+    padding: 5px 8px !important;
+  }
+
+  .pdp-simple h3 {
+    margin-bottom: 7px !important;
+    font-size: clamp(25px, 8vw, 34px) !important;
+    line-height: .98 !important;
+  }
+
+  .pdp-simple .pdp-description {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+    -webkit-line-clamp: 5 !important;
+  }
+
+  .pdp-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    margin: 8px 0 !important;
+  }
+
+  .pdp-facts > div {
+    min-height: 42px !important;
+    padding: 6px 8px !important;
+  }
+
+  .pdp-facts dt {
+    margin-bottom: 2px !important;
+    font-size: 8px !important;
+  }
+
+  .pdp-facts dd {
+    font-size: 11px !important;
+  }
+
+  .pdp-purchase {
+    position: static !important;
+    margin: auto 0 0 !important;
+    padding: 9px !important;
+    box-shadow: none !important;
+  }
+
+  .pdp-purchase .price-net {
+    font-size: 30px !important;
+  }
+
+  .pdp-purchase__meta {
+    display: none !important;
+  }
+
+  .pdp-simple .pdp-actions {
+    grid-template-columns: 104px minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  .pdp-simple .pdp-add-button {
+    min-height: 46px !important;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 700px) {
+  .pdp-simple {
+    grid-template-rows: minmax(120px, 23dvh) minmax(0, 1fr) !important;
+  }
+  .pdp-simple .pdp-description {
+    -webkit-line-clamp: 3 !important;
+  }
+  .pdp-facts {
+    display: none !important;
+  }
+}
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · CURADURÍA V2 / PDP SIN TABLAS / SUPERFICIE VISIBLE
+   ============================================================ */
+.product-card__visual,
+.product-table__thumb,
+.mobile-list-card__visual,
+.pdp-image-button,
+.cart-item__visual,
+.product-image-fallback {
+  background:
+    radial-gradient(ellipse at 50% 43%, #fafaf6 0%, #ecece5 48%, #d8d8cf 100%) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(98, 94, 82, .18),
+    inset 0 -22px 34px rgba(72, 70, 62, .055) !important;
+}
+
+.product-card__image,
+.product-table__image,
+.mobile-list-card__image,
+.pdp-image,
+.cart-item__image,
+.js-product-image {
+  mix-blend-mode: multiply !important;
+  filter:
+    contrast(1.12)
+    brightness(.985)
+    saturate(1.03)
+    drop-shadow(0 8px 7px rgba(0,0,0,.19)) !important;
+}
+
+.product-detail-card {
+  width: min(1380px, calc(100vw - 18px)) !important;
+  height: min(92dvh, 780px) !important;
+  max-height: min(92dvh, 780px) !important;
+}
+
+.pdp-simple {
+  grid-template-columns: minmax(360px, 47%) minmax(0, 53%) !important;
+}
+
+.pdp-simple__media {
+  padding: clamp(14px, 2vw, 26px) !important;
+}
+
+.pdp-simple .pdp-image-button {
+  width: min(100%, 600px) !important;
+  max-height: min(68dvh, 600px) !important;
+}
+
+.pdp-simple__content {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: clamp(20px, 3vw, 42px) !important;
+}
+
+.pdp-simple h3 {
+  font-size: clamp(32px, 3.1vw, 52px) !important;
+  line-height: 1 !important;
+}
+
+.pdp-simple .pdp-description {
+  display: block !important;
+  max-height: none !important;
+  overflow: visible !important;
+  margin: 10px 0 0 !important;
+  font-size: clamp(14px, 1.08vw, 16px) !important;
+  line-height: 1.58 !important;
+  -webkit-line-clamp: unset !important;
+}
+
+.pdp-identity-line {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 7px !important;
+  margin: 14px 0 !important;
+}
+
+.pdp-identity-line span {
+  padding: 7px 10px !important;
+  border: 1px solid #353535 !important;
+  background: #191919 !important;
+  color: #d7d7d7 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: .04em !important;
+}
+
+.pdp-purchase {
+  margin-top: 18px !important;
+}
+
+@media (max-width: 760px) {
+  .product-detail-card {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+
+  .pdp-simple {
+    grid-template-rows: minmax(135px, 31dvh) minmax(0, 1fr) !important;
+  }
+
+  .pdp-simple__content {
+    justify-content: flex-start !important;
+    padding: 10px 13px max(9px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .pdp-simple h3 {
+    font-size: clamp(23px, 7.2vw, 31px) !important;
+    line-height: 1 !important;
+  }
+
+  .pdp-simple .pdp-description {
+    display: -webkit-box !important;
+    overflow: hidden !important;
+    font-size: 12.5px !important;
+    line-height: 1.38 !important;
+    -webkit-line-clamp: 5 !important;
+    -webkit-box-orient: vertical !important;
+  }
+
+  .pdp-identity-line {
+    margin: 8px 0 !important;
+  }
+
+  .pdp-identity-line span {
+    padding: 5px 7px !important;
+    font-size: 10px !important;
+  }
+
+  .pdp-purchase {
+    margin-top: auto !important;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 700px) {
+  .pdp-simple {
+    grid-template-rows: minmax(110px, 24dvh) minmax(0, 1fr) !important;
+  }
+  .pdp-simple .pdp-description {
+    -webkit-line-clamp: 3 !important;
+  }
+  .pdp-identity-line {
+    display: none !important;
+  }
+}
