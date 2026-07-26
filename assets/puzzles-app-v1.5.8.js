@@ -439,8 +439,15 @@
       });
 
       listen(dom.btnSearchHeader, 'click', () => {
-        document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' });
-        setTimeout(() => dom.searchInput.focus(), 500);
+        const catalog = document.getElementById('catalogo');
+        const mobile = window.matchMedia('(max-width: 760px)').matches;
+        if (catalog) catalog.scrollIntoView({ behavior: mobile ? 'auto' : 'smooth', block: 'start' });
+        setTimeout(() => {
+          if (dom.searchInput) {
+            try { dom.searchInput.focus({ preventScroll: true }); }
+            catch (_) { dom.searchInput.focus(); }
+          }
+        }, mobile ? 60 : 500);
       });
 
       [dom.btnHeaderWhatsApp, dom.btnFooterWhatsApp].filter(Boolean).forEach(button => {
@@ -3198,43 +3205,49 @@
         state.initialLoadPromise ||
         Promise.resolve();
 
+      const guardedInitialLoad = Promise.race([
+        initialLoad,
+        new Promise(resolve => setTimeout(resolve, 8000))
+      ]);
+
       await Promise.allSettled([
         minimumTime,
-        initialLoad
+        guardedInitialLoad
       ]);
 
       state.entrySplashActive = false;
 
-      if (dom.entrySplash) {
-        dom.entrySplash.classList.add('is-leaving');
-
-        setTimeout(() => {
+      const finishEntrySplash = () => {
+        if (dom.entrySplash) {
           dom.entrySplash.classList.add('hidden');
           dom.entrySplash.classList.remove('is-leaving');
           dom.entrySplash.setAttribute('aria-hidden', 'true');
+        }
+
+        if (
+          state.ageConfirmedThisVisit ||
+          (
+            state.user &&
+            state.sessionToken &&
+            puzzlesStorageGet(STORAGE_KEYS.AGE) === 'true'
+          )
+        ) {
+          openIntentWelcome(false);
 
           if (
-            state.ageConfirmedThisVisit ||
-            (
-              state.user &&
-              state.sessionToken &&
-              puzzlesStorageGet(STORAGE_KEYS.AGE) === 'true'
-            )
+            !dom.intentWelcomeModal ||
+            !dom.intentWelcomeModal.classList.contains('is-open')
           ) {
-            openIntentWelcome(false);
-
-            if (
-              !dom.intentWelcomeModal ||
-              !dom.intentWelcomeModal.classList.contains(
-                'is-open'
-              )
-            ) {
-              document.body.classList.remove(
-                'no-scroll'
-              );
-            }
+            document.body.classList.remove('no-scroll');
           }
-        }, 320);
+        }
+      };
+
+      if (dom.entrySplash) {
+        dom.entrySplash.classList.add('is-leaving');
+        setTimeout(finishEntrySplash, 320);
+      } else {
+        finishEntrySplash();
       }
     }
 
@@ -3860,11 +3873,11 @@
           );
           proxyUrl.searchParams.set(
             'cbg',
-            'ffffff'
+            'ececea'
           );
           proxyUrl.searchParams.set(
             'bg',
-            'ffffff'
+            'ececea'
           );
           proxyUrl.searchParams.set(
             'output',
@@ -3881,7 +3894,7 @@
         'https://images.weserv.nl/?url=' +
         encodeURIComponent(source) +
         '&w=900&h=900&fit=contain' +
-        '&cbg=ffffff&bg=ffffff&output=webp&q=87&we=1'
+        '&cbg=ececea&bg=ececea&output=webp&q=88&we=1'
       );
     }
 

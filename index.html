@@ -2,7 +2,7 @@
 <html lang="es-MX">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <meta name="background-color" content="#000000">
   <meta name="description" content="PUZZLES · Vinos, licores y destilados">
@@ -10,25 +10,34 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="PUZZLES">
-  <link rel="manifest" href="./manifest.webmanifest?v=1.5.8-stable-shop-1">
-  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png?v=1.5.8-stable-shop-1">
-  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png?v=1.5.8-stable-shop-1">
+  <link rel="manifest" href="./manifest.webmanifest?v=1.5.8-mobile-pricing-1">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png?v=1.5.8-mobile-pricing-1">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png?v=1.5.8-mobile-pricing-1">
   <title>PUZZLES</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
+      position: fixed;
+      inset: 0;
       width: 100%;
       height: 100%;
+      min-width: 100%;
+      max-width: 100%;
       margin: 0;
+      padding: 0;
       overflow: hidden;
+      overscroll-behavior: none;
       background: #000;
+      touch-action: pan-x pan-y;
     }
-    body { padding: 0; }
     iframe {
+      position: fixed;
+      inset: 0;
       display: block;
-      width: 100%;
-      height: 100%;
-      min-height: 100%;
+      width: 100vw;
+      height: 100dvh;
+      min-width: 100vw;
+      max-width: 100vw;
       border: 0;
       background: #000;
     }
@@ -36,7 +45,7 @@
 </head>
 <body>
   <iframe
-    src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&v=1.5.8&fix=1.5.8-stable-shop-1"
+    src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&v=1.5.8&fix=1.5.8-mobile-pricing-1"
     title="PUZZLES"
     allow="clipboard-write"
     referrerpolicy="strict-origin-when-cross-origin"

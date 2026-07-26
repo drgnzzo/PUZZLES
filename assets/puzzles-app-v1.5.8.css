@@ -5744,3 +5744,197 @@ button:disabled,
     width: 100%;
   }
 }
+
+
+/* ============================================================
+   PUZZLES 1.5.8 · MÓVIL ESTABLE + BOTELLAS TRANSPARENTES
+   ============================================================ */
+html,
+body {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
+}
+
+body,
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+.btn,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* Fondo de exhibición tipo ecommerce: gris cálido y una base suave. */
+.product-card__visual,
+.product-table__thumb,
+.mobile-list-card__visual,
+.pdp-image-button,
+.cart-item__visual {
+  position: relative !important;
+  isolation: isolate !important;
+  background:
+    radial-gradient(circle at 50% 46%, #f7f7f5 0%, #efefec 55%, #e6e6e2 100%) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(120,120,112,.16),
+    inset 0 -18px 32px rgba(80,80,70,.035) !important;
+  color-scheme: only light;
+  forced-color-adjust: none;
+}
+
+.product-card__visual::after,
+.product-table__thumb::after,
+.mobile-list-card__visual::after,
+.pdp-image-button::after,
+.cart-item__visual::after {
+  content: '' !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  left: 20% !important;
+  right: 20% !important;
+  bottom: 7% !important;
+  height: 7% !important;
+  display: block !important;
+  border-radius: 50% !important;
+  background: radial-gradient(ellipse, rgba(25,25,20,.20) 0%, rgba(25,25,20,0) 72%) !important;
+  pointer-events: none !important;
+}
+
+.product-card__image,
+.product-table__image,
+.mobile-list-card__image,
+.pdp-image,
+.cart-item__image,
+.js-product-image {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  mix-blend-mode: multiply !important;
+  filter:
+    contrast(1.075)
+    brightness(.995)
+    saturate(1.025)
+    drop-shadow(0 5px 5px rgba(0,0,0,.13)) !important;
+  color-scheme: only light;
+  forced-color-adjust: none;
+}
+
+@media (max-width: 760px) {
+  html,
+  body,
+  #app,
+  main,
+  .catalog-section,
+  .catalog-layout,
+  .section-heading,
+  .catalog-toolbar,
+  .product-grid,
+  .table-wrap,
+  .mobile-product-list {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  input,
+  select,
+  textarea,
+  .field,
+  .search-input {
+    font-size: 16px !important;
+    line-height: 1.25 !important;
+  }
+
+  .announcement {
+    padding-top: env(safe-area-inset-top) !important;
+  }
+
+  .site-header {
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .hero-carousel {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+  }
+
+  /* Lista móvil sin columna lateral que comprima el título. */
+  .mobile-list-card {
+    grid-template-columns: 72px minmax(0, 1fr) !important;
+    grid-template-areas:
+      'visual body'
+      'buy buy' !important;
+    gap: 9px 11px !important;
+    padding: 9px !important;
+  }
+
+  .mobile-list-card__visual {
+    grid-area: visual;
+    width: 72px !important;
+    height: 72px !important;
+  }
+
+  .mobile-list-card__body {
+    grid-area: body;
+  }
+
+  .mobile-list-card__buy {
+    grid-area: buy;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-top: 8px !important;
+    border-top: 1px solid #2d2d2d !important;
+  }
+
+  .mobile-list-card__buy strong {
+    justify-self: start;
+    font-size: 19px !important;
+  }
+
+  .mobile-list-card__buy .table-add {
+    justify-self: end;
+    min-width: 118px !important;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding-inline: 0 !important;
+  }
+
+  .product-card__body {
+    padding: 8px !important;
+  }
+
+  .product-title-button {
+    min-height: 38px;
+    font-size: 14px !important;
+  }
+
+  .product-card .price-net {
+    font-size: clamp(20px, 6.7vw, 27px) !important;
+  }
+
+  .checkout-modal,
+  .auth-modal,
+  .product-detail-modal,
+  .cart-drawer {
+    max-width: 100vw !important;
+  }
+}
