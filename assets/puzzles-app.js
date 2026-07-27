@@ -2594,7 +2594,10 @@
         if (value) value.textContent = '1';
       });
 
+      dom.productDetailBackdrop.classList.add('is-open');
       dom.productDetailModal.classList.add('is-open');
+      dom.productDetailModal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('no-scroll');
     }
 
     function changeDetailQuantity(delta) {
@@ -2608,6 +2611,7 @@
 
     function closeProductDetail() {
       dom.productDetailModal.classList.remove('is-open');
+      dom.productDetailModal.setAttribute('aria-hidden', 'true');
       dom.productDetailBackdrop.classList.remove('is-open');
       state.detailProductCode = '';
       if (!document.querySelector('.modal.is-open, .drawer.is-open, .image-zoom-modal.is-open')) {
@@ -4822,6 +4826,8 @@
         const localProgress = Math.max(-1, Math.min(1, (viewportRect.top - rect.top) / Math.max(1, rect.height)));
         scene.style.setProperty('--cellar-visibility', visibility.toFixed(3));
         scene.style.setProperty('--cellar-shift', (localProgress * 44).toFixed(2) + 'px');
+        scene.style.setProperty('--cellar-progress', localProgress.toFixed(3));
+        scene.classList.toggle('is-active', visibility > 0.56);
         if (centerDistance < nearest) {
           nearest = centerDistance;
           activeIndex = index;
@@ -5047,5 +5053,607 @@
     installRevealSystem();
     installLegalInformation();
     installPaginationMotion();
+  });
+})();
+
+
+/* ============================================================
+   PUZZLES · CIERRE DE FRONTEND PRE-MEDUSA
+   Accesibilidad, rendimiento perceptual, metadatos y profundidad.
+   Esta capa estabiliza la tienda actual sin cambiar su backend.
+   ============================================================ */
+(function installPuzzlesFinalFrontendPass() {
+  'use strict';
+
+  const ROOT_TITLE = 'PUZZLES · Vinos, licores y destilados';
+  const ROOT_DESCRIPTION = 'Descubre vinos, licores y destilados seleccionados por PUZZLES. Precios y disponibilidad sujetos a confirmación.';
+  const FOCUSABLE_SELECTOR = [
+    'a[href]:not([tabindex="-1"])',
+    'button:not([disabled]):not([tabindex="-1"])',
+    'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
+    'select:not([disabled]):not([tabindex="-1"])',
+    'textarea:not([disabled]):not([tabindex="-1"])',
+    '[contenteditable="true"]:not([tabindex="-1"])',
+    '[tabindex]:not([tabindex="-1"])'
+  ].join(',');
+
+  const layerFocusMemory = new WeakMap();
+  let previousOpenLayers = [];
+  let layerSyncScheduled = false;
+  let metadataScheduled = false;
+
+  function ready(callback) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', callback, { once: true });
+    } else {
+      callback();
+    }
+  }
+
+  function isRendered(element) {
+    if (!element || !element.isConnected) return false;
+    const style = window.getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden';
+  }
+
+  function isLayerOpen(layer) {
+    if (!layer || !isRendered(layer)) return false;
+    if (layer.id === 'ageGate') return !layer.classList.contains('hidden');
+    if (layer.id === 'filtersPanel') {
+      return window.matchMedia('(max-width: 960px)').matches && layer.classList.contains('is-open');
+    }
+    return layer.classList.contains('is-open');
+  }
+
+  function layerZIndex(layer) {
+    const value = Number.parseInt(window.getComputedStyle(layer).zIndex, 10);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function getOpenLayers() {
+    const candidates = Array.from(document.querySelectorAll([
+      '#ageGate',
+      '#puzzlesCellar',
+      '.image-zoom-modal',
+      '.modal',
+      '.drawer',
+      '#filtersPanel'
+    ].join(','))).filter(isLayerOpen);
+
+    return candidates.sort(function (first, second) {
+      const zDifference = layerZIndex(first) - layerZIndex(second);
+      if (zDifference) return zDifference;
+      return first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+  }
+
+  function getFocusable(layer) {
+    return Array.from(layer.querySelectorAll(FOCUSABLE_SELECTOR)).filter(function (element) {
+      if (!isRendered(element)) return false;
+      if (element.closest('[hidden], [aria-hidden="true"]')) return false;
+      return element.getClientRects().length > 0;
+    });
+  }
+
+  function focusLayer(layer) {
+    if (!layer || !isLayerOpen(layer) || layer.contains(document.activeElement)) return;
+    const preferred = layer.querySelector([
+      '[data-autofocus]',
+      '.modal-close',
+      '#btnCloseCellar',
+      '#btnCloseCart',
+      'input:not([type="hidden"])',
+      'button:not([disabled])'
+    ].join(','));
+    const target = preferred || getFocusable(layer)[0] || layer;
+    if (!target.hasAttribute('tabindex') && target === layer) target.setAttribute('tabindex', '-1');
+    try { target.focus({ preventScroll: true }); }
+    catch (_) { try { target.focus(); } catch (_) {} }
+  }
+
+  function restoreLayerFocus(layer) {
+    const trigger = layerFocusMemory.get(layer);
+    layerFocusMemory.delete(layer);
+    if (!trigger || !trigger.isConnected || typeof trigger.focus !== 'function') return;
+    window.setTimeout(function () {
+      if (getOpenLayers().length) return;
+      try { trigger.focus({ preventScroll: true }); }
+      catch (_) { try { trigger.focus(); } catch (_) {} }
+    }, 30);
+  }
+
+  function syncOpenLayers() {
+    layerSyncScheduled = false;
+    const openLayers = getOpenLayers();
+
+    openLayers.forEach(function (layer) {
+      if (layer.getAttribute('aria-hidden') !== 'false') layer.setAttribute('aria-hidden', 'false');
+      if (layer.classList.contains('drawer') || layer.id === 'puzzlesCellar') {
+        layer.setAttribute('role', 'dialog');
+        layer.setAttribute('aria-modal', 'true');
+      }
+      if (!previousOpenLayers.includes(layer)) {
+        const trigger = document.activeElement && !layer.contains(document.activeElement)
+          ? document.activeElement
+          : null;
+        if (trigger) layerFocusMemory.set(layer, trigger);
+        window.setTimeout(function () { focusLayer(layer); }, 36);
+      }
+    });
+
+    previousOpenLayers.forEach(function (layer) {
+      if (openLayers.includes(layer)) return;
+      if (layer.getAttribute('aria-hidden') !== 'true') layer.setAttribute('aria-hidden', 'true');
+      restoreLayerFocus(layer);
+    });
+
+    document.body.classList.toggle('no-scroll', openLayers.length > 0);
+    previousOpenLayers = openLayers;
+  }
+
+  function scheduleLayerSync() {
+    if (layerSyncScheduled) return;
+    layerSyncScheduled = true;
+    window.requestAnimationFrame(syncOpenLayers);
+  }
+
+  function trapFocus(event) {
+    if (event.key !== 'Tab') return;
+    const layers = getOpenLayers();
+    const layer = layers[layers.length - 1];
+    if (!layer) return;
+    const focusable = getFocusable(layer);
+    if (!focusable.length) {
+      event.preventDefault();
+      focusLayer(layer);
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!layer.contains(document.activeElement)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+      return;
+    }
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function installAccessibleLayerManager() {
+    document.addEventListener('keydown', trapFocus, true);
+    const observer = new MutationObserver(scheduleLayerSync);
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['class', 'hidden', 'aria-hidden']
+    });
+    window.addEventListener('resize', scheduleLayerSync, { passive: true });
+    scheduleLayerSync();
+  }
+
+  function installLiveAnnouncements() {
+    let region = document.getElementById('puzzlesA11yStatus');
+    if (!region) {
+      region = document.createElement('div');
+      region.id = 'puzzlesA11yStatus';
+      region.className = 'puzzles-sr-only';
+      region.setAttribute('role', 'status');
+      region.setAttribute('aria-live', 'polite');
+      region.setAttribute('aria-atomic', 'true');
+      document.body.appendChild(region);
+    }
+
+    const toastStack = document.getElementById('toastStack');
+    if (!toastStack) return;
+    toastStack.setAttribute('role', 'status');
+    toastStack.setAttribute('aria-live', 'polite');
+    toastStack.setAttribute('aria-atomic', 'false');
+
+    const observer = new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        record.addedNodes.forEach(function (node) {
+          if (node.nodeType !== 1) return;
+          const message = String(node.textContent || '').trim();
+          if (!message) return;
+          region.textContent = '';
+          window.setTimeout(function () { region.textContent = message; }, 20);
+        });
+      });
+    });
+    observer.observe(toastStack, { childList: true });
+  }
+
+  function setupStudioTabs(root) {
+    if (!root || root.dataset.a11yTabsReady === 'true') return;
+    const tabs = Array.from(root.querySelectorAll('[data-studio-tab]'));
+    const scope = root.closest('#studioWorkspace, #studioModal') || document;
+    const panels = Array.from(scope.querySelectorAll('[data-studio-panel]'));
+    if (!tabs.length || !panels.length) return;
+    root.dataset.a11yTabsReady = 'true';
+    root.setAttribute('role', 'tablist');
+    root.setAttribute('aria-label', 'Secciones de PUZZLES Studio');
+
+    function sync() {
+      tabs.forEach(function (tab, index) {
+        const key = tab.dataset.studioTab;
+        const panel = panels.find(function (item) { return item.dataset.studioPanel === key; });
+        const active = tab.classList.contains('is-active') && panel && !panel.hidden;
+        const tabId = 'studioTab-' + key;
+        const panelId = 'studioPanel-' + key;
+        tab.id = tabId;
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        tab.setAttribute('aria-controls', panelId);
+        tab.tabIndex = active ? 0 : -1;
+        if (panel) {
+          panel.id = panelId;
+          panel.setAttribute('role', 'tabpanel');
+          panel.setAttribute('aria-labelledby', tabId);
+          panel.tabIndex = 0;
+        }
+      });
+    }
+
+    root.addEventListener('click', function () { window.setTimeout(sync, 0); });
+    root.addEventListener('keydown', function (event) {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      const current = tabs.indexOf(document.activeElement);
+      if (current < 0) return;
+      event.preventDefault();
+      let next = current;
+      if (event.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+      if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = tabs.length - 1;
+      tabs[next].click();
+      tabs[next].focus();
+      window.setTimeout(sync, 0);
+    });
+    sync();
+  }
+
+  function installTabSemantics() {
+    document.querySelectorAll('.studio-tabs').forEach(setupStudioTabs);
+    const observer = new MutationObserver(function () {
+      document.querySelectorAll('.studio-tabs').forEach(setupStudioTabs);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function setAutocomplete(id, value, inputMode) {
+    const field = document.getElementById(id);
+    if (!field) return;
+    field.setAttribute('autocomplete', value);
+    if (inputMode) field.setAttribute('inputmode', inputMode);
+  }
+
+  function installFormSemantics() {
+    const fields = {
+      customerName: ['name'], customerEmail: ['email'], customerPhone: ['tel', 'tel'],
+      customerStreet: ['street-address'], customerExterior: ['address-line2'], customerInterior: ['address-line2'],
+      customerNeighborhood: ['address-level3'], customerPostalCode: ['postal-code', 'numeric'],
+      customerCity: ['address-level2'], customerState: ['address-level1'],
+      contactName: ['name'], contactEmail: ['email'], contactPhone: ['tel', 'tel'],
+      contactCompany: ['organization'], contactCity: ['address-level2'],
+      loginEmail: ['username'], loginPassword: ['current-password'],
+      registerName: ['name'], registerEmail: ['email'], registerPassword: ['new-password']
+    };
+    Object.keys(fields).forEach(function (id) {
+      setAutocomplete(id, fields[id][0], fields[id][1]);
+    });
+
+    const checkoutError = document.getElementById('checkoutError');
+    const contactError = document.getElementById('contactError');
+    if (checkoutError) checkoutError.setAttribute('role', 'alert');
+    if (contactError) contactError.setAttribute('role', 'alert');
+  }
+
+  function tuneImage(image) {
+    if (!image || image.dataset.puzzlesImageTuned === 'true') return;
+    image.dataset.puzzlesImageTuned = 'true';
+    image.decoding = 'async';
+
+    const isLogo = image.matches('.age-gate__logo, .entry-splash__logo, .site-header__logo, .footer__logo');
+    const isFirstHero = image.matches('.hero-slide:first-child .hero-slide__artwork');
+    const isZoom = image.id === 'zoomedProductImage';
+    if (isLogo || isFirstHero || isZoom) image.loading = 'eager';
+    else image.loading = 'lazy';
+    if (isFirstHero) image.fetchPriority = 'high';
+
+    if (image.matches('.product-image, .pdp-image, .product-card img, .mobile-list-card img')) {
+      image.setAttribute('sizes', '(max-width: 760px) 42vw, (max-width: 1200px) 25vw, 280px');
+    }
+
+    const holder = image.closest('.product-card__visual, .mobile-list-card__visual, .pdp-image-button, .product-table__thumb, .hero-slide');
+    if (holder) holder.classList.add('puzzles-image-loading');
+
+    function finish() {
+      image.classList.add('puzzles-image-loaded');
+      if (holder) holder.classList.remove('puzzles-image-loading');
+    }
+    if (image.complete && image.naturalWidth > 0) finish();
+    else {
+      image.addEventListener('load', finish, { once: true });
+      image.addEventListener('error', function () {
+        if (holder) holder.classList.remove('puzzles-image-loading');
+      }, { once: true });
+    }
+  }
+
+  function preloadFirstHero() {
+    const image = document.querySelector('.hero-slide:first-child .hero-slide__artwork');
+    if (!image || !image.currentSrc && !image.src) return;
+    const href = image.currentSrc || image.src;
+    if (document.querySelector('link[data-puzzles-hero-preload]')) return;
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = href;
+    link.dataset.puzzlesHeroPreload = 'true';
+    document.head.appendChild(link);
+  }
+
+  function tuneAllImages(root) {
+    if (root && root.matches && root.matches('img')) tuneImage(root);
+    if (root && root.querySelectorAll) root.querySelectorAll('img').forEach(tuneImage);
+    preloadFirstHero();
+  }
+
+  function installImagePerformance() {
+    tuneAllImages(document);
+    const observer = new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        record.addedNodes.forEach(function (node) {
+          if (node.nodeType === 1) tuneAllImages(node);
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function buildSkeletonMarkup() {
+    return '<div class="puzzles-skeleton-grid" aria-hidden="true">' +
+      Array.from({ length: 10 }).map(function () {
+        return '<article class="puzzles-skeleton-card"><span></span><i></i><b></b><em></em></article>';
+      }).join('') + '</div>';
+  }
+
+  function installCatalogSkeletons() {
+    const loading = document.getElementById('loadingState');
+    const grid = document.getElementById('gridView');
+    if (!loading || !grid) return;
+
+    function sync() {
+      const active = !loading.classList.contains('hidden') && !state.hasStoreSnapshot;
+      let skeleton = grid.querySelector('.puzzles-skeleton-grid');
+      if (active && !skeleton && !grid.querySelector('.product-card')) {
+        grid.insertAdjacentHTML('afterbegin', buildSkeletonMarkup());
+        grid.classList.add('is-skeleton-loading');
+      } else if (!active && skeleton) {
+        skeleton.remove();
+        grid.classList.remove('is-skeleton-loading');
+      }
+    }
+
+    const observer = new MutationObserver(sync);
+    observer.observe(loading, { attributes: true, attributeFilter: ['class'] });
+    observer.observe(grid, { childList: true });
+    sync();
+  }
+
+  function ensureMeta(selector, attributes) {
+    let element = document.head.querySelector(selector);
+    if (!element) {
+      element = document.createElement('meta');
+      Object.keys(attributes).forEach(function (key) { element.setAttribute(key, attributes[key]); });
+      document.head.appendChild(element);
+    }
+    return element;
+  }
+
+  function productDescription(product) {
+    const source = String(product.pdpSummary || product.pdpDescription || product.description || '').replace(/\s+/g, ' ').trim();
+    const fallback = [product.category, product.brand, product.specialty].filter(Boolean).join(' · ');
+    const text = source || fallback || ROOT_DESCRIPTION;
+    return text.length > 158 ? text.slice(0, 155).trimEnd() + '…' : text;
+  }
+
+  function currentDetailProduct() {
+    if (typeof state === 'undefined' || !state.detailProductCode || !Array.isArray(state.products)) return null;
+    return state.products.find(function (product) {
+      return String(product.code) === String(state.detailProductCode);
+    }) || null;
+  }
+
+  function emitMetaToParent(title, description) {
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'PUZZLES_META',
+          title: title,
+          description: description
+        }, '*');
+      }
+    } catch (_) {}
+  }
+
+  function updateProductMetadata() {
+    metadataScheduled = false;
+    const modal = document.getElementById('productDetailModal');
+    const product = modal && modal.classList.contains('is-open') ? currentDetailProduct() : null;
+    const descriptionMeta = ensureMeta('meta[name="description"]', { name: 'description' });
+    const robotsMeta = ensureMeta('meta[name="robots"]', { name: 'robots', content: 'index,follow,max-image-preview:large' });
+    robotsMeta.content = 'index,follow,max-image-preview:large';
+
+    const schemaId = 'puzzlesProductSchema';
+    const existingSchema = document.getElementById(schemaId);
+    if (existingSchema) existingSchema.remove();
+
+    if (!product) {
+      document.title = ROOT_TITLE;
+      descriptionMeta.content = ROOT_DESCRIPTION;
+      emitMetaToParent(ROOT_TITLE, ROOT_DESCRIPTION);
+      return;
+    }
+
+    const title = String(product.displayName || product.description || 'Producto') + ' · PUZZLES';
+    const description = productDescription(product);
+    document.title = title;
+    descriptionMeta.content = description;
+    emitMetaToParent(title, description);
+
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: String(product.displayName || product.description || ''),
+      description: description,
+      category: String(product.category || ''),
+      image: product.imageDisplayUrl || product.imageUrl || undefined,
+      brand: product.brand ? { '@type': 'Brand', name: String(product.brand) } : undefined
+    };
+    const price = Number(product.priceNet || 0);
+    if (product.available && Number.isFinite(price) && price > 0) {
+      schema.offers = {
+        '@type': 'Offer',
+        priceCurrency: String(state.store && state.store.currency || 'MXN'),
+        price: price.toFixed(2),
+        availability: 'https://schema.org/InStock',
+        url: 'https://drgnzzo.github.io/PUZZLES/'
+      };
+    }
+    Object.keys(schema).forEach(function (key) { if (schema[key] === undefined) delete schema[key]; });
+    const script = document.createElement('script');
+    script.id = schemaId;
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(schema);
+    document.head.appendChild(script);
+  }
+
+  function scheduleMetadata() {
+    if (metadataScheduled) return;
+    metadataScheduled = true;
+    window.requestAnimationFrame(updateProductMetadata);
+  }
+
+  function installMetadataBridge() {
+    ensureMeta('meta[name="description"]', { name: 'description', content: ROOT_DESCRIPTION });
+    const modal = document.getElementById('productDetailModal');
+    if (modal) {
+      const observer = new MutationObserver(scheduleMetadata);
+      observer.observe(modal, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
+    }
+    scheduleMetadata();
+  }
+
+  function enhanceCellarDepth() {
+    const cellar = document.getElementById('puzzlesCellar');
+    if (!cellar || cellar.dataset.finalDepthReady === 'true') return;
+    cellar.dataset.finalDepthReady = 'true';
+    cellar.setAttribute('role', 'dialog');
+    cellar.setAttribute('aria-modal', 'true');
+    cellar.setAttribute('aria-label', 'Recorrido inmersivo por la cava PUZZLES');
+
+    const collections = [
+      null,
+      { label: 'EXPLORAR VINOS', terms: ['vino', 'tinto', 'blanco', 'rosado'] },
+      { label: 'VER CHAMPAGNE', terms: ['champagne', 'espumoso', 'prosecco', 'cava'] },
+      { label: 'VER DESTILADOS', terms: ['tequila', 'whisky', 'mezcal', 'ron', 'ginebra', 'vodka', 'brandy', 'cognac'] }
+    ];
+
+    cellar.querySelectorAll('[data-cellar-scene]').forEach(function (scene, index) {
+      if (!scene.querySelector('.puzzles-cellar__architecture')) {
+        scene.insertAdjacentHTML('afterbegin', [
+          '<div class="puzzles-cellar__architecture" aria-hidden="true">',
+          '<span class="puzzles-cellar__light-beam"></span>',
+          '<span class="puzzles-cellar__shelf puzzles-cellar__shelf--back"></span>',
+          '<span class="puzzles-cellar__bottles puzzles-cellar__bottles--back"></span>',
+          '<span class="puzzles-cellar__shelf puzzles-cellar__shelf--front"></span>',
+          '<span class="puzzles-cellar__bottles puzzles-cellar__bottles--front"></span>',
+          '<span class="puzzles-cellar__haze"></span>',
+          '</div>'
+        ].join(''));
+      }
+      const collection = collections[index];
+      const copy = scene.querySelector('.puzzles-cellar__copy');
+      if (collection && copy && !copy.querySelector('[data-cellar-collection]')) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'puzzles-cellar__collection-button';
+        button.dataset.cellarCollection = collection.terms.join('|');
+        button.textContent = collection.label;
+        copy.appendChild(button);
+      }
+    });
+
+    function normalizeText(value) {
+      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
+
+    cellar.addEventListener('click', function (event) {
+      const button = event.target.closest('[data-cellar-collection]');
+      if (!button) return;
+      const terms = String(button.dataset.cellarCollection || '').split('|').filter(Boolean);
+      const categories = Array.isArray(state.categories) ? state.categories.filter(function (category) {
+        const normalized = normalizeText(category);
+        return terms.some(function (term) { return normalized.includes(normalizeText(term)); });
+      }) : [];
+
+      state.category = 'Todas';
+      state.brand = 'Todas';
+      state.page = 1;
+      state.editorialIntent = categories.length ? { key: 'cellar-selection', categories: categories, sort: 'featured' } : null;
+      state.search = categories.length ? '' : (terms[0] || '');
+      if (dom.searchInput) dom.searchInput.value = state.search;
+      if (dom.brandFilter) dom.brandFilter.value = 'Todas';
+      if (typeof renderCategories === 'function') renderCategories();
+      if (typeof renderBrands === 'function') renderBrands();
+      if (typeof applyFilters === 'function') applyFilters();
+      const skip = cellar.querySelector('[data-cellar-catalog]');
+      if (skip) skip.click();
+    });
+  }
+
+  function installMotionDiscipline() {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    function sync() {
+      document.documentElement.classList.toggle('puzzles-reduced-motion', motionQuery.matches);
+    }
+    sync();
+    if (typeof motionQuery.addEventListener === 'function') motionQuery.addEventListener('change', sync);
+    else if (typeof motionQuery.addListener === 'function') motionQuery.addListener(sync);
+  }
+
+  function installEditorialDetails() {
+    const detailModal = document.getElementById('productDetailModal');
+    if (detailModal) detailModal.setAttribute('aria-hidden', detailModal.classList.contains('is-open') ? 'false' : 'true');
+    const cart = document.getElementById('cartDrawer');
+    if (cart) {
+      cart.setAttribute('role', 'dialog');
+      cart.setAttribute('aria-modal', 'true');
+    }
+    document.querySelectorAll('button, a, input, select, textarea').forEach(function (element) {
+      if (!element.hasAttribute('data-puzzles-interactive')) element.setAttribute('data-puzzles-interactive', 'true');
+    });
+  }
+
+  ready(function () {
+    document.documentElement.classList.add('puzzles-final-pass');
+    document.body.classList.add('puzzles-final-pass');
+    installMotionDiscipline();
+    installAccessibleLayerManager();
+    installLiveAnnouncements();
+    installTabSemantics();
+    installFormSemantics();
+    installImagePerformance();
+    installCatalogSkeletons();
+    installMetadataBridge();
+    enhanceCellarDepth();
+    installEditorialDetails();
   });
 })();
