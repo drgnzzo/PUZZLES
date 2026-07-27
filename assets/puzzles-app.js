@@ -328,7 +328,14 @@ async function init() {
       state.initialLoadComplete = true;
     });
 
-  await state.initialLoadPromise;
+  // El splash solo cubre el arranque perceptual. El catálogo puede terminar
+  // de actualizarse detrás sin retener al usuario frente a una pantalla vacía.
+  await Promise.race([
+    state.initialLoadPromise,
+    new Promise(function (resolve) {
+      window.setTimeout(resolve, 1500);
+    })
+  ]);
   await finishInitialEntrySplash();
 }
 
@@ -1229,7 +1236,7 @@ function beginInitialEntrySplash() {
     dom.entrySplashBar.style.animation = 'none';
     void dom.entrySplashBar.offsetWidth;
     dom.entrySplashBar.style.animation =
-      'entrySplashProgress 3s cubic-bezier(.22,1,.36,1) forwards';
+      'entrySplashProgress 1.45s cubic-bezier(.22,1,.36,1) forwards';
   }
 
   document.body.classList.remove('entry-sequence-complete');
@@ -1242,8 +1249,8 @@ async function finishInitialEntrySplash() {
   );
   const minimumVisible =
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ? 700
-      : 2600;
+      ? 350
+      : 1050;
   const remaining = Math.max(
     0,
     minimumVisible - elapsed
@@ -1287,15 +1294,25 @@ async function finishInitialEntrySplash() {
 
 function openImmersiveIntro() {
   hideLegacyIntentWelcome();
+  document.body.classList.remove('age-gate-visible');
 
-  const launch =
-    document.querySelector('.puzzles-cellar-launch');
-  if (launch) {
-    launch.remove();
+  const installer =
+    window.PUZZLES_INSTALL_IMMERSIVE_INTRO;
+
+  if (typeof installer === 'function') {
+    try {
+      installer();
+    } catch (error) {
+      console.error(
+        'No fue posible preparar la introducción:',
+        error
+      );
+    }
   }
 
   const open =
     window.PUZZLES_OPEN_IMMERSIVE_INTRO;
+
   if (typeof open === 'function') {
     state.immersiveIntroShown = true;
     open(dom.btnAgeYes || document.activeElement);
@@ -1306,6 +1323,13 @@ function openImmersiveIntro() {
   const retry = window.setInterval(
     function () {
       attempts += 1;
+
+      const retryInstaller =
+        window.PUZZLES_INSTALL_IMMERSIVE_INTRO;
+      if (typeof retryInstaller === 'function') {
+        try { retryInstaller(); } catch (_) {}
+      }
+
       const retryOpen =
         window.PUZZLES_OPEN_IMMERSIVE_INTRO;
 
@@ -1316,12 +1340,16 @@ function openImmersiveIntro() {
           dom.btnAgeYes ||
           document.activeElement
         );
-      } else if (attempts >= 20) {
+      } else if (attempts >= 80) {
         window.clearInterval(retry);
         document.body.classList.remove('no-scroll');
+        toast(
+          'No se pudo abrir la introducción. Entra al catálogo para continuar.',
+          'error'
+        );
       }
     },
-    100
+    50
   );
 }
 
@@ -3390,9 +3418,19 @@ function restoreAgeGate() {
         : '';
   }
 
+  const ageVisible = Boolean(
+    !confirmed &&
+    !state.entrySplashActive
+  );
+
+  document.body.classList.toggle(
+    'age-gate-visible',
+    ageVisible
+  );
+
   document.body.classList.toggle(
     'no-scroll',
-    !confirmed ||
+    ageVisible ||
     state.entrySplashActive ||
     document.body.classList.contains(
       'cellar-is-open'
@@ -4054,9 +4092,14 @@ async function confirmAge() {
       hero.appendChild(signature);
     }
 
-    if (hero && controls && controls.parentElement === hero) {
-      controls.classList.add('hero-carousel__controls--external');
-      hero.insertAdjacentElement('afterend', controls);
+    if (hero && controls) {
+      controls.classList.remove(
+        'hero-carousel__controls--external'
+      );
+
+      if (controls.parentElement !== hero) {
+        hero.appendChild(controls);
+      }
     }
 
     const closeControlByModalId = {
@@ -4225,88 +4268,164 @@ async function confirmAge() {
 function installFilterFollower() {
   const panel = document.getElementById('filtersPanel');
   const layout = document.querySelector('.catalog-layout');
-  if (
-    !panel ||
-    !layout ||
-    panel.dataset.followInstalled === 'true'
-  ) {
-    return;
-  }
 
-  panel.dataset.followInstalled = 'true';
-  panel.classList.add(
-    'filters-panel--follow-ready'
-  );
+  if (!panel || !layout) return;
 
-  const legacySlot =
-    panel.parentElement &&
-    panel.parentElement.classList.contains(
-      'filters-panel-slot'
-    )
+  let slot = panel.parentElement &&
+    panel.parentElement.classList.contains('filters-panel-slot')
       ? panel.parentElement
       : null;
 
-  if (legacySlot) {
-    legacySlot.parentNode.insertBefore(
-      panel,
-      legacySlot
-    );
-    legacySlot.remove();
+  if (!slot) {
+    slot = document.createElement('div');
+    slot.className = 'filters-panel-slot';
+    panel.parentNode.insertBefore(slot, panel);
+    slot.appendChild(panel);
   }
 
-  function updateStickyOffset() {
+  panel.dataset.followInstalled = 'true';
+  panel.classList.add('filters-panel--follow-ready');
+
+  let frame = 0;
+
+  function clearMode() {
+    panel.classList.remove(
+      'is-follow-top',
+      'is-following',
+      'is-follow-end'
+    );
+
+    [
+      'position',
+      'top',
+      'bottom',
+      'left',
+      'width',
+      'max-height'
+    ].forEach(function (property) {
+      panel.style.removeProperty(property);
+    });
+  }
+
+  function chromeOffset() {
     const announcement =
       document.querySelector('.announcement');
     const header =
       document.querySelector('.site-header');
-    const announcementHeight = announcement
-      ? announcement.getBoundingClientRect().height
-      : 0;
-    const headerHeight = header
-      ? header.getBoundingClientRect().height
-      : 0;
-    const offset = Math.max(
-      16,
+
+    return Math.max(
+      12,
       Math.round(
-        announcementHeight +
-        headerHeight +
-        14
+        (announcement
+          ? announcement.getBoundingClientRect().height
+          : 0) +
+        (header
+          ? header.getBoundingClientRect().height
+          : 0) +
+        12
       )
     );
+  }
 
-    panel.style.setProperty(
-      '--filters-sticky-top',
-      offset + 'px'
+  function update() {
+    frame = 0;
+
+    if (window.innerWidth <= 960) {
+      clearMode();
+      return;
+    }
+
+    const offset = chromeOffset();
+    const layoutRect = layout.getBoundingClientRect();
+    const slotRect = slot.getBoundingClientRect();
+    const maxHeight = Math.max(
+      220,
+      window.innerHeight - offset - 16
     );
+    const naturalHeight = Math.min(
+      panel.scrollHeight,
+      maxHeight
+    );
+
     document.documentElement.style.setProperty(
       '--filters-sticky-top',
       offset + 'px'
     );
+
+    panel.style.setProperty(
+      'max-height',
+      maxHeight + 'px',
+      'important'
+    );
+
+    panel.classList.remove(
+      'is-follow-top',
+      'is-following',
+      'is-follow-end'
+    );
+
+    if (layoutRect.top >= offset) {
+      panel.classList.add('is-follow-top');
+      panel.style.setProperty('position', 'absolute', 'important');
+      panel.style.setProperty('top', '0px', 'important');
+      panel.style.setProperty('bottom', 'auto', 'important');
+      panel.style.setProperty('left', '0px', 'important');
+      panel.style.setProperty('width', '100%', 'important');
+      return;
+    }
+
+    if (layoutRect.bottom <= offset + naturalHeight) {
+      panel.classList.add('is-follow-end');
+      panel.style.setProperty('position', 'absolute', 'important');
+      panel.style.setProperty('top', 'auto', 'important');
+      panel.style.setProperty('bottom', '0px', 'important');
+      panel.style.setProperty('left', '0px', 'important');
+      panel.style.setProperty('width', '100%', 'important');
+      return;
+    }
+
+    panel.classList.add('is-following');
+    panel.style.setProperty('position', 'fixed', 'important');
+    panel.style.setProperty('top', offset + 'px', 'important');
+    panel.style.setProperty('bottom', 'auto', 'important');
+    panel.style.setProperty(
+      'left',
+      Math.round(slotRect.left) + 'px',
+      'important'
+    );
+    panel.style.setProperty(
+      'width',
+      Math.round(slotRect.width) + 'px',
+      'important'
+    );
   }
 
-  updateStickyOffset();
-  window.addEventListener(
-    'resize',
-    updateStickyOffset,
-    { passive: true }
-  );
+  function schedule() {
+    if (frame) return;
+    frame = window.requestAnimationFrame(update);
+  }
+
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule, { passive: true });
 
   if ('ResizeObserver' in window) {
-    const observer =
-      new ResizeObserver(updateStickyOffset);
-    const announcement =
-      document.querySelector('.announcement');
-    const header =
-      document.querySelector('.site-header');
-
-    if (announcement) {
-      observer.observe(announcement);
-    }
-
-    if (header) {
-      observer.observe(header);
-    }
+    const resizeObserver = new ResizeObserver(schedule);
+    resizeObserver.observe(layout);
+    resizeObserver.observe(slot);
+    resizeObserver.observe(panel);
+    const main = layout.querySelector('.catalog-main');
+    if (main) resizeObserver.observe(main);
   }
+
+  const mutationObserver = new MutationObserver(schedule);
+  mutationObserver.observe(layout, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'hidden', 'style']
+  });
+
+  schedule();
 }
 
   function installDesignSignals() {
@@ -5137,155 +5256,226 @@ async function submitContactForm(event) {
   }
 
   function installCellarExperience() {
-    if (document.getElementById('puzzlesCellar')) return;
+    if (document.getElementById('puzzlesCellar')) {
+      return document.getElementById('puzzlesCellar');
+    }
 
-    const scenes = CELLAR_SCENES.map(function (scene, index) {
-      const finalScene = index === CELLAR_SCENES.length - 1;
-      return [
-        '<article class="puzzles-cellar__scene" data-cellar-scene="', index, '" style="--cellar-image:url(\'', escapeText(scene.image), '\')">',
-        '<div class="puzzles-cellar__media" aria-hidden="true"></div>',
-        '<div class="puzzles-cellar__shade" aria-hidden="true"></div>',
-        '<div class="puzzles-cellar__copy">',
-        '<span class="puzzles-cellar__kicker">', escapeText(scene.kicker), '</span>',
-        '<h2>', escapeText(scene.title), '</h2>',
-        '<p>', escapeText(scene.text), '</p>',
-        index === 4
-          ? '<div class="puzzles-cellar__moments" data-cellar-moments aria-label="Elige el momento que buscas"></div>'
-          : '',
-        finalScene
-          ? '<button class="puzzles-cellar__catalog-button" type="button" data-cellar-catalog>ENTRAR A LA TIENDA</button>'
-          : '<span class="puzzles-cellar__scroll-cue">Desliza para continuar</span>',
-        '</div>',
-        '</article>'
-      ].join('');
-    }).join('');
+    const collections = [
+      {
+        key: 'wine',
+        kicker: 'LA BODEGA',
+        title: 'Vinos',
+        text: 'Tintos, blancos y rosados para la mesa, el regalo y la cava.',
+        image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-02-editorial.png',
+        terms: ['vino', 'tinto', 'blanco', 'rosado']
+      },
+      {
+        key: 'bubbles',
+        kicker: 'CELEBRACIÓN',
+        title: 'Champagne y espumosos',
+        text: 'Burbujas y etiquetas para brindar y marcar una ocasión.',
+        image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-03-editorial.png',
+        terms: ['champagne', 'espumoso', 'prosecco', 'cava']
+      },
+      {
+        key: 'spirits',
+        kicker: 'CARÁCTER',
+        title: 'Destilados',
+        text: 'Tequila, whisky, ron, mezcal, ginebra, vodka y licores.',
+        image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-04-botellas.png',
+        terms: ['tequila', 'whisky', 'mezcal', 'ron', 'ginebra', 'vodka', 'brandy', 'cognac', 'licor', 'anis']
+      },
+      {
+        key: 'all',
+        kicker: 'LA COLECCIÓN',
+        title: 'Catálogo completo',
+        text: 'Entra sin filtros y recorre todas las etiquetas disponibles.',
+        image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png',
+        terms: []
+      }
+    ];
 
     document.body.insertAdjacentHTML('beforeend', [
-      '<section id="puzzlesCellar" class="puzzles-cellar" aria-hidden="true">',
-      '<header class="puzzles-cellar__topbar">',
+      '<section id="puzzlesCellar" class="puzzles-cellar puzzles-immersive-menu" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="puzzlesImmersiveTitle">',
+      '<div class="puzzles-immersive-menu__background" aria-hidden="true"></div>',
+      '<header class="puzzles-cellar__topbar puzzles-immersive-menu__topbar">',
       '<div><strong>PUZZLES</strong><span>VINOS · LICORES · DESTILADOS</span></div>',
-      '<div class="puzzles-cellar__actions">',
-      '<button type="button" data-cellar-catalog>OMITIR INTRODUCCIÓN</button>',
-      '</div>',
+      '<button type="button" class="puzzles-immersive-menu__skip" data-cellar-catalog>OMITIR INTRODUCCIÓN</button>',
       '</header>',
-      '<div class="puzzles-cellar__progress" aria-hidden="true"><span></span></div>',
-      '<div class="puzzles-cellar__viewport" tabindex="0">',
-      scenes,
+      '<div class="puzzles-immersive-menu__viewport">',
+      '<div class="puzzles-immersive-menu__intro">',
+      '<span class="puzzles-cellar__kicker">ELIGE TU RECORRIDO</span>',
+      '<h1 id="puzzlesImmersiveTitle">¿Qué estás buscando?</h1>',
+      '<p>Selecciona una colección o un momento. La tienda se preparará antes de entrar.</p>',
       '</div>',
-      '<nav class="puzzles-cellar__dots" aria-label="Escenas del recorrido">',
-      CELLAR_SCENES.map(function (_, index) {
-        return '<button type="button" data-cellar-jump="' + index + '" aria-label="Ir a escena ' + (index + 1) + '"></button>';
+      '<div class="puzzles-immersive-menu__grid" data-immersive-collections>',
+      collections.map(function (item) {
+        return [
+          '<article class="puzzles-immersive-card" data-immersive-mood="', escapeText(item.key), '" style="--immersive-card-image:url(\'', escapeText(item.image), '\')">',
+          '<div class="puzzles-immersive-card__image" aria-hidden="true"></div>',
+          '<div class="puzzles-immersive-card__shade" aria-hidden="true"></div>',
+          '<div class="puzzles-immersive-card__content">',
+          '<span>', escapeText(item.kicker), '</span>',
+          '<h2>', escapeText(item.title), '</h2>',
+          '<p>', escapeText(item.text), '</p>',
+          '<button type="button" data-immersive-collection="', escapeText(item.key), '">EXPLORAR</button>',
+          '</div>',
+          '</article>'
+        ].join('');
       }).join(''),
-      '</nav>',
+      '</div>',
+      '<section class="puzzles-immersive-menu__moments" aria-labelledby="puzzlesMomentsTitle">',
+      '<div class="puzzles-immersive-menu__section-head">',
+      '<span>MOMENTOS CON INTENCIÓN</span>',
+      '<h2 id="puzzlesMomentsTitle">También puedes empezar por la ocasión</h2>',
+      '</div>',
+      '<div class="puzzles-immersive-menu__moment-grid" data-cellar-moments></div>',
+      '</section>',
+      '</div>',
       '</section>'
     ].join(''));
 
     const cellar = document.getElementById('puzzlesCellar');
-    const viewport = cellar.querySelector('.puzzles-cellar__viewport');
-    const progress = cellar.querySelector('.puzzles-cellar__progress span');
-    const sceneNodes = Array.from(cellar.querySelectorAll('[data-cellar-scene]'));
-    const dots = Array.from(cellar.querySelectorAll('[data-cellar-jump]'));
-    let returnFocus = null;
-    let scheduled = false;
-
-    function update() {
-      scheduled = false;
-      const max = Math.max(1, viewport.scrollHeight - viewport.clientHeight);
-      const ratio = Math.max(0, Math.min(1, viewport.scrollTop / max));
-      progress.style.transform = 'scaleX(' + ratio + ')';
-
-      let activeIndex = 0;
-      let nearest = Infinity;
-      sceneNodes.forEach(function (scene, index) {
-        const rect = scene.getBoundingClientRect();
-        const viewportRect = viewport.getBoundingClientRect();
-        const centerDistance = Math.abs((rect.top + rect.height / 2) - (viewportRect.top + viewportRect.height / 2));
-        const visibility = Math.max(0, Math.min(1, 1 - centerDistance / Math.max(1, viewportRect.height)));
-        const localProgress = Math.max(-1, Math.min(1, (viewportRect.top - rect.top) / Math.max(1, rect.height)));
-        scene.style.setProperty('--cellar-visibility', visibility.toFixed(3));
-        scene.style.setProperty('--cellar-shift', (localProgress * 44).toFixed(2) + 'px');
-        scene.style.setProperty('--cellar-progress', localProgress.toFixed(3));
-        scene.classList.toggle('is-active', visibility > 0.56);
-        if (centerDistance < nearest) {
-          nearest = centerDistance;
-          activeIndex = index;
-        }
-      });
-      dots.forEach(function (dot, index) {
-        dot.classList.toggle('is-active', index === activeIndex);
-        dot.setAttribute('aria-current', index === activeIndex ? 'true' : 'false');
-      });
-    }
-
-    function schedule() {
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(update);
-    }
-
-function renderCellarMoments() {
-  const container =
-    cellar.querySelector(
-      '[data-cellar-moments]'
+    const viewport = cellar.querySelector('.puzzles-immersive-menu__viewport');
+    const background = cellar.querySelector('.puzzles-immersive-menu__background');
+    const collectionByKey = new Map(
+      collections.map(function (item) {
+        return [item.key, item];
+      })
     );
+    let returnFocus = null;
 
-  if (!container) return;
+    function normalize(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    }
 
-  const moments =
-    Array.isArray(
-      state.store &&
-      state.store.moments
-    )
-      ? state.store.moments
-      : [];
+    function categoryNames() {
+      return Array.isArray(state.categories)
+        ? state.categories.map(function (category) {
+            return typeof category === 'string'
+              ? category
+              : String(category && category.name || '');
+          }).filter(Boolean)
+        : [];
+    }
 
-  container.innerHTML = moments
-    .slice(0, 4)
-    .map(function (moment) {
-      return [
-        '<button type="button" class="puzzles-cellar__moment-button" data-cellar-moment-action="',
-        escapeText(
-          moment.action || 'catalog'
-        ),
-        '">',
-        '<span>',
-        escapeText(
-          moment.eyebrow || 'MOMENTO'
-        ),
-        '</span>',
-        '<strong>',
-        escapeText(
-          moment.title || 'Explorar'
-        ),
-        '</strong>',
-        '</button>'
-      ].join('');
-    })
-    .join('');
-}
+    function setBackground(image, mood) {
+      if (background && image) {
+        background.style.setProperty(
+          '--immersive-active-image',
+          "url('" + String(image).replace(/'/g, "\\'") + "')"
+        );
+      }
+      cellar.dataset.immersiveMood = mood || 'all';
+    }
 
-function openCellar(trigger) {
-  renderCellarMoments();
-  returnFocus = trigger || document.activeElement;
+    function renderMoments() {
+      const container = cellar.querySelector('[data-cellar-moments]');
+      if (!container) return;
+
+      const moments = Array.isArray(state.store && state.store.moments)
+        ? state.store.moments.slice(0, 6)
+        : [];
+
+      if (!moments.length) {
+        container.innerHTML = [
+          '<button class="puzzles-immersive-moment" type="button" data-immersive-moment-action="catalog">',
+          '<span>EXPLORAR</span><strong>Ver toda la colección</strong>',
+          '<small>Entra al catálogo completo y utiliza los filtros.</small>',
+          '</button>'
+        ].join('');
+        return;
+      }
+
+      container.innerHTML = moments.map(function (moment, index) {
+        const fallbackImages = collections[index % collections.length].image;
+        return [
+          '<button class="puzzles-immersive-moment" type="button" ',
+          'data-immersive-moment-action="', escapeText(moment.action || 'catalog'), '" ',
+          'data-immersive-image="', escapeText(moment.imageUrl || fallbackImages), '">',
+          '<span>', escapeText(moment.eyebrow || 'MOMENTO'), '</span>',
+          '<strong>', escapeText(moment.title || 'Explorar'), '</strong>',
+          '<small>', escapeText(moment.text || 'Descubre una selección preparada para esta ocasión.'), '</small>',
+          '</button>'
+        ].join('');
+      }).join('');
+    }
+
+    function resetCatalog() {
+      state.category = 'Todas';
+      state.brand = 'Todas';
+      state.search = '';
+      state.editorialIntent = null;
+      state.page = 1;
+
+      if (dom.searchInput) dom.searchInput.value = '';
+      if (dom.brandFilter) dom.brandFilter.value = 'Todas';
+    }
+
+    function applyCollection(item) {
+      resetCatalog();
+
+      if (item && item.terms && item.terms.length) {
+        const categories = categoryNames().filter(function (category) {
+          const categoryText = normalize(category);
+          return item.terms.some(function (term) {
+            return categoryText.includes(normalize(term));
+          });
+        });
+
+        state.editorialIntent = categories.length
+          ? {
+              key: 'immersive-' + item.key,
+              categories: categories,
+              sort: 'featured'
+            }
+          : null;
+
+        if (!categories.length) {
+          state.search = item.terms[0] || '';
+          if (dom.searchInput) dom.searchInput.value = state.search;
+        }
+      }
+
+      document.body.dataset.catalogMood = item && item.key || 'all';
+
+      if (typeof renderCategories === 'function') renderCategories();
+      if (typeof renderBrands === 'function') renderBrands();
+      if (typeof applyFilters === 'function') applyFilters();
+    }
+
+    function openCellar(trigger) {
+      renderMoments();
+      returnFocus = trigger || document.activeElement;
       cellar.classList.add('is-open');
       cellar.setAttribute('aria-hidden', 'false');
+      document.body.classList.remove('age-gate-visible');
       document.body.classList.add('no-scroll', 'cellar-is-open');
       viewport.scrollTop = 0;
+      setBackground(collections[0].image, collections[0].key);
+
       window.setTimeout(function () {
-        viewport.focus({ preventScroll: true });
-        update();
-      }, 40);
+        const first = cellar.querySelector('[data-immersive-collection]');
+        if (first) first.focus({ preventScroll: true });
+      }, 60);
     }
 
     function closeCellar(goCatalog) {
       cellar.classList.remove('is-open');
       cellar.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('no-scroll', 'cellar-is-open');
+
       if (goCatalog) {
         const catalog = document.getElementById('catalogo');
         if (catalog) {
           window.setTimeout(function () {
-            catalog.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+            catalog.scrollIntoView({
+              behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+              block: 'start'
+            });
           }, 80);
         }
       } else if (returnFocus && typeof returnFocus.focus === 'function') {
@@ -5293,70 +5483,78 @@ function openCellar(trigger) {
       }
     }
 
-    window.PUZZLES_OPEN_IMMERSIVE_INTRO =
-      function (trigger) {
-        openCellar(trigger);
-      };
+    window.PUZZLES_OPEN_IMMERSIVE_INTRO = openCellar;
+    window.PUZZLES_CLOSE_IMMERSIVE_INTRO = closeCellar;
 
-    window.PUZZLES_CLOSE_IMMERSIVE_INTRO =
-      function (goCatalog) {
-        closeCellar(Boolean(goCatalog));
-      };
-
-    cellar
-      .querySelectorAll(
-        '[data-cellar-catalog]'
-      )
-      .forEach(function (button) {
-        button.addEventListener(
-          'click',
-          function () {
-            closeCellar(true);
-          }
-        );
-      });
-
-    cellar.addEventListener(
-      'click',
-      function (event) {
-        const moment =
-          event.target.closest(
-            '[data-cellar-moment-action]'
-          );
-
-        if (!moment) return;
-
-        event.preventDefault();
-        const action =
-          moment.dataset.cellarMomentAction ||
-          'catalog';
-
-        if (
-          typeof handleEditorialAction ===
-          'function'
-        ) {
-          handleEditorialAction(action);
-        }
-
-        closeCellar(true);
+    cellar.addEventListener('pointerover', function (event) {
+      const card = event.target.closest('[data-immersive-mood]');
+      if (card) {
+        const item = collectionByKey.get(card.dataset.immersiveMood);
+        if (item) setBackground(item.image, item.key);
       }
-    );
-    dots.forEach(function (dot) {
-      dot.addEventListener('click', function () {
-        const index = Number(dot.dataset.cellarJump || 0);
-        sceneNodes[index]?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-      });
+
+      const moment = event.target.closest('[data-immersive-image]');
+      if (moment && moment.dataset.immersiveImage) {
+        setBackground(moment.dataset.immersiveImage, 'moment');
+      }
     });
-    viewport.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', schedule, { passive: true });
+
+    cellar.addEventListener('focusin', function (event) {
+      const card = event.target.closest('[data-immersive-mood]');
+      if (card) {
+        const item = collectionByKey.get(card.dataset.immersiveMood);
+        if (item) setBackground(item.image, item.key);
+      }
+    });
+
+    cellar.addEventListener('click', function (event) {
+      const skip = event.target.closest('[data-cellar-catalog]');
+      if (skip) {
+        event.preventDefault();
+        resetCatalog();
+        if (typeof renderCategories === 'function') renderCategories();
+        if (typeof renderBrands === 'function') renderBrands();
+        if (typeof applyFilters === 'function') applyFilters();
+        document.body.dataset.catalogMood = 'all';
+        closeCellar(true);
+        return;
+      }
+
+      const collectionButton = event.target.closest('[data-immersive-collection]');
+      if (collectionButton) {
+        event.preventDefault();
+        const item = collectionByKey.get(collectionButton.dataset.immersiveCollection);
+        applyCollection(item || collectionByKey.get('all'));
+        closeCellar(true);
+        return;
+      }
+
+      const momentButton = event.target.closest('[data-immersive-moment-action]');
+      if (momentButton) {
+        event.preventDefault();
+        const action = momentButton.dataset.immersiveMomentAction || 'catalog';
+        closeCellar(false);
+        window.setTimeout(function () {
+          if (typeof handleEditorialAction === 'function') {
+            handleEditorialAction(action);
+          }
+        }, 30);
+      }
+    });
+
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && cellar.classList.contains('is-open')) {
-        event.stopPropagation();
+        event.preventDefault();
+        resetCatalog();
         closeCellar(true);
       }
     }, true);
-    update();
+
+    return cellar;
   }
+
+  window.PUZZLES_INSTALL_IMMERSIVE_INTRO =
+    installCellarExperience;
 
   function installRevealSystem() {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -5674,12 +5872,26 @@ function installCatalogAtmosphere() {
 }
 
   ready(function () {
-    enforceCurrentInterfaceRules();
-    installCellarExperience();
-    installCatalogAtmosphere();
-    installRevealSystem();
-    installLegalInformation();
-    installPaginationMotion();
+    const installers = [
+      installCellarExperience,
+      enforceCurrentInterfaceRules,
+      installCatalogAtmosphere,
+      installRevealSystem,
+      installLegalInformation,
+      installPaginationMotion
+    ];
+
+    installers.forEach(function (installer) {
+      try {
+        installer();
+      } catch (error) {
+        console.error(
+          'PUZZLES installer error:',
+          installer && installer.name,
+          error
+        );
+      }
+    });
   });
 })();
 
@@ -6179,205 +6391,15 @@ function installCatalogAtmosphere() {
   }
 
 function enhanceCellarDepth() {
-  const cellar =
-    document.getElementById('puzzlesCellar');
-
-  if (
-    !cellar ||
-    cellar.dataset.finalDepthReady === 'true'
-  ) {
-    return;
-  }
+  const cellar = document.getElementById('puzzlesCellar');
+  if (!cellar) return;
 
   cellar.dataset.finalDepthReady = 'true';
   cellar.setAttribute('role', 'dialog');
-  cellar.setAttribute(
-    'aria-modal',
-    'true'
-  );
+  cellar.setAttribute('aria-modal', 'true');
   cellar.setAttribute(
     'aria-label',
     'Introducción inmersiva de PUZZLES'
-  );
-
-  const collections = [
-    null,
-    {
-      label: 'EXPLORAR VINOS',
-      terms: [
-        'vino',
-        'tinto',
-        'blanco',
-        'rosado'
-      ]
-    },
-    {
-      label: 'VER CHAMPAGNE',
-      terms: [
-        'champagne',
-        'espumoso',
-        'prosecco',
-        'cava'
-      ]
-    },
-    {
-      label: 'VER DESTILADOS',
-      terms: [
-        'tequila',
-        'whisky',
-        'mezcal',
-        'ron',
-        'ginebra',
-        'vodka',
-        'brandy',
-        'cognac'
-      ]
-    }
-  ];
-
-  cellar
-    .querySelectorAll(
-      '[data-cellar-scene]'
-    )
-    .forEach(function (scene, index) {
-      const collection =
-        collections[index];
-      const copy =
-        scene.querySelector(
-          '.puzzles-cellar__copy'
-        );
-
-      if (
-        collection &&
-        copy &&
-        !copy.querySelector(
-          '[data-cellar-collection]'
-        )
-      ) {
-        const button =
-          document.createElement('button');
-
-        button.type = 'button';
-        button.className =
-          'puzzles-cellar__collection-button';
-        button.dataset.cellarCollection =
-          collection.terms.join('|');
-        button.textContent =
-          collection.label;
-        copy.appendChild(button);
-      }
-    });
-
-  function normalizeText(value) {
-    return String(value || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase();
-  }
-
-  cellar.addEventListener(
-    'click',
-    function (event) {
-      const button =
-        event.target.closest(
-          '[data-cellar-collection]'
-        );
-
-      if (!button) return;
-
-      const terms = String(
-        button.dataset.cellarCollection ||
-        ''
-      )
-        .split('|')
-        .filter(Boolean);
-
-      const categories =
-        Array.isArray(state.categories)
-          ? state.categories
-              .map(function (category) {
-                return typeof category === 'string'
-                  ? category
-                  : String(
-                      category &&
-                      category.name ||
-                      ''
-                    );
-              })
-              .filter(
-                function (categoryName) {
-                  const normalized =
-                    normalizeText(
-                      categoryName
-                    );
-
-                  return terms.some(
-                    function (term) {
-                      return normalized.includes(
-                        normalizeText(term)
-                      );
-                    }
-                  );
-                }
-              )
-          : [];
-
-      state.category = 'Todas';
-      state.brand = 'Todas';
-      state.page = 1;
-      state.editorialIntent =
-        categories.length
-          ? {
-              key: 'cellar-selection',
-              categories: categories,
-              sort: 'featured'
-            }
-          : null;
-      state.search =
-        categories.length
-          ? ''
-          : (terms[0] || '');
-
-      if (dom.searchInput) {
-        dom.searchInput.value =
-          state.search;
-      }
-
-      if (dom.brandFilter) {
-        dom.brandFilter.value =
-          'Todas';
-      }
-
-      if (
-        typeof renderCategories ===
-        'function'
-      ) {
-        renderCategories();
-      }
-
-      if (
-        typeof renderBrands ===
-        'function'
-      ) {
-        renderBrands();
-      }
-
-      if (
-        typeof applyFilters ===
-        'function'
-      ) {
-        applyFilters();
-      }
-
-      const skip =
-        cellar.querySelector(
-          '[data-cellar-catalog]'
-        );
-
-      if (skip) {
-        skip.click();
-      }
-    }
   );
 }
 

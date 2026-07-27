@@ -9880,3 +9880,476 @@ body[data-catalog-mood="spirits"] .catalog-section {
   box-shadow: none !important;
 }
 
+
+
+/* ============================================================
+   PUZZLES · CORRECCIÓN INTEGRADA DE ENTRADA E INMERSIÓN
+   Splash breve → pantalla +18 opaca → menú inmersivo en tarjetas → tienda.
+   ============================================================ */
+
+/* La validación de edad tapa por completo la aplicación. */
+#ageGate,
+.age-gate {
+  z-index: 51000 !important;
+  background: #000000 !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  isolation: isolate !important;
+}
+
+#ageGate::before,
+#ageGate::after,
+.age-gate::before,
+.age-gate::after {
+  content: none !important;
+  display: none !important;
+}
+
+#ageGate .age-gate__card {
+  background: #101010 !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+
+.entry-splash {
+  z-index: 52000 !important;
+  background: #000 !important;
+}
+
+body.age-gate-visible .hero-carousel__controls,
+body.age-gate-visible .hero-brand-signature,
+body.cellar-is-open .hero-carousel__controls,
+body.cellar-is-open .hero-brand-signature {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Los controles vuelven a formar parte del banner. */
+.hero-carousel {
+  position: relative !important;
+}
+
+.hero-carousel .hero-carousel__controls,
+.hero-carousel__controls--external {
+  position: absolute !important;
+  z-index: 12 !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 16px !important;
+  width: min(1180px, calc(100% - 40px)) !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: translateX(-50%) !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* Introducción inmersiva en cuadrícula de tarjetas grandes. */
+.puzzles-cellar.puzzles-immersive-menu {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 50000 !important;
+  display: block !important;
+  overflow: hidden !important;
+  background: #050505 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition:
+    opacity 320ms cubic-bezier(.22,1,.36,1),
+    visibility 320ms cubic-bezier(.22,1,.36,1) !important;
+}
+
+.puzzles-cellar.puzzles-immersive-menu.is-open {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+.puzzles-immersive-menu__background {
+  position: absolute;
+  inset: -4%;
+  background-image:
+    linear-gradient(90deg, rgba(0,0,0,.90), rgba(0,0,0,.54) 52%, rgba(0,0,0,.77)),
+    linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.86)),
+    var(--immersive-active-image, url('https://drgnzzo.github.io/PUZZLES/assets/banner-02-editorial.png'));
+  background-position: center;
+  background-size: cover;
+  filter: saturate(.82) contrast(1.04);
+  transform: scale(1.035);
+  transition: background-image 380ms ease, filter 380ms ease;
+}
+
+.puzzles-immersive-menu__background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 70% 22%, rgba(216,154,0,.12), transparent 28%),
+    linear-gradient(180deg, transparent, rgba(0,0,0,.32));
+}
+
+.puzzles-immersive-menu__topbar {
+  position: absolute !important;
+  z-index: 5 !important;
+  top: 0 !important;
+  right: 0 !important;
+  left: 0 !important;
+  min-height: 72px !important;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(22px, env(safe-area-inset-right))
+    14px
+    max(22px, env(safe-area-inset-left)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1px solid rgba(255,255,255,.15) !important;
+  background: rgba(0,0,0,.58) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.puzzles-immersive-menu__skip {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(255,255,255,.42);
+  background: rgba(0,0,0,.38);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .14em;
+  cursor: pointer;
+}
+
+.puzzles-immersive-menu__viewport {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  padding:
+    calc(96px + env(safe-area-inset-top))
+    max(28px, 5vw)
+    max(54px, env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.puzzles-immersive-menu__intro {
+  width: min(1120px, 100%);
+  margin: 0 auto 28px;
+}
+
+.puzzles-immersive-menu__intro h1 {
+  max-width: 900px;
+  margin: 8px 0 12px;
+  color: #fff;
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+  font-size: clamp(46px, 7vw, 94px);
+  font-weight: 500;
+  line-height: .91;
+  letter-spacing: -.025em;
+  text-transform: uppercase;
+}
+
+.puzzles-immersive-menu__intro p {
+  max-width: 650px;
+  margin: 0;
+  color: rgba(255,255,255,.72);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.puzzles-immersive-menu__grid {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.puzzles-immersive-card {
+  position: relative;
+  min-height: clamp(280px, 34vh, 390px);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.19);
+  background: #111;
+  isolation: isolate;
+  transition:
+    transform 220ms cubic-bezier(.22,1,.36,1),
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.puzzles-immersive-card:hover,
+.puzzles-immersive-card:focus-within {
+  z-index: 2;
+  transform: translateY(-4px);
+  border-color: rgba(216,154,0,.85);
+  box-shadow: 0 24px 60px rgba(0,0,0,.42);
+}
+
+.puzzles-immersive-card__image,
+.puzzles-immersive-card__shade {
+  position: absolute;
+  inset: 0;
+}
+
+.puzzles-immersive-card__image {
+  z-index: -2;
+  background-image: var(--immersive-card-image);
+  background-position: center;
+  background-size: cover;
+  filter: saturate(.82) contrast(1.02);
+  transform: scale(1.02);
+  transition: transform 650ms cubic-bezier(.22,1,.36,1), filter 300ms ease;
+}
+
+.puzzles-immersive-card:hover .puzzles-immersive-card__image,
+.puzzles-immersive-card:focus-within .puzzles-immersive-card__image {
+  transform: scale(1.075);
+  filter: saturate(.96) contrast(1.04);
+}
+
+.puzzles-immersive-card__shade {
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.88)),
+    linear-gradient(90deg, rgba(0,0,0,.62), transparent 70%);
+}
+
+.puzzles-immersive-card__content {
+  position: absolute;
+  inset: auto 0 0;
+  padding: clamp(20px, 3vw, 30px);
+}
+
+.puzzles-immersive-card__content > span,
+.puzzles-immersive-menu__section-head > span {
+  color: #d89a00;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.puzzles-immersive-card__content h2 {
+  margin: 8px 0 8px;
+  color: #fff;
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+  font-size: clamp(34px, 4vw, 56px);
+  font-weight: 500;
+  line-height: .92;
+  text-transform: uppercase;
+}
+
+.puzzles-immersive-card__content p {
+  max-width: 42ch;
+  margin: 0 0 18px;
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.puzzles-immersive-card__content button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid #d89a00;
+  background: #d89a00;
+  color: #000;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  cursor: pointer;
+}
+
+.puzzles-immersive-menu__moments {
+  width: min(1120px, 100%);
+  margin: 58px auto 0;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255,255,255,.18);
+}
+
+.puzzles-immersive-menu__section-head h2 {
+  max-width: 760px;
+  margin: 7px 0 20px;
+  color: #fff;
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+  font-size: clamp(32px, 5vw, 62px);
+  font-weight: 500;
+  line-height: .95;
+  text-transform: uppercase;
+}
+
+.puzzles-immersive-menu__moment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.puzzles-immersive-moment {
+  min-height: 150px;
+  padding: 22px;
+  border: 1px solid rgba(255,255,255,.20);
+  background: rgba(10,10,10,.70);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.puzzles-immersive-moment:hover,
+.puzzles-immersive-moment:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(216,154,0,.85);
+  background: rgba(24,19,11,.82);
+}
+
+.puzzles-immersive-moment span,
+.puzzles-immersive-moment strong,
+.puzzles-immersive-moment small {
+  display: block;
+}
+
+.puzzles-immersive-moment span {
+  margin-bottom: 10px;
+  color: #d89a00;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .15em;
+}
+
+.puzzles-immersive-moment strong {
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+  font-size: 26px;
+  font-weight: 550;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.puzzles-immersive-moment small {
+  margin-top: 10px;
+  color: rgba(255,255,255,.64);
+  font-size: 11px;
+  line-height: 1.42;
+}
+
+/* Seguidor vertical real del panel de filtros, independiente de sticky. */
+@media (min-width: 961px) {
+  .catalog-layout {
+    align-items: stretch !important;
+    overflow: visible !important;
+  }
+
+  .filters-panel-slot {
+    position: relative !important;
+    display: block !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    align-self: stretch !important;
+    min-width: 0 !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+  }
+
+  .filters-panel-slot > .filters-panel {
+    margin: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    transform: none !important;
+  }
+
+  .filters-panel-slot > .filters-panel.is-follow-top,
+  .filters-panel-slot > .filters-panel.is-follow-end {
+    position: absolute !important;
+  }
+
+  .filters-panel-slot > .filters-panel.is-following {
+    position: fixed !important;
+    z-index: 1400 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .puzzles-immersive-menu__topbar > div span {
+    display: none;
+  }
+
+  .puzzles-immersive-menu__viewport {
+    padding:
+      calc(84px + env(safe-area-inset-top))
+      14px
+      max(34px, env(safe-area-inset-bottom));
+  }
+
+  .puzzles-immersive-menu__intro {
+    margin-bottom: 18px;
+  }
+
+  .puzzles-immersive-menu__intro h1 {
+    font-size: clamp(42px, 13vw, 64px);
+  }
+
+  .puzzles-immersive-menu__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .puzzles-immersive-card {
+    min-height: 255px;
+  }
+
+  .puzzles-immersive-card__content {
+    padding: 14px;
+  }
+
+  .puzzles-immersive-card__content h2 {
+    font-size: clamp(27px, 8vw, 38px);
+  }
+
+  .puzzles-immersive-card__content p {
+    display: none;
+  }
+
+  .puzzles-immersive-card__content button {
+    width: 100%;
+    margin-top: 14px;
+    padding: 0 8px;
+  }
+
+  .puzzles-immersive-menu__moments {
+    margin-top: 34px;
+  }
+
+  .puzzles-immersive-menu__moment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .puzzles-immersive-moment {
+    min-height: 132px;
+    padding: 14px;
+  }
+
+  .puzzles-immersive-moment strong {
+    font-size: 21px;
+  }
+
+  .puzzles-immersive-moment small {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .puzzles-immersive-card {
+    min-height: 225px;
+  }
+
+  .puzzles-immersive-menu__skip {
+    padding: 0 10px;
+    letter-spacing: .09em;
+  }
+}
