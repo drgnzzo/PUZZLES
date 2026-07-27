@@ -749,6 +749,43 @@
       });
     }
 
+    function gasRunArgs(functionName, args, timeoutMs) {
+      return new Promise((resolve, reject) => {
+        const limit = Math.max(5000, timeoutMs || 25000);
+        let finished = false;
+        const timer = setTimeout(() => {
+          if (finished) return;
+          finished = true;
+          reject(new Error('La operación tardó demasiado. Intenta nuevamente.'));
+        }, limit);
+
+        try {
+          const runner = google.script.run
+            .withSuccessHandler(result => {
+              if (finished) return;
+              finished = true;
+              clearTimeout(timer);
+              resolve(result);
+            })
+            .withFailureHandler(error => {
+              if (finished) return;
+              finished = true;
+              clearTimeout(timer);
+              reject(new Error(error && error.message ? error.message : String(error)));
+            });
+
+          const method = runner[functionName];
+          if (typeof method !== 'function') throw new Error('La función ' + functionName + ' no está disponible.');
+          method.apply(runner, Array.isArray(args) ? args : []);
+        } catch (error) {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          reject(error);
+        }
+      });
+    }
+
     async function backendGetStore() {
       if (isAppsScriptHost()) {
         return gasRun(
@@ -4225,6 +4262,40 @@
 
 
 
+  function mountStudioWorkspace() {
+    if (document.getElementById('studioWorkspace')) return document.getElementById('studioWorkspace');
+    const modal = document.getElementById('studioModal');
+    const backdrop = document.getElementById('studioBackdrop');
+    if (!modal) return null;
+
+    const tabs = modal.querySelector('.studio-tabs');
+    const body = modal.querySelector('.studio-body');
+    const catalog = document.getElementById('catalogo') || document.querySelector('.catalog-section');
+    const layout = document.querySelector('.catalog-layout');
+    if (!tabs || !body || !catalog) return null;
+
+    const workspace = document.createElement('section');
+    workspace.id = 'studioWorkspace';
+    workspace.className = 'studio-workspace';
+    workspace.hidden = true;
+    workspace.setAttribute('aria-label', 'PUZZLES Studio');
+    workspace.innerHTML = [
+      '<header class="studio-workspace__head">',
+      '<div><span class="operational-kicker">MODO EDITORIAL</span><h2>PUZZLES Studio</h2><p>Edita publicaciones, banners y documentos sin abrir otra sesión.</p></div>',
+      '<span class="studio-workspace__session">La sesión se controla desde el encabezado principal.</span>',
+      '</header>'
+    ].join('');
+    workspace.appendChild(tabs);
+    workspace.appendChild(body);
+
+    if (layout && layout.parentElement === catalog) catalog.insertBefore(workspace, layout);
+    else catalog.insertBefore(workspace, catalog.firstChild);
+
+    modal.remove();
+    if (backdrop) backdrop.remove();
+    return workspace;
+  }
+
   function ensureOperationalUi() {
     const successActions = document.getElementById('successActions');
     if (successActions && !document.getElementById('btnRequestSalesNote')) {
@@ -4324,6 +4395,7 @@
       }
     }
 
+    mountStudioWorkspace();
     installOperationalEvents();
   }
 
@@ -4341,8 +4413,14 @@
       if (contactTrigger) { event.preventDefault(); openContact(); return; }
       const studioTrigger = event.target.closest('#btnStudioHeader');
       if (studioTrigger) { event.preventDefault(); openStudio(); return; }
+      const editCurrent = event.target.closest('[data-studio-edit-current]');
+      if (editCurrent) {
+        event.preventDefault();
+        openStudioEditor(state.detailProductCode);
+        return;
+      }
       const edit = event.target.closest('[data-studio-edit-code]');
-      if (edit) { openStudioEditor(edit.dataset.studioEditCode); return; }
+      if (edit) { event.preventDefault(); openStudioEditor(edit.dataset.studioEditCode); return; }
       const checkbox = event.target.closest('[data-studio-select]');
       if (checkbox) {
         const code = checkbox.dataset.studioSelect;
@@ -4362,8 +4440,6 @@
     document.getElementById('btnCancelContact')?.addEventListener('click', () => closePair('contactModal','contactBackdrop'));
     document.getElementById('contactBackdrop')?.addEventListener('click', () => closePair('contactModal','contactBackdrop'));
     document.getElementById('contactForm')?.addEventListener('submit', submitContactForm);
-    document.getElementById('btnCloseStudio')?.addEventListener('click', () => closePair('studioModal','studioBackdrop'));
-    document.getElementById('studioBackdrop')?.addEventListener('click', () => closePair('studioModal','studioBackdrop'));
     document.getElementById('btnStudioRefresh')?.addEventListener('click', () => refreshStudioCatalog(true));
     document.getElementById('studioSearch')?.addEventListener('input', renderStudioProducts);
     document.getElementById('studioStatus')?.addEventListener('change', renderStudioProducts);
@@ -4456,9 +4532,11 @@
   }
 
   async function refreshStudioCatalog(forceRender) {
-    if (!state.isStudio || !state.sessionToken) return;
-    const result = await gasRun('getStudioCatalog', state.sessionToken);
+    if (!state.sessionToken) return;
+    const result = await gasRun('getStudioCatalog', state.sessionToken, 45000);
     if (!result?.ok) throw new Error(result?.error || 'No se pudo cargar Studio.');
+    state.isStudio = true;
+    if (state.user) state.user.isStudio = true;
     state.studioProducts = Array.isArray(result.products) ? result.products : [];
     const activeMap = new Map(state.products.map(product => [String(product.code), product]));
     state.studioProducts.forEach(item => {
@@ -4476,10 +4554,44 @@
     if (forceRender || document.getElementById('studioModal')?.classList.contains('is-open')) renderStudioProducts();
   }
 
-  function openStudio() {
-    if (!state.isStudio) { toast('Inicia sesión con una cuenta Studio o Admin.', 'error'); return; }
-    document.getElementById('studioModal').classList.add('is-open'); document.getElementById('studioBackdrop').classList.add('is-open'); document.body.classList.add('no-scroll');
-    setStudioTab('products'); refreshStudioCatalog(true).catch(e => toast(e.message,'error'));
+  async function openStudio() {
+    if (!state.sessionToken || !state.user) {
+      toast('Inicia sesión para usar Studio.', 'error');
+      return;
+    }
+
+    const workspace = mountStudioWorkspace();
+    if (!workspace) {
+      toast('No se pudo preparar el espacio Studio.', 'error');
+      return;
+    }
+
+    if (!workspace.hidden) {
+      workspace.hidden = true;
+      document.getElementById('btnStudioHeader')?.setAttribute('aria-pressed', 'false');
+      return;
+    }
+
+    try {
+      const result = await gasRun('getStudioCatalog', state.sessionToken, 45000);
+      if (!result || !result.ok) throw new Error((result && result.error) || 'Esta cuenta no tiene acceso a Studio.');
+
+      state.isStudio = true;
+      state.isAdmin = Boolean(state.user && state.user.isAdmin);
+      if (state.user) {
+        state.user.isStudio = true;
+        state.user.role = state.user.role || (state.isAdmin ? 'ADMIN' : 'STUDIO');
+      }
+      state.studioProducts = Array.isArray(result.products) ? result.products : [];
+      syncStudioControls();
+      setStudioTab('products');
+      renderStudioProducts();
+      workspace.hidden = false;
+      document.getElementById('btnStudioHeader')?.setAttribute('aria-pressed', 'true');
+      workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) {
+      toast(error.message || 'No se pudo abrir Studio.', 'error');
+    }
   }
 
   function setStudioTab(tabName) {
@@ -4513,15 +4625,16 @@
 
   async function setSelectedStudioStatus(status) {
     const codes = Array.from(state.studioSelected); if (!codes.length) { toast('Selecciona productos primero.','error'); return; }
-    const result = await gasRun('bulkSetProductStatus', state.sessionToken, codes, status);
+    const result = await gasRunArgs('bulkSetProductStatus', [state.sessionToken, codes, status], 45000);
     if (!result?.ok) { toast(result?.error || 'No se pudo cambiar el estado.','error'); return; }
     state.studioSelected.clear(); toast(`${result.changed} productos actualizados.`, 'success'); await refreshStudioCatalog(true);
   }
 
   function findStudioProduct(code) { return state.studioProducts.find(item => String(item.code) === String(code)) || getProduct(code); }
   function openStudioEditor(code) {
-    if (!state.isStudio) return;
-    const item = findStudioProduct(code); if (!item) return;
+    if (!state.isStudio) { toast('Esta sesión no tiene acceso a edición.', 'error'); return; }
+    const item = findStudioProduct(code);
+    if (!item) { toast('No encontramos la publicación para editar.', 'error'); return; }
     const values = {
       studioEditCode: item.code, studioEditName: item.displayName, studioEditBrand: item.brand, studioEditCategory: item.category,
       studioEditSpecialty: item.specialty, studioEditPresentation: item.presentation || item.volume, studioEditStatus: item.webStatus || 'ACTIVO',
@@ -4548,7 +4661,7 @@
       alcohol:document.getElementById('studioEditAlcohol').value, pdpFactsJson:document.getElementById('studioEditFacts').value,
       processedImageUrl:document.getElementById('studioEditProcessedImage').value
     };
-    const result=await gasRun('updateProductFromStudio',state.sessionToken,code,patch);
+    const result=await gasRunArgs('updateProductFromStudio', [state.sessionToken, code, patch], 60000);
     if(!result?.ok){error.textContent=result?.error||'No se pudo guardar.';error.classList.add('is-visible');return;}
     toast('Publicación actualizada.','success'); document.getElementById('studioEditorModal').classList.remove('is-open'); document.getElementById('studioEditorBackdrop').classList.remove('is-open'); await loadStore({background:false}); await refreshStudioCatalog(true);
     if(state.detailProductCode===String(code)){closeProductDetail();setTimeout(()=>openProductDetail(code),150);}
@@ -4563,17 +4676,17 @@
   async function saveStudioBanner(rowNumber) {
     const card=document.querySelector(`[data-banner-row="${rowNumber}"]`); if(!card)return;
     const patch={}; card.querySelectorAll('[data-banner-field]').forEach(input=>patch[input.dataset.bannerField]=input.value);
-    const result=await gasRun('updateBannerTextFromStudio',state.sessionToken,rowNumber,patch); if(!result?.ok){toast(result?.error||'No se pudo guardar.','error');return;} toast('Banner actualizado.','success'); await loadStore({background:false});
+    const result=await gasRunArgs('updateBannerTextFromStudio', [state.sessionToken, rowNumber, patch], 45000); if(!result?.ok){toast(result?.error||'No se pudo guardar.','error');return;} toast('Banner actualizado.','success'); await loadStore({background:false});
   }
 
   async function loadStudioOrders() {
     const container=document.getElementById('studioOrderList'); if(!container)return; container.innerHTML='<div class="studio-empty">Cargando pedidos…</div>';
-    const result=await gasRun('getStudioOrders',state.sessionToken,40); if(!result?.ok){container.innerHTML=`<div class="studio-empty">${escapeHtml(result?.error||'Error')}</div>`;return;}
+    const result=await gasRunArgs('getStudioOrders', [state.sessionToken, 40], 45000); if(!result?.ok){container.innerHTML=`<div class="studio-empty">${escapeHtml(result?.error||'Error')}</div>`;return;}
     container.innerHTML=(result.orders||[]).map(order=>`<article class="studio-order-row"><div><strong>${escapeHtml(order.Folio||'')}</strong><span>${escapeHtml(order.Nombre||'')} · ${escapeHtml(order.Fecha||'')}</span></div><strong>${escapeHtml(order.Total||'')}</strong><div class="studio-order-actions"><button type="button" data-generate-document="NOTA DE VENTA" data-folio="${escapeAttr(order.Folio||'')}">Nota</button><button type="button" data-generate-document="COTIZACIÓN" data-folio="${escapeAttr(order.Folio||'')}">Cotización</button><button type="button" data-generate-document="NOTA DE VENTA" data-send="true" data-folio="${escapeAttr(order.Folio||'')}">Enviar nota</button></div></article>`).join('')||'<div class="studio-empty">No hay pedidos.</div>';
   }
 
   async function generateStudioDocument(folio,type,send) {
-    const result=await gasRun('generarDocumentoVenta',state.sessionToken,folio,type,Boolean(send));
+    const result=await gasRunArgs('generarDocumentoVenta', [state.sessionToken, folio, type, Boolean(send)], 90000);
     if(!result?.ok){toast(result?.error||'No se pudo generar el documento.','error');return;} toast(send?'Documento enviado.':'Documento generado.','success'); if(result.fileUrl&&!send) window.open(result.fileUrl,'_blank','noopener');
   }
 
