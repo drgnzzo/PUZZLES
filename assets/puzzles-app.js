@@ -328,14 +328,9 @@ async function init() {
       state.initialLoadComplete = true;
     });
 
-  // El splash solo cubre el arranque perceptual. El catálogo puede terminar
-  // de actualizarse detrás sin retener al usuario frente a una pantalla vacía.
-  await Promise.race([
-    state.initialLoadPromise,
-    new Promise(function (resolve) {
-      window.setTimeout(resolve, 520);
-    })
-  ]);
+  // El catálogo y la sesión continúan cargando en segundo plano.
+  // La entrada no espera la respuesta de Apps Script: el usuario pasa de
+  // inmediato a la confirmación de edad y después al recorrido.
   await finishInitialEntrySplash();
 }
 
@@ -1193,103 +1188,53 @@ async function init() {
 function hideLegacyIntentWelcome() {
   state.intentWelcomeShown = true;
 
-  if (dom.intentWelcomeModal) {
-    dom.intentWelcomeModal.classList.remove('is-open');
-    dom.intentWelcomeModal.classList.add('hidden');
-    dom.intentWelcomeModal.setAttribute('aria-hidden', 'true');
-  }
-
-  if (dom.intentWelcomeBackdrop) {
-    dom.intentWelcomeBackdrop.classList.remove('is-open');
-    dom.intentWelcomeBackdrop.classList.add('hidden');
-    dom.intentWelcomeBackdrop.setAttribute('aria-hidden', 'true');
-  }
-
-  if (dom.btnMomentsHeader) {
-    dom.btnMomentsHeader.hidden = true;
-    dom.btnMomentsHeader.classList.add('hidden');
-    dom.btnMomentsHeader.setAttribute('aria-hidden', 'true');
-  }
+  [
+    dom.intentWelcomeModal,
+    dom.intentWelcomeBackdrop,
+    dom.btnMomentsHeader,
+    document.querySelector('.feature-strip'),
+    document.querySelector('.puzzles-cellar-launch'),
+    document.getElementById('btnOpenCellar')
+  ].filter(Boolean).forEach(function (node) {
+    node.classList.remove('is-open');
+    node.classList.add('hidden');
+    node.setAttribute('aria-hidden', 'true');
+    node.hidden = true;
+    node.style.display = 'none';
+  });
 }
 
 function beginInitialEntrySplash() {
-  state.entrySplashActive = true;
+  state.entrySplashActive = false;
   state.entrySplashStartedAt = Date.now();
-  state.entrySequenceComplete = false;
+  state.entrySequenceComplete = true;
   state.ageConfirmedThisVisit = false;
 
   hideLegacyIntentWelcome();
 
-  if (dom.ageGate) {
-    dom.ageGate.classList.add('hidden');
-    dom.ageGate.setAttribute('aria-hidden', 'true');
-    dom.ageGate.style.display = 'none';
-  }
-
   if (dom.entrySplash) {
-    dom.entrySplash.classList.remove('hidden', 'is-leaving');
-    dom.entrySplash.setAttribute('aria-hidden', 'false');
-    dom.entrySplash.style.display = '';
-  }
-
-  if (dom.entrySplashBar) {
-    dom.entrySplashBar.style.animation = 'none';
-    void dom.entrySplashBar.offsetWidth;
-    dom.entrySplashBar.style.animation =
-      'entrySplashProgress .62s cubic-bezier(.22,1,.36,1) forwards';
-  }
-
-  document.body.classList.remove('entry-sequence-complete');
-  document.body.classList.add('no-scroll', 'entry-sequence-active');
-}
-
-async function finishInitialEntrySplash() {
-  const elapsed = Date.now() - Number(
-    state.entrySplashStartedAt || Date.now()
-  );
-  const minimumVisible =
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ? 180
-      : 420;
-  const remaining = Math.max(
-    0,
-    minimumVisible - elapsed
-  );
-
-  if (remaining > 0) {
-    await new Promise(
-      resolve => setTimeout(resolve, remaining)
-    );
-  }
-
-  if (dom.entrySplash) {
-    dom.entrySplash.classList.add('is-leaving');
-    await new Promise(
-      resolve => setTimeout(resolve, 150)
-    );
     dom.entrySplash.classList.add('hidden');
-    dom.entrySplash.classList.remove('is-leaving');
     dom.entrySplash.setAttribute('aria-hidden', 'true');
     dom.entrySplash.style.display = 'none';
   }
 
+  document.body.classList.remove('entry-sequence-active');
+  document.body.classList.add('entry-sequence-complete');
+  restoreAgeGate();
+
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'PUZZLES_FRAME_READY' }, '*');
+    }
+  } catch (_) {}
+}
+
+async function finishInitialEntrySplash() {
   state.entrySplashActive = false;
   state.entrySequenceComplete = true;
   document.body.classList.remove('entry-sequence-active');
   document.body.classList.add('entry-sequence-complete');
   restoreAgeGate();
-
-  if (dom.btnAgeYes) {
-    window.setTimeout(function () {
-      try {
-        dom.btnAgeYes.focus({
-          preventScroll: true
-        });
-      } catch (_) {
-        dom.btnAgeYes.focus();
-      }
-    }, 60);
-  }
 }
 
 function openImmersiveIntro() {
@@ -1309,9 +1254,7 @@ function openImmersiveIntro() {
 
     if (typeof open === 'function') {
       state.immersiveIntroShown = true;
-      window.requestAnimationFrame(function () {
-        open(dom.btnAgeYes || document.activeElement);
-      });
+      open(dom.btnAgeYes || document.activeElement);
       return;
     }
   } catch (error) {
@@ -3929,11 +3872,11 @@ async function confirmAge() {
           );
           proxyUrl.searchParams.set(
             'cbg',
-            'ececea'
+            'ffffff'
           );
           proxyUrl.searchParams.set(
             'bg',
-            'ececea'
+            'ffffff'
           );
           proxyUrl.searchParams.set(
             'output',
@@ -3950,7 +3893,7 @@ async function confirmAge() {
         'https://images.weserv.nl/?url=' +
         encodeURIComponent(source) +
         '&w=900&h=900&fit=contain' +
-        '&cbg=ececea&bg=ececea&output=webp&q=88&we=1'
+        '&cbg=ffffff&bg=ffffff&output=webp&q=88&we=1'
       );
     }
 
@@ -4246,144 +4189,55 @@ async function confirmAge() {
 function installFilterFollower() {
   const panel = document.getElementById('filtersPanel');
   const layout = document.querySelector('.catalog-layout');
-
   if (!panel || !layout) return;
 
-  let slot = panel.parentElement &&
-    panel.parentElement.classList.contains(
-      'filters-panel-slot'
-    )
+  const slot = panel.parentElement &&
+    panel.parentElement.classList.contains('filters-panel-slot')
       ? panel.parentElement
       : null;
 
-  if (!slot) {
-    slot = document.createElement('div');
-    slot.className = 'filters-panel-slot';
-    panel.parentNode.insertBefore(slot, panel);
-    slot.appendChild(panel);
+  if (slot && slot.parentElement) {
+    slot.parentElement.insertBefore(panel, slot);
+    slot.remove();
   }
 
-  panel.dataset.followInstalled = 'true';
-  panel.classList.add('filters-panel--follow-ready');
+  panel.dataset.followInstalled = 'native';
   panel.classList.remove(
+    'filters-panel--follow-ready',
     'is-follow-top',
     'is-following',
     'is-follow-end'
   );
 
   [
-    'position',
-    'top',
-    'bottom',
-    'left',
-    'width',
-    'max-height'
+    'position', 'top', 'right', 'bottom', 'left', 'width',
+    'height', 'max-height', 'transform', 'z-index'
   ].forEach(function (property) {
     panel.style.removeProperty(property);
   });
 
-  let frame = 0;
-
-  function chromeOffset() {
-    const announcement =
-      document.querySelector('.announcement');
-    const header =
-      document.querySelector('.site-header');
-
-    return Math.max(
+  function updateOffset() {
+    const announcement = document.querySelector('.announcement');
+    const header = document.querySelector('.site-header');
+    const offset = Math.max(
       12,
-      Math.round(
-        (announcement
-          ? announcement.getBoundingClientRect().height
-          : 0) +
-        (header
-          ? header.getBoundingClientRect().height
-          : 0) +
-        12
+      Math.ceil(
+        (announcement ? announcement.getBoundingClientRect().height : 0) +
+        (header ? header.getBoundingClientRect().height : 0) +
+        14
       )
     );
-  }
-
-  function update() {
-    frame = 0;
-
-    if (window.innerWidth <= 960) {
-      slot.style.removeProperty('min-height');
-      panel.style.removeProperty('max-height');
-      return;
-    }
-
-    const main =
-      layout.querySelector('.catalog-main');
-    const offset = chromeOffset();
-    const mainHeight = main
-      ? Math.max(
-          main.scrollHeight,
-          main.getBoundingClientRect().height
-        )
-      : layout.getBoundingClientRect().height;
 
     document.documentElement.style.setProperty(
       '--filters-sticky-top',
       offset + 'px'
     );
-
-    slot.style.setProperty(
-      'min-height',
-      Math.ceil(mainHeight) + 'px'
-    );
-
-    panel.style.setProperty(
-      'max-height',
-      Math.max(
-        220,
-        window.innerHeight - offset - 16
-      ) + 'px'
-    );
   }
 
-  function schedule() {
-    if (frame) return;
-    frame = window.requestAnimationFrame(update);
-  }
-
-  window.addEventListener(
-    'resize',
-    schedule,
-    { passive: true }
-  );
-
-  document.addEventListener(
-    'click',
-    function () {
-      window.setTimeout(schedule, 0);
-    }
-  );
-
-  if ('ResizeObserver' in window) {
-    const resizeObserver =
-      new ResizeObserver(schedule);
-    resizeObserver.observe(layout);
-    resizeObserver.observe(slot);
-    const main = layout.querySelector('.catalog-main');
-    if (main) resizeObserver.observe(main);
-  }
-
-  const mutationObserver =
-    new MutationObserver(schedule);
-  mutationObserver.observe(layout, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: [
-      'class',
-      'hidden',
-      'style'
-    ]
-  });
-
-  schedule();
+  updateOffset();
+  window.addEventListener('resize', updateOffset, { passive: true });
 }
+
 
   function installDesignSignals() {
     document.documentElement.classList.add('puzzles-design-revisited');
@@ -5213,29 +5067,12 @@ async function submitContactForm(event) {
   }
 
   function installCellarExperience() {
-    const existingCellar =
-      document.getElementById('puzzlesCellar');
-
-    if (
-      existingCellar &&
-      existingCellar.classList.contains(
-        'puzzles-immersive-menu'
-      )
-    ) {
-      return existingCellar;
-    }
-
-    if (existingCellar) {
-      existingCellar.remove();
-    }
+    const existing = document.getElementById('puzzlesCellar');
+    if (existing) existing.remove();
 
     document
-      .querySelectorAll(
-        '.puzzles-cellar-launch, #btnOpenCellar'
-      )
-      .forEach(function (node) {
-        node.remove();
-      });
+      .querySelectorAll('.puzzles-cellar-launch, #btnOpenCellar')
+      .forEach(function (node) { node.remove(); });
 
     const collections = [
       {
@@ -5243,7 +5080,7 @@ async function submitContactForm(event) {
         kicker: 'LA BODEGA',
         title: 'Vinos',
         text: 'Tintos, blancos y rosados para la mesa, el regalo y la cava.',
-        image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-02-editorial.png',
+        image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png',
         terms: ['vino', 'tinto', 'blanco', 'rosado']
       },
       {
@@ -5272,54 +5109,48 @@ async function submitContactForm(event) {
       }
     ];
 
+    function collectionCard(item) {
+      return [
+        '<article class="puzzles-immersive-card" data-immersive-mood="', escapeText(item.key), '" data-immersive-image="', escapeText(item.image), '" style="--immersive-card-image:url(\'', escapeText(item.image), '\')">',
+        '<div class="puzzles-immersive-card__image" aria-hidden="true"></div>',
+        '<div class="puzzles-immersive-card__shade" aria-hidden="true"></div>',
+        '<div class="puzzles-immersive-card__content">',
+        '<span>', escapeText(item.kicker), '</span>',
+        '<h2>', escapeText(item.title), '</h2>',
+        '<p>', escapeText(item.text), '</p>',
+        '<button type="button" data-immersive-collection="', escapeText(item.key), '">EXPLORAR</button>',
+        '</div>',
+        '</article>'
+      ].join('');
+    }
+
     document.body.insertAdjacentHTML('beforeend', [
       '<section id="puzzlesCellar" class="puzzles-cellar puzzles-immersive-menu" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="puzzlesImmersiveTitle">',
       '<div class="puzzles-immersive-menu__background" aria-hidden="true"></div>',
-      '<header class="puzzles-cellar__topbar puzzles-immersive-menu__topbar">',
+      '<header class="puzzles-immersive-menu__topbar">',
       '<div><strong>PUZZLES</strong><span>VINOS · LICORES · DESTILADOS</span></div>',
       '<button type="button" class="puzzles-immersive-menu__skip" data-cellar-catalog>OMITIR INTRODUCCIÓN</button>',
       '</header>',
       '<div class="puzzles-immersive-menu__viewport">',
       '<div class="puzzles-immersive-menu__intro">',
-      '<span class="puzzles-cellar__kicker">ELIGE TU RECORRIDO</span>',
-      '<h1 id="puzzlesImmersiveTitle">¿Qué estás buscando?</h1>',
-      '<p>Selecciona una colección o un momento. La tienda se preparará antes de entrar.</p>',
+      '<span>ELIGE TU RECORRIDO</span>',
+      '<h1 id="puzzlesImmersiveTitle">¿Cómo quieres entrar a PUZZLES?</h1>',
+      '<p>Elige una colección o una ocasión. La atmósfera continuará dentro del catálogo.</p>',
       '</div>',
-      '<div class="puzzles-immersive-menu__grid" data-immersive-collections>',
-      collections.map(function (item) {
-        return [
-          '<article class="puzzles-immersive-card" data-immersive-mood="', escapeText(item.key), '" style="--immersive-card-image:url(\'', escapeText(item.image), '\')">',
-          '<div class="puzzles-immersive-card__image" aria-hidden="true"></div>',
-          '<div class="puzzles-immersive-card__shade" aria-hidden="true"></div>',
-          '<div class="puzzles-immersive-card__content">',
-          '<span>', escapeText(item.kicker), '</span>',
-          '<h2>', escapeText(item.title), '</h2>',
-          '<p>', escapeText(item.text), '</p>',
-          '<button type="button" data-immersive-collection="', escapeText(item.key), '">EXPLORAR</button>',
-          '</div>',
-          '</article>'
-        ].join('');
-      }).join(''),
+      '<div class="puzzles-immersive-menu__grid" data-immersive-grid>',
+      collections.map(collectionCard).join(''),
       '</div>',
-      '<section class="puzzles-immersive-menu__moments" aria-labelledby="puzzlesMomentsTitle">',
-      '<div class="puzzles-immersive-menu__section-head">',
-      '<span>MOMENTOS CON INTENCIÓN</span>',
-      '<h2 id="puzzlesMomentsTitle">También puedes empezar por la ocasión</h2>',
-      '</div>',
-      '<div class="puzzles-immersive-menu__moment-grid" data-cellar-moments></div>',
-      '</section>',
       '</div>',
       '</section>'
     ].join(''));
 
     const cellar = document.getElementById('puzzlesCellar');
     const viewport = cellar.querySelector('.puzzles-immersive-menu__viewport');
+    const grid = cellar.querySelector('[data-immersive-grid]');
     const background = cellar.querySelector('.puzzles-immersive-menu__background');
-    const collectionByKey = new Map(
-      collections.map(function (item) {
-        return [item.key, item];
-      })
-    );
+    const collectionByKey = new Map(collections.map(function (item) {
+      return [item.key, item];
+    }));
     let returnFocus = null;
 
     function normalize(value) {
@@ -5350,35 +5181,34 @@ async function submitContactForm(event) {
     }
 
     function renderMoments() {
-      const container = cellar.querySelector('[data-cellar-moments]');
-      if (!container) return;
+      grid.querySelectorAll('[data-generated-moment]').forEach(function (node) {
+        node.remove();
+      });
 
       const moments = Array.isArray(state.store && state.store.moments)
-        ? state.store.moments.slice(0, 6)
+        ? state.store.moments.slice(0, 4)
         : [];
 
-      if (!moments.length) {
-        container.innerHTML = [
-          '<button class="puzzles-immersive-moment" type="button" data-immersive-moment-action="catalog">',
-          '<span>EXPLORAR</span><strong>Ver toda la colección</strong>',
-          '<small>Entra al catálogo completo y utiliza los filtros.</small>',
-          '</button>'
+      moments.forEach(function (moment, index) {
+        const fallback = collections[index % collections.length].image;
+        const image = moment.imageUrl || fallback;
+        const article = document.createElement('article');
+        article.className = 'puzzles-immersive-card puzzles-immersive-card--moment';
+        article.dataset.generatedMoment = 'true';
+        article.dataset.immersiveImage = image;
+        article.style.setProperty('--immersive-card-image', "url('" + String(image).replace(/'/g, "\\'") + "')");
+        article.innerHTML = [
+          '<div class="puzzles-immersive-card__image" aria-hidden="true"></div>',
+          '<div class="puzzles-immersive-card__shade" aria-hidden="true"></div>',
+          '<div class="puzzles-immersive-card__content">',
+          '<span>', escapeText(moment.eyebrow || 'MOMENTO CON INTENCIÓN'), '</span>',
+          '<h2>', escapeText(moment.title || 'Explorar'), '</h2>',
+          '<p>', escapeText(moment.text || 'Descubre una selección preparada para esta ocasión.'), '</p>',
+          '<button type="button" data-immersive-moment-action="', escapeText(moment.action || 'catalog'), '">EXPLORAR</button>',
+          '</div>'
         ].join('');
-        return;
-      }
-
-      container.innerHTML = moments.map(function (moment, index) {
-        const fallbackImages = collections[index % collections.length].image;
-        return [
-          '<button class="puzzles-immersive-moment" type="button" ',
-          'data-immersive-moment-action="', escapeText(moment.action || 'catalog'), '" ',
-          'data-immersive-image="', escapeText(moment.imageUrl || fallbackImages), '">',
-          '<span>', escapeText(moment.eyebrow || 'MOMENTO'), '</span>',
-          '<strong>', escapeText(moment.title || 'Explorar'), '</strong>',
-          '<small>', escapeText(moment.text || 'Descubre una selección preparada para esta ocasión.'), '</small>',
-          '</button>'
-        ].join('');
-      }).join('');
+        grid.appendChild(article);
+      });
     }
 
     function resetCatalog() {
@@ -5387,9 +5217,14 @@ async function submitContactForm(event) {
       state.search = '';
       state.editorialIntent = null;
       state.page = 1;
-
       if (dom.searchInput) dom.searchInput.value = '';
       if (dom.brandFilter) dom.brandFilter.value = 'Todas';
+    }
+
+    function refreshCatalogUi() {
+      if (typeof renderCategories === 'function') renderCategories();
+      if (typeof renderBrands === 'function') renderBrands();
+      if (typeof applyFilters === 'function') applyFilters();
     }
 
     function applyCollection(item) {
@@ -5404,11 +5239,7 @@ async function submitContactForm(event) {
         });
 
         state.editorialIntent = categories.length
-          ? {
-              key: 'immersive-' + item.key,
-              categories: categories,
-              sort: 'featured'
-            }
+          ? { key: 'immersive-' + item.key, categories: categories, sort: 'featured' }
           : null;
 
         if (!categories.length) {
@@ -5418,10 +5249,7 @@ async function submitContactForm(event) {
       }
 
       document.body.dataset.catalogMood = item && item.key || 'all';
-
-      if (typeof renderCategories === 'function') renderCategories();
-      if (typeof renderBrands === 'function') renderBrands();
-      if (typeof applyFilters === 'function') applyFilters();
+      refreshCatalogUi();
     }
 
     function openCellar(trigger) {
@@ -5437,7 +5265,7 @@ async function submitContactForm(event) {
       window.setTimeout(function () {
         const first = cellar.querySelector('[data-immersive-collection]');
         if (first) first.focus({ preventScroll: true });
-      }, 60);
+      }, 30);
     }
 
     function closeCellar(goCatalog) {
@@ -5453,7 +5281,7 @@ async function submitContactForm(event) {
               behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
               block: 'start'
             });
-          }, 80);
+          }, 40);
         }
       } else if (returnFocus && typeof returnFocus.focus === 'function') {
         returnFocus.focus({ preventScroll: true });
@@ -5464,24 +5292,27 @@ async function submitContactForm(event) {
     window.PUZZLES_CLOSE_IMMERSIVE_INTRO = closeCellar;
 
     cellar.addEventListener('pointerover', function (event) {
-      const card = event.target.closest('[data-immersive-mood]');
-      if (card) {
-        const item = collectionByKey.get(card.dataset.immersiveMood);
-        if (item) setBackground(item.image, item.key);
-      }
-
-      const moment = event.target.closest('[data-immersive-image]');
-      if (moment && moment.dataset.immersiveImage) {
-        setBackground(moment.dataset.immersiveImage, 'moment');
-      }
+      const target = event.target.closest('[data-immersive-image], [data-immersive-mood]');
+      if (!target) return;
+      const item = target.dataset.immersiveMood
+        ? collectionByKey.get(target.dataset.immersiveMood)
+        : null;
+      setBackground(
+        target.dataset.immersiveImage || (item && item.image),
+        target.dataset.immersiveMood || 'moment'
+      );
     });
 
     cellar.addEventListener('focusin', function (event) {
-      const card = event.target.closest('[data-immersive-mood]');
-      if (card) {
-        const item = collectionByKey.get(card.dataset.immersiveMood);
-        if (item) setBackground(item.image, item.key);
-      }
+      const target = event.target.closest('[data-immersive-image], [data-immersive-mood]');
+      if (!target) return;
+      const item = target.dataset.immersiveMood
+        ? collectionByKey.get(target.dataset.immersiveMood)
+        : null;
+      setBackground(
+        target.dataset.immersiveImage || (item && item.image),
+        target.dataset.immersiveMood || 'moment'
+      );
     });
 
     cellar.addEventListener('click', function (event) {
@@ -5489,10 +5320,8 @@ async function submitContactForm(event) {
       if (skip) {
         event.preventDefault();
         resetCatalog();
-        if (typeof renderCategories === 'function') renderCategories();
-        if (typeof renderBrands === 'function') renderBrands();
-        if (typeof applyFilters === 'function') applyFilters();
         document.body.dataset.catalogMood = 'all';
+        refreshCatalogUi();
         closeCellar(true);
         return;
       }
@@ -5500,8 +5329,10 @@ async function submitContactForm(event) {
       const collectionButton = event.target.closest('[data-immersive-collection]');
       if (collectionButton) {
         event.preventDefault();
-        const item = collectionByKey.get(collectionButton.dataset.immersiveCollection);
-        applyCollection(item || collectionByKey.get('all'));
+        applyCollection(
+          collectionByKey.get(collectionButton.dataset.immersiveCollection) ||
+          collectionByKey.get('all')
+        );
         closeCellar(true);
         return;
       }
@@ -5515,7 +5346,7 @@ async function submitContactForm(event) {
           if (typeof handleEditorialAction === 'function') {
             handleEditorialAction(action);
           }
-        }, 30);
+        }, 20);
       }
     });
 
@@ -5523,6 +5354,7 @@ async function submitContactForm(event) {
       if (event.key === 'Escape' && cellar.classList.contains('is-open')) {
         event.preventDefault();
         resetCatalog();
+        refreshCatalogUi();
         closeCellar(true);
       }
     }, true);

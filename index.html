@@ -42,44 +42,30 @@
   </script>
   <style>
     * { box-sizing: border-box; }
-    html, body {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      min-width: 100%;
-      max-width: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      overscroll-behavior: none;
-      background: #0b0b0b;
-      color: #f4f0e8;
-      touch-action: pan-x pan-y;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    iframe {
-      position: fixed;
-      inset: 0;
-      display: block;
-      width: 100vw;
-      height: 100dvh;
-      min-width: 100vw;
-      max-width: 100vw;
-      border: 0;
-      background: #0b0b0b;
-      opacity: 1;
-    }
-    noscript { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; padding: 24px; background: #0b0b0b; text-align: center; }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
-    }
+    html, body { position: fixed; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden; background: #000; color: #fff; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    iframe { position: fixed; inset: 0; display: block; width: 100vw; height: 100dvh; border: 0; background: #000; opacity: 0; transition: opacity 140ms ease; }
+    body.is-ready iframe { opacity: 1; }
+    #puzzlesShellSplash { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; background: #000; opacity: 1; visibility: visible; transition: opacity 140ms ease, visibility 140ms ease; }
+    body.is-ready #puzzlesShellSplash { opacity: 0; visibility: hidden; pointer-events: none; }
+    .shell-splash__inner { width: min(390px, 82vw); text-align: center; }
+    .shell-splash__inner img { display: block; width: min(250px, 58vw); max-height: 230px; margin: 0 auto 20px; object-fit: contain; }
+    .shell-splash__track { width: min(320px, 72vw); height: 3px; margin: 0 auto; overflow: hidden; background: #272727; }
+    .shell-splash__track span { display: block; width: 100%; height: 100%; background: #d89a00; transform-origin: left; animation: shellProgress .65s cubic-bezier(.22,1,.36,1) both; }
+    @keyframes shellProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    noscript { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: #000; text-align: center; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
+  <div id="puzzlesShellSplash" aria-label="Preparando PUZZLES">
+    <div class="shell-splash__inner">
+      <img src="./assets/puzzles_logo.png?rev=20260727-consolidated-1" alt="PUZZLES · Vinos, licores y destilados">
+      <div class="shell-splash__track" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
   <iframe
     id="puzzlesAppFrame"
-    src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&rev=stable"
+    src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&rev=20260727-consolidated-1"
     title="PUZZLES · Vinos, licores y destilados"
     allow="clipboard-write"
     referrerpolicy="strict-origin-when-cross-origin"
@@ -89,8 +75,24 @@
     (function () {
       var frame = document.getElementById('puzzlesAppFrame');
       var description = document.querySelector('meta[name="description"]');
+      var revealed = false;
+      var started = performance.now();
+
+      function reveal() {
+        if (revealed) return;
+        var elapsed = performance.now() - started;
+        var wait = Math.max(0, 520 - elapsed);
+        window.setTimeout(function () {
+          if (revealed) return;
+          revealed = true;
+          document.body.classList.add('is-ready');
+        }, wait);
+      }
+
       window.addEventListener('message', function (event) {
-        if (event.source !== frame.contentWindow || !event.data || event.data.type !== 'PUZZLES_META') return;
+        if (event.source !== frame.contentWindow || !event.data) return;
+        if (event.data.type === 'PUZZLES_FRAME_READY') reveal();
+        if (event.data.type !== 'PUZZLES_META') return;
         if (typeof event.data.title === 'string' && event.data.title.trim()) {
           document.title = event.data.title.trim();
           frame.title = event.data.title.trim();
@@ -99,10 +101,21 @@
           description.setAttribute('content', event.data.description.trim());
         }
       });
+
+      frame.addEventListener('load', function () {
+        window.setTimeout(reveal, 80);
+      }, { once: true });
+      window.setTimeout(reveal, 1100);
+
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('./sw.js').catch(function () {});
-        });
+        navigator.serviceWorker.getRegistrations().then(function (items) {
+          items.forEach(function (registration) { registration.unregister(); });
+        }).catch(function () {});
+      }
+      if ('caches' in window) {
+        caches.keys().then(function (keys) {
+          keys.filter(function (key) { return /^puzzles-/i.test(key); }).forEach(function (key) { caches.delete(key); });
+        }).catch(function () {});
       }
     })();
   </script>
