@@ -10353,3 +10353,189 @@ body.cellar-is-open .hero-brand-signature {
     letter-spacing: .09em;
   }
 }
+
+
+/* ============================================================
+   PUZZLES · CIERRE INTEGRADO DE ENTRADA, TOUR, PDP Y FILTROS
+   ============================================================ */
+
+/* El splash es breve y su salida no añade una segunda espera visual. */
+.entry-splash {
+  transition:
+    opacity 150ms ease,
+    visibility 150ms ease !important;
+}
+
+/* La introducción siempre ocupa la ventana y nunca hereda la geometría
+   del recorrido anterior que utilizaba el mismo identificador. */
+.puzzles-cellar.puzzles-immersive-menu {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.puzzles-cellar.puzzles-immersive-menu.is-open {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Los controles del carrusel permanecen dentro del hero. */
+.hero-carousel {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.hero-carousel > .hero-carousel__controls,
+.hero-carousel .hero-carousel__controls {
+  position: absolute !important;
+  z-index: 20 !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 18px !important;
+  width: min(1180px, calc(100% - 40px)) !important;
+  margin: 0 !important;
+  transform: translateX(-50%) !important;
+}
+
+/* PDP de escritorio: ventana de producto, no página casi completa. */
+@media (min-width: 761px) {
+  .product-detail-modal {
+    padding: clamp(26px, 5vh, 58px) clamp(30px, 6vw, 96px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+
+  .product-detail-modal .product-detail-card,
+  .product-detail-modal .modal__card,
+  .product-detail-card {
+    width: min(1040px, calc(100vw - 120px)) !important;
+    height: auto !important;
+    max-width: 1040px !important;
+    max-height: min(84dvh, 780px) !important;
+    overflow: hidden !important;
+  }
+
+  .product-detail-head {
+    min-height: 64px !important;
+    padding: 12px 18px !important;
+  }
+
+  .product-detail-content,
+  .product-detail-modal .modal__body {
+    height: auto !important;
+    max-height: calc(min(84dvh, 780px) - 64px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .pdp-editorial {
+    display: grid !important;
+    grid-template-columns: minmax(300px, 41%) minmax(0, 59%) !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .pdp-editorial__media {
+    min-height: 0 !important;
+    padding: clamp(20px, 3vw, 34px) !important;
+  }
+
+  .pdp-editorial .pdp-image-button {
+    width: min(100%, 390px) !important;
+    height: min(48dvh, 390px) !important;
+    max-height: 390px !important;
+    aspect-ratio: 1 / 1 !important;
+  }
+
+  .pdp-editorial .pdp-image {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 7% !important;
+    object-fit: contain !important;
+  }
+
+  .pdp-editorial__content {
+    padding: clamp(22px, 3vw, 34px) !important;
+    overflow: visible !important;
+  }
+
+  .pdp-editorial h3 {
+    font-size: clamp(30px, 3.2vw, 46px) !important;
+  }
+}
+
+/* El panel acompaña la altura completa del catálogo con sticky nativo.
+   No usa position:fixed ni coordenadas calculadas durante el scroll. */
+@media (min-width: 961px) {
+  .catalog-section,
+  .catalog-layout,
+  .catalog-main,
+  #gridView,
+  #tableView,
+  .product-grid,
+  .table-wrap {
+    overflow: visible !important;
+  }
+
+  .catalog-layout {
+    display: grid !important;
+    grid-template-columns:
+      clamp(220px, 15vw, 292px)
+      minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    position: relative !important;
+  }
+
+  .filters-panel-slot {
+    display: block !important;
+    position: relative !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    align-self: stretch !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .filters-panel-slot > .filters-panel,
+  .filters-panel.filters-panel--follow-ready {
+    position: sticky !important;
+    top: var(--filters-sticky-top, 118px) !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-height:
+      calc(100dvh - var(--filters-sticky-top, 118px) - 16px) !important;
+    margin: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  .filters-panel-slot > .filters-panel.is-follow-top,
+  .filters-panel-slot > .filters-panel.is-following,
+  .filters-panel-slot > .filters-panel.is-follow-end {
+    position: sticky !important;
+    top: var(--filters-sticky-top, 118px) !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+  }
+
+  .catalog-layout > .catalog-main {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+  }
+}

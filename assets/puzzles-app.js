@@ -333,7 +333,7 @@ async function init() {
   await Promise.race([
     state.initialLoadPromise,
     new Promise(function (resolve) {
-      window.setTimeout(resolve, 1500);
+      window.setTimeout(resolve, 520);
     })
   ]);
   await finishInitialEntrySplash();
@@ -1236,7 +1236,7 @@ function beginInitialEntrySplash() {
     dom.entrySplashBar.style.animation = 'none';
     void dom.entrySplashBar.offsetWidth;
     dom.entrySplashBar.style.animation =
-      'entrySplashProgress 1.45s cubic-bezier(.22,1,.36,1) forwards';
+      'entrySplashProgress .62s cubic-bezier(.22,1,.36,1) forwards';
   }
 
   document.body.classList.remove('entry-sequence-complete');
@@ -1249,8 +1249,8 @@ async function finishInitialEntrySplash() {
   );
   const minimumVisible =
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ? 350
-      : 1050;
+      ? 180
+      : 420;
   const remaining = Math.max(
     0,
     minimumVisible - elapsed
@@ -1265,7 +1265,7 @@ async function finishInitialEntrySplash() {
   if (dom.entrySplash) {
     dom.entrySplash.classList.add('is-leaving');
     await new Promise(
-      resolve => setTimeout(resolve, 320)
+      resolve => setTimeout(resolve, 150)
     );
     dom.entrySplash.classList.add('hidden');
     dom.entrySplash.classList.remove('is-leaving');
@@ -1296,60 +1296,38 @@ function openImmersiveIntro() {
   hideLegacyIntentWelcome();
   document.body.classList.remove('age-gate-visible');
 
-  const installer =
-    window.PUZZLES_INSTALL_IMMERSIVE_INTRO;
+  try {
+    const installer =
+      window.PUZZLES_INSTALL_IMMERSIVE_INTRO;
 
-  if (typeof installer === 'function') {
-    try {
+    if (typeof installer === 'function') {
       installer();
-    } catch (error) {
-      console.error(
-        'No fue posible preparar la introducción:',
-        error
-      );
     }
+
+    const open =
+      window.PUZZLES_OPEN_IMMERSIVE_INTRO;
+
+    if (typeof open === 'function') {
+      state.immersiveIntroShown = true;
+      window.requestAnimationFrame(function () {
+        open(dom.btnAgeYes || document.activeElement);
+      });
+      return;
+    }
+  } catch (error) {
+    console.error(
+      'No fue posible abrir la introducción:',
+      error
+    );
   }
 
-  const open =
-    window.PUZZLES_OPEN_IMMERSIVE_INTRO;
-
-  if (typeof open === 'function') {
-    state.immersiveIntroShown = true;
-    open(dom.btnAgeYes || document.activeElement);
-    return;
-  }
-
-  let attempts = 0;
-  const retry = window.setInterval(
-    function () {
-      attempts += 1;
-
-      const retryInstaller =
-        window.PUZZLES_INSTALL_IMMERSIVE_INTRO;
-      if (typeof retryInstaller === 'function') {
-        try { retryInstaller(); } catch (_) {}
-      }
-
-      const retryOpen =
-        window.PUZZLES_OPEN_IMMERSIVE_INTRO;
-
-      if (typeof retryOpen === 'function') {
-        window.clearInterval(retry);
-        state.immersiveIntroShown = true;
-        retryOpen(
-          dom.btnAgeYes ||
-          document.activeElement
-        );
-      } else if (attempts >= 80) {
-        window.clearInterval(retry);
-        document.body.classList.remove('no-scroll');
-        toast(
-          'No se pudo abrir la introducción. Entra al catálogo para continuar.',
-          'error'
-        );
-      }
-    },
-    50
+  document.body.classList.remove(
+    'no-scroll',
+    'cellar-is-open'
+  );
+  toast(
+    'No se pudo abrir la introducción. Puedes continuar en el catálogo.',
+    'error'
   );
 }
 
@@ -4272,7 +4250,9 @@ function installFilterFollower() {
   if (!panel || !layout) return;
 
   let slot = panel.parentElement &&
-    panel.parentElement.classList.contains('filters-panel-slot')
+    panel.parentElement.classList.contains(
+      'filters-panel-slot'
+    )
       ? panel.parentElement
       : null;
 
@@ -4285,27 +4265,24 @@ function installFilterFollower() {
 
   panel.dataset.followInstalled = 'true';
   panel.classList.add('filters-panel--follow-ready');
+  panel.classList.remove(
+    'is-follow-top',
+    'is-following',
+    'is-follow-end'
+  );
+
+  [
+    'position',
+    'top',
+    'bottom',
+    'left',
+    'width',
+    'max-height'
+  ].forEach(function (property) {
+    panel.style.removeProperty(property);
+  });
 
   let frame = 0;
-
-  function clearMode() {
-    panel.classList.remove(
-      'is-follow-top',
-      'is-following',
-      'is-follow-end'
-    );
-
-    [
-      'position',
-      'top',
-      'bottom',
-      'left',
-      'width',
-      'max-height'
-    ].forEach(function (property) {
-      panel.style.removeProperty(property);
-    });
-  }
 
   function chromeOffset() {
     const announcement =
@@ -4331,72 +4308,37 @@ function installFilterFollower() {
     frame = 0;
 
     if (window.innerWidth <= 960) {
-      clearMode();
+      slot.style.removeProperty('min-height');
+      panel.style.removeProperty('max-height');
       return;
     }
 
+    const main =
+      layout.querySelector('.catalog-main');
     const offset = chromeOffset();
-    const layoutRect = layout.getBoundingClientRect();
-    const slotRect = slot.getBoundingClientRect();
-    const maxHeight = Math.max(
-      220,
-      window.innerHeight - offset - 16
-    );
-    const naturalHeight = Math.min(
-      panel.scrollHeight,
-      maxHeight
-    );
+    const mainHeight = main
+      ? Math.max(
+          main.scrollHeight,
+          main.getBoundingClientRect().height
+        )
+      : layout.getBoundingClientRect().height;
 
     document.documentElement.style.setProperty(
       '--filters-sticky-top',
       offset + 'px'
     );
 
+    slot.style.setProperty(
+      'min-height',
+      Math.ceil(mainHeight) + 'px'
+    );
+
     panel.style.setProperty(
       'max-height',
-      maxHeight + 'px',
-      'important'
-    );
-
-    panel.classList.remove(
-      'is-follow-top',
-      'is-following',
-      'is-follow-end'
-    );
-
-    if (layoutRect.top >= offset) {
-      panel.classList.add('is-follow-top');
-      panel.style.setProperty('position', 'absolute', 'important');
-      panel.style.setProperty('top', '0px', 'important');
-      panel.style.setProperty('bottom', 'auto', 'important');
-      panel.style.setProperty('left', '0px', 'important');
-      panel.style.setProperty('width', '100%', 'important');
-      return;
-    }
-
-    if (layoutRect.bottom <= offset + naturalHeight) {
-      panel.classList.add('is-follow-end');
-      panel.style.setProperty('position', 'absolute', 'important');
-      panel.style.setProperty('top', 'auto', 'important');
-      panel.style.setProperty('bottom', '0px', 'important');
-      panel.style.setProperty('left', '0px', 'important');
-      panel.style.setProperty('width', '100%', 'important');
-      return;
-    }
-
-    panel.classList.add('is-following');
-    panel.style.setProperty('position', 'fixed', 'important');
-    panel.style.setProperty('top', offset + 'px', 'important');
-    panel.style.setProperty('bottom', 'auto', 'important');
-    panel.style.setProperty(
-      'left',
-      Math.round(slotRect.left) + 'px',
-      'important'
-    );
-    panel.style.setProperty(
-      'width',
-      Math.round(slotRect.width) + 'px',
-      'important'
+      Math.max(
+        220,
+        window.innerHeight - offset - 16
+      ) + 'px'
     );
   }
 
@@ -4405,24 +4347,39 @@ function installFilterFollower() {
     frame = window.requestAnimationFrame(update);
   }
 
-  window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', schedule, { passive: true });
+  window.addEventListener(
+    'resize',
+    schedule,
+    { passive: true }
+  );
+
+  document.addEventListener(
+    'click',
+    function () {
+      window.setTimeout(schedule, 0);
+    }
+  );
 
   if ('ResizeObserver' in window) {
-    const resizeObserver = new ResizeObserver(schedule);
+    const resizeObserver =
+      new ResizeObserver(schedule);
     resizeObserver.observe(layout);
     resizeObserver.observe(slot);
-    resizeObserver.observe(panel);
     const main = layout.querySelector('.catalog-main');
     if (main) resizeObserver.observe(main);
   }
 
-  const mutationObserver = new MutationObserver(schedule);
+  const mutationObserver =
+    new MutationObserver(schedule);
   mutationObserver.observe(layout, {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['class', 'hidden', 'style']
+    attributeFilter: [
+      'class',
+      'hidden',
+      'style'
+    ]
   });
 
   schedule();
@@ -5256,9 +5213,29 @@ async function submitContactForm(event) {
   }
 
   function installCellarExperience() {
-    if (document.getElementById('puzzlesCellar')) {
-      return document.getElementById('puzzlesCellar');
+    const existingCellar =
+      document.getElementById('puzzlesCellar');
+
+    if (
+      existingCellar &&
+      existingCellar.classList.contains(
+        'puzzles-immersive-menu'
+      )
+    ) {
+      return existingCellar;
     }
+
+    if (existingCellar) {
+      existingCellar.remove();
+    }
+
+    document
+      .querySelectorAll(
+        '.puzzles-cellar-launch, #btnOpenCellar'
+      )
+      .forEach(function (node) {
+        node.remove();
+      });
 
     const collections = [
       {
