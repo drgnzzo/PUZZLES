@@ -93,13 +93,18 @@
       hasStoreSnapshot: false,
       storeRefreshError: '',
       isAdmin: false,
+      isStudio: false,
+      studioStatus: 'TODOS',
+      studioProducts: [],
+      studioSelected: new Set(),
       adminPrices: {},
       detailProductCode: '',
       detailQuantity: 1,
       initialLoadPromise: null,
       initialLoadComplete: false,
       entrySplashActive: false,
-      intentWelcomeShown: false
+      intentWelcomeShown: false,
+      lastOrder: null
     };
 
     const dom = {};
@@ -1469,6 +1474,10 @@
           return false;
         }
 
+        if (state.isStudio && state.studioStatus !== 'TODOS' && String(product.webStatus || 'ACTIVO') !== state.studioStatus) {
+          return false;
+        }
+
         if (
           state.category !== 'Todas' &&
           product.category !== state.category
@@ -1839,7 +1848,7 @@
           const adminCost = getAdminCost(product.code);
 
           return `
-            <article class="product-card" data-code="${escapeAttr(product.code)}">
+            <article class="product-card ${product.webStatus && product.webStatus !== 'ACTIVO' && product.webStatus !== 'CONSULTAR' ? 'product-card--hidden' : ''}" data-code="${escapeAttr(product.code)}">
               <button class="product-card__visual product-open-button" data-darkreader-lock type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver información de ${escapeAttr(product.displayName)}">
                 <div class="product-image-fallback" data-darkreader-lock aria-hidden="true">
                   <span>${escapeHtml(categoryLetter(product.category))}</span>
@@ -1848,12 +1857,8 @@
                 <span class="product-card__category">${escapeHtml(product.category)}</span>
               </button>
 
+              ${state.isStudio && product.webStatus && product.webStatus !== 'ACTIVO' ? `<div class="studio-status-badge">${escapeHtml(product.webStatus.replace('_',' '))}</div>` : ''}
               <div class="product-card__body">
-                <div class="product-card__code">
-                  CÓDIGO ${escapeHtml(product.code)}
-                  ${product.upc ? ` · UPC ${escapeHtml(product.upc)}` : ''}
-                </div>
-
                 <h3 class="product-card__name">
                   <button class="product-title-button" type="button" data-product-detail="${escapeAttr(product.code)}">
                     ${escapeHtml(product.displayName)}
@@ -1911,7 +1916,7 @@
               const adminCost = getAdminCost(product.code);
 
               return `
-                <article class="mobile-list-card" data-code="${escapeAttr(product.code)}">
+                <article class="mobile-list-card ${product.webStatus && product.webStatus !== 'ACTIVO' && product.webStatus !== 'CONSULTAR' ? 'product-card--hidden' : ''}" data-code="${escapeAttr(product.code)}">
                   <button class="mobile-list-card__visual" type="button" data-product-detail="${escapeAttr(product.code)}" aria-label="Ver ${escapeAttr(product.displayName)}">
                     <span class="product-image-fallback" aria-hidden="true"><span>${escapeHtml(categoryLetter(product.category))}</span></span>
                     ${productImageMarkup(product, 'mobile-list-card__image', product.displayName)}
@@ -1923,7 +1928,6 @@
                     <div class="mobile-list-card__meta">
                       ${product.brand ? `<span>${escapeHtml(product.brand)}</span>` : ''}
                       ${product.volume ? `<span>${escapeHtml(product.volume)}</span>` : ''}
-                      <span>Código ${escapeHtml(product.code)}</span>
                     </div>
                     ${state.isAdmin ? renderAdminPrice(adminCost, true) : ''}
                   </div>
@@ -1959,7 +1963,7 @@
                 const sale = toFiniteNumber(product.priceNet);
                 const adminCost = getAdminCost(product.code);
                 return `<tr>
-                  <td class="product-table__product"><button class="product-table__product-wrap product-row-button" type="button" data-product-detail="${escapeAttr(product.code)}"><span class="product-table__thumb"><span class="product-image-fallback" aria-hidden="true"><span>${escapeHtml(categoryLetter(product.category))}</span></span>${productImageMarkup(product, 'product-table__image', product.displayName)}</span><span><strong>${escapeHtml(product.displayName)}</strong><small>Código ${escapeHtml(product.code)}${product.upc ? ` · UPC ${escapeHtml(product.upc)}` : ''}</small></span></button></td>
+                  <td class="product-table__product"><button class="product-table__product-wrap product-row-button" type="button" data-product-detail="${escapeAttr(product.code)}"><span class="product-table__thumb"><span class="product-image-fallback" aria-hidden="true"><span>${escapeHtml(categoryLetter(product.category))}</span></span>${productImageMarkup(product, 'product-table__image', product.displayName)}</span><span><strong>${escapeHtml(product.displayName)}</strong></span></button></td>
                   <td>${escapeHtml(product.volume || '—')}</td>
                   <td>${escapeHtml(product.brand || '—')}</td>
                   <td><span class="table-category">${escapeHtml(product.category)}</span></td>
@@ -2418,8 +2422,6 @@
       add('Origen', product.origin);
       add('Graduación alcohólica', product.alcohol);
       (product.pdpFacts || []).forEach(item => add(item.label, item.value));
-      add('UPC', product.upc);
-      add('SKU', product.sku);
       return facts.slice(0, 12);
     }
 
@@ -2488,6 +2490,7 @@
               </div>
               <h3>${escapeHtml(product.displayName)}</h3>
               ${summary ? `<p class="pdp-summary">${escapeHtml(summary)}</p>` : ''}
+              ${state.isStudio ? `<button class="studio-inline-edit" type="button" data-studio-edit-current>Editar publicación</button>` : ''}
               <div class="pdp-identity-line">
                 ${product.specialty ? `<span>${escapeHtml(product.specialty)}</span>` : ''}
                 ${(product.volume || product.presentation) ? `<span>${escapeHtml(product.volume || product.presentation)}</span>` : ''}
@@ -2503,7 +2506,6 @@
                 ${renderAdminPrice(adminCost)}
               </div>
               <div class="pdp-buybox__availability">
-                <span>Código ${escapeHtml(product.code || '—')}</span>
                 <span>${product.stock === null ? 'Disponibilidad sujeta a confirmación' : escapeHtml(String(product.stock)) + ' disponibles'}</span>
               </div>
               <div class="pdp-actions">
@@ -2546,6 +2548,8 @@
       const add = dom.productDetailContent.querySelector('[data-pdp-add]');
       listen(minus, 'click', () => changeDetailQuantity(-1));
       listen(plus, 'click', () => changeDetailQuantity(1));
+      const studioEdit = dom.productDetailContent.querySelector('[data-studio-edit-current]');
+      listen(studioEdit, 'click', () => openStudioEditor(product.code));
       listen(add, 'click', () => {
         addToCart(product.code, state.detailQuantity);
         state.detailQuantity = 1;
@@ -2786,7 +2790,6 @@
               <div class="cart-item__name">${escapeHtml(line.product.displayName || line.product.description)}</div>
               <div class="cart-item__price">${money(line.lineNet)}</div>
             </div>
-            <div class="cart-item__code">CÓDIGO ${escapeHtml(line.product.code)}</div>
             <div class="cart-item__bottom">
               <div class="qty-control">
                 <button type="button" data-cart-minus="${escapeAttr(line.product.code)}">−</button>
@@ -2967,6 +2970,11 @@
         const result = await backendCreateOrder(payload);
         if (!result || !result.ok) throw new Error((result && result.error) || 'No se pudo registrar el pedido.');
 
+        state.lastOrder = {
+          folio: result.folio || '',
+          email: payload.email || '',
+          total: Number(result.totalNet || 0)
+        };
         state.cart = {};
         saveCart();
         renderCart();
@@ -3076,7 +3084,8 @@
         setText(dom.accountEmail, state.user.email || '');
       }
       if (dom.accountRole) {
-        dom.accountRole.classList.toggle('hidden', !state.isAdmin);
+        dom.accountRole.classList.toggle('hidden', !(state.isAdmin || state.isStudio));
+        if (state.isAdmin || state.isStudio) setText(dom.accountRole, state.isAdmin ? 'Administrador' : 'Studio');
       }
 
       if (dom.btnLogoutHeader) {
@@ -3107,6 +3116,7 @@
       state.sessionToken = result.token;
       state.user = result.user;
       state.isAdmin = Boolean(result.user && result.user.isAdmin);
+      state.isStudio = Boolean(result.user && result.user.isStudio);
       puzzlesStorageSet(STORAGE_KEYS.SESSION, state.sessionToken);
       const serverCart = result.cart && typeof result.cart === 'object' ? result.cart : {};
       const merged = Object.assign({}, serverCart, state.cart);
@@ -3126,6 +3136,7 @@
       restoreAgeGate();
       updateAuthUi();
       loadAdminPricing().catch(() => {});
+      if (state.isStudio) refreshStudioCatalog().catch(() => {});
       toast('Sesión iniciada. Tu carrito quedó guardado.', 'success');
       setTimeout(closeAuth, 450);
     }
@@ -3134,12 +3145,13 @@
       element.classList.toggle('is-visible', Boolean(message));
     }
     async function restoreSession() {
-      if (!state.sessionToken || !isAppsScriptHost()) { state.isAdmin = false; state.adminPrices = {}; updateAuthUi(); return; }
+      if (!state.sessionToken || !isAppsScriptHost()) { state.isAdmin = false; state.isStudio = false; state.adminPrices = {}; updateAuthUi(); return; }
       const result = await backendRestoreSession(state.sessionToken);
       if (!result || !result.ok) {
         state.sessionToken = '';
         state.user = null;
         state.isAdmin = false;
+        state.isStudio = false;
         state.adminPrices = {};
         puzzlesStorageRemove(STORAGE_KEYS.SESSION);
         puzzlesStorageRemove(STORAGE_KEYS.AGE);
@@ -3150,6 +3162,7 @@
       }
       state.user = result.user;
       state.isAdmin = Boolean(result.user && result.user.isAdmin);
+      state.isStudio = Boolean(result.user && result.user.isStudio);
       const serverCart = result.cart && typeof result.cart === 'object' ? result.cart : {};
       if (!Object.keys(state.cart).length) state.cart = serverCart;
       if (state.user) {
@@ -3164,12 +3177,14 @@
       restoreAgeGate();
       updateAuthUi();
       await loadAdminPricing();
+      if (state.isStudio) await refreshStudioCatalog();
     }
     async function logoutUser() {
       if (state.sessionToken) await backendLogout(state.sessionToken);
       state.sessionToken = '';
       state.user = null;
       state.isAdmin = false;
+      state.isStudio = false;
       state.adminPrices = {};
       puzzlesStorageRemove(STORAGE_KEYS.SESSION);
       puzzlesStorageRemove(STORAGE_KEYS.AGE);
@@ -4106,8 +4121,8 @@
       contact.innerHTML = [
         '<h4>Contacto y mayoreo</h4>',
         '<p>Cotizaciones, pedidos especiales y consultas para compras por volumen.</p>',
-        '<a class="footer__email" href="mailto:id.vicvic@gmail.com?subject=Cotizaci%C3%B3n%20o%20consulta%20de%20mayoreo%20-%20PUZZLES">id.vicvic@gmail.com</a>',
-        '<span class="footer__response-note">Escríbenos con los productos, cantidades y ciudad de entrega.</span>'
+        '<button class="footer__contact-button" type="button" data-open-contact>Solicitar atención</button>',
+        '<span class="footer__response-note">Compártenos productos, cantidades y ciudad de entrega.</span>'
       ].join('');
       inner.appendChild(contact);
     }
@@ -4208,9 +4223,368 @@
     if (catalog) catalog.setAttribute('data-page-size', '25');
   }
 
+
+
+  function ensureOperationalUi() {
+    const successActions = document.getElementById('successActions');
+    if (successActions && !document.getElementById('btnRequestSalesNote')) {
+      const documents = document.createElement('div');
+      documents.className = 'success-document-actions';
+      documents.innerHTML = '<p>¿Necesitas un documento comercial?</p><div><button id="btnRequestSalesNote" class="btn btn--ghost" type="button">Enviar nota de venta</button><button id="btnRequestQuote" class="btn btn--ghost" type="button">Enviar cotización</button></div><span id="successDocumentStatus" aria-live="polite"></span>';
+      successActions.insertBefore(documents, document.getElementById('btnSuccessClose'));
+    }
+    if (!document.getElementById('contactModal')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="contactBackdrop" class="backdrop operational-backdrop"></div>
+        <section id="contactModal" class="modal operational-modal" role="dialog" aria-modal="true" aria-labelledby="contactTitle">
+          <div class="modal__card operational-card contact-card">
+            <div class="modal__head"><div><span class="operational-kicker">PUZZLES</span><h2 id="contactTitle">Contacto y mayoreo</h2></div><button id="btnCloseContact" class="modal-close" type="button" aria-label="Cerrar">×</button></div>
+            <div class="modal__body">
+              <form id="contactForm" class="operational-form">
+                <div class="operational-grid">
+                  <label>Nombre<input id="contactName" required maxlength="120"></label>
+                  <label>Correo<input id="contactEmail" type="email" maxlength="180"></label>
+                  <label>Teléfono / WhatsApp<input id="contactPhone" inputmode="tel" maxlength="18"></label>
+                  <label>Empresa<input id="contactCompany" maxlength="160"></label>
+                  <label>Ciudad<input id="contactCity" maxlength="120"></label>
+                  <label>Tipo de solicitud<select id="contactType"><option>Cotización</option><option>Mayoreo</option><option>Disponibilidad</option><option>Nota de venta</option><option>Consulta general</option></select></label>
+                </div>
+                <label class="operational-form__wide">Producto relacionado<input id="contactProduct" readonly></label>
+                <input id="contactProductCode" type="hidden">
+                <input id="contactWebsite" class="hp-field" autocomplete="off" tabindex="-1">
+                <label class="operational-form__wide">¿Qué necesitas?<textarea id="contactMessage" required maxlength="1800" rows="5"></textarea></label>
+                <div id="contactError" class="form-error"></div>
+                <div class="modal__actions"><button type="button" class="btn btn--ghost" id="btnCancelContact">Cancelar</button><button type="submit" class="btn btn--primary" id="btnSubmitContact">Enviar solicitud</button></div>
+              </form>
+            </div>
+          </div>
+        </section>`);
+    }
+
+    if (!document.getElementById('studioModal')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="studioBackdrop" class="backdrop operational-backdrop"></div>
+        <section id="studioModal" class="modal operational-modal studio-modal" role="dialog" aria-modal="true" aria-labelledby="studioTitle">
+          <div class="modal__card operational-card studio-card">
+            <div class="modal__head"><div><span class="operational-kicker">OPERACIÓN</span><h2 id="studioTitle">PUZZLES Studio</h2></div><button id="btnCloseStudio" class="modal-close" type="button" aria-label="Cerrar">×</button></div>
+            <div class="studio-tabs" role="tablist">
+              <button class="is-active" data-studio-tab="products" type="button">Productos</button>
+              <button data-studio-tab="banners" type="button">Banners</button>
+              <button data-studio-tab="documents" type="button">Documentos</button>
+            </div>
+            <div class="modal__body studio-body">
+              <section data-studio-panel="products">
+                <div class="studio-toolbar">
+                  <input id="studioSearch" type="search" placeholder="Buscar producto, marca o categoría">
+                  <select id="studioStatus"><option value="TODOS">Todos los estados</option><option>ACTIVO</option><option>OCULTO</option><option>BORRADOR</option><option>CONSULTAR</option><option>NO_ACTIVO</option></select>
+                  <button id="btnStudioRefresh" type="button">Actualizar</button>
+                </div>
+                <div class="studio-bulk"><span id="studioSelectionCount">0 seleccionados</span><button data-bulk-status="ACTIVO" type="button">Activar</button><button data-bulk-status="OCULTO" type="button">Ocultar</button><button data-bulk-status="BORRADOR" type="button">Borrador</button></div>
+                <div id="studioProductList" class="studio-product-list"><div class="studio-empty">Inicia sesión con una cuenta Studio o Admin.</div></div>
+              </section>
+              <section data-studio-panel="banners" hidden><div id="studioBannerList" class="studio-banner-list"></div></section>
+              <section data-studio-panel="documents" hidden><div class="studio-toolbar"><button id="btnStudioLoadOrders" type="button">Cargar pedidos recientes</button></div><div id="studioOrderList" class="studio-order-list"></div></section>
+            </div>
+          </div>
+        </section>`);
+    }
+
+    if (!document.getElementById('studioEditorModal')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="studioEditorBackdrop" class="backdrop operational-backdrop"></div>
+        <section id="studioEditorModal" class="modal operational-modal" role="dialog" aria-modal="true" aria-labelledby="studioEditorTitle">
+          <div class="modal__card operational-card studio-editor-card">
+            <div class="modal__head"><div><span class="operational-kicker">EDICIÓN</span><h2 id="studioEditorTitle">Editar publicación</h2></div><button id="btnCloseStudioEditor" class="modal-close" type="button" aria-label="Cerrar">×</button></div>
+            <div class="modal__body"><form id="studioEditorForm" class="operational-form"><input id="studioEditCode" type="hidden"><div class="operational-grid">
+              <label class="operational-form__wide">Nombre visible<input id="studioEditName" maxlength="240"></label>
+              <label>Marca<input id="studioEditBrand" maxlength="160"></label><label>Categoría<input id="studioEditCategory" maxlength="120"></label>
+              <label>Especialidad / edición<input id="studioEditSpecialty" maxlength="180"></label><label>Presentación<input id="studioEditPresentation" maxlength="80"></label>
+              <label>Estado web<select id="studioEditStatus"><option>ACTIVO</option><option>OCULTO</option><option>BORRADOR</option><option>CONSULTAR</option><option>NO_ACTIVO</option></select></label>
+              <label>Precio venta<input id="studioEditPrice" inputmode="decimal"></label><label>Precio anterior<input id="studioEditCompare" inputmode="decimal"></label>
+              <label class="operational-form__wide">Resumen<textarea id="studioEditSummary" rows="2" maxlength="700"></textarea></label>
+              <label class="operational-form__wide">Descripción<textarea id="studioEditDescription" rows="7" maxlength="7000"></textarea></label>
+              <label class="operational-form__wide">Perfil<textarea id="studioEditProfile" rows="3"></textarea></label>
+              <label class="operational-form__wide">Servicio<textarea id="studioEditServing" rows="3"></textarea></label>
+              <label class="operational-form__wide">Maridaje<textarea id="studioEditPairing" rows="3"></textarea></label>
+              <label>Origen<input id="studioEditOrigin"></label><label>Graduación<input id="studioEditAlcohol"></label>
+              <label class="operational-form__wide">Ficha técnica JSON<textarea id="studioEditFacts" rows="4"></textarea></label>
+              <label class="operational-form__wide">URL de imagen procesada<input id="studioEditProcessedImage" type="url"></label>
+            </div><div id="studioEditorError" class="form-error"></div><div class="modal__actions"><button type="button" class="btn btn--ghost" id="btnCancelStudioEditor">Cancelar</button><button type="submit" class="btn btn--primary">Guardar cambios</button></div></form></div>
+          </div>
+        </section>`);
+    }
+
+    if (!document.getElementById('btnStudioHeader')) {
+      const anchor = document.getElementById('btnAccountHeader');
+      if (anchor) {
+        const button = document.createElement('button');
+        button.id = 'btnStudioHeader'; button.type = 'button'; button.className = 'icon-button studio-header-button hidden';
+        button.innerHTML = '<span class="studio-header-mark">S</span><span class="icon-button__label">Studio</span>';
+        anchor.parentElement.insertBefore(button, anchor);
+      }
+    }
+
+    installOperationalEvents();
+  }
+
+  let operationalEventsInstalled = false;
+  function installOperationalEvents() {
+    if (operationalEventsInstalled) return;
+    operationalEventsInstalled = true;
+    const closePair = (modalId, backdropId) => {
+      document.getElementById(modalId)?.classList.remove('is-open');
+      document.getElementById(backdropId)?.classList.remove('is-open');
+      if (!document.querySelector('.modal.is-open, .drawer.is-open')) document.body.classList.remove('no-scroll');
+    };
+    document.addEventListener('click', event => {
+      const contactTrigger = event.target.closest('[data-open-contact]');
+      if (contactTrigger) { event.preventDefault(); openContact(); return; }
+      const studioTrigger = event.target.closest('#btnStudioHeader');
+      if (studioTrigger) { event.preventDefault(); openStudio(); return; }
+      const edit = event.target.closest('[data-studio-edit-code]');
+      if (edit) { openStudioEditor(edit.dataset.studioEditCode); return; }
+      const checkbox = event.target.closest('[data-studio-select]');
+      if (checkbox) {
+        const code = checkbox.dataset.studioSelect;
+        checkbox.checked ? state.studioSelected.add(code) : state.studioSelected.delete(code);
+        updateStudioSelection(); return;
+      }
+      const bulk = event.target.closest('[data-bulk-status]');
+      if (bulk) { setSelectedStudioStatus(bulk.dataset.bulkStatus); return; }
+      const tab = event.target.closest('[data-studio-tab]');
+      if (tab) { setStudioTab(tab.dataset.studioTab); return; }
+      const bannerSave = event.target.closest('[data-banner-save]');
+      if (bannerSave) { saveStudioBanner(Number(bannerSave.dataset.bannerSave)); return; }
+      const doc = event.target.closest('[data-generate-document]');
+      if (doc) { generateStudioDocument(doc.dataset.folio, doc.dataset.generateDocument, doc.dataset.send === 'true'); return; }
+    });
+    document.getElementById('btnCloseContact')?.addEventListener('click', () => closePair('contactModal','contactBackdrop'));
+    document.getElementById('btnCancelContact')?.addEventListener('click', () => closePair('contactModal','contactBackdrop'));
+    document.getElementById('contactBackdrop')?.addEventListener('click', () => closePair('contactModal','contactBackdrop'));
+    document.getElementById('contactForm')?.addEventListener('submit', submitContactForm);
+    document.getElementById('btnCloseStudio')?.addEventListener('click', () => closePair('studioModal','studioBackdrop'));
+    document.getElementById('studioBackdrop')?.addEventListener('click', () => closePair('studioModal','studioBackdrop'));
+    document.getElementById('btnStudioRefresh')?.addEventListener('click', () => refreshStudioCatalog(true));
+    document.getElementById('studioSearch')?.addEventListener('input', renderStudioProducts);
+    document.getElementById('studioStatus')?.addEventListener('change', renderStudioProducts);
+    document.getElementById('btnCloseStudioEditor')?.addEventListener('click', () => closePair('studioEditorModal','studioEditorBackdrop'));
+    document.getElementById('btnCancelStudioEditor')?.addEventListener('click', () => closePair('studioEditorModal','studioEditorBackdrop'));
+    document.getElementById('studioEditorBackdrop')?.addEventListener('click', () => closePair('studioEditorModal','studioEditorBackdrop'));
+    document.getElementById('studioEditorForm')?.addEventListener('submit', saveStudioProduct);
+    document.getElementById('btnStudioLoadOrders')?.addEventListener('click', loadStudioOrders);
+    document.getElementById('btnRequestSalesNote')?.addEventListener('click', () => requestCustomerDocument('NOTA DE VENTA'));
+    document.getElementById('btnRequestQuote')?.addEventListener('click', () => requestCustomerDocument('COTIZACIÓN'));
+  }
+
+  async function requestCustomerDocument(type) {
+    const status = document.getElementById('successDocumentStatus');
+    const noteButton = document.getElementById('btnRequestSalesNote');
+    const quoteButton = document.getElementById('btnRequestQuote');
+    if (!state.lastOrder?.folio || !state.lastOrder?.email) {
+      if (status) status.textContent = 'No encontramos el correo asociado a este pedido.';
+      return;
+    }
+    [noteButton, quoteButton].forEach(button => { if (button) button.disabled = true; });
+    if (status) status.textContent = 'Generando y enviando…';
+    try {
+      const result = await gasRun('solicitarDocumentoPedido', {
+        folio: state.lastOrder.folio,
+        email: state.lastOrder.email,
+        type
+      }, 45000);
+      if (!result?.ok) throw new Error(result?.error || 'No se pudo generar el documento.');
+      if (status) status.textContent = result.message || 'Documento enviado al correo asociado al pedido.';
+      toast('Documento enviado.', 'success');
+    } catch (error) {
+      if (status) status.textContent = error.message || String(error);
+      toast(error.message || 'No se pudo enviar el documento.', 'error');
+    } finally {
+      [noteButton, quoteButton].forEach(button => { if (button) button.disabled = false; });
+    }
+  }
+
+  function syncStudioControls() {
+    const button = document.getElementById('btnStudioHeader');
+    if (button) button.classList.toggle('hidden', !state.isStudio);
+    let wrap = document.getElementById('studioStatusFilterWrap');
+    if (state.isStudio && dom.filtersPanel && !wrap) {
+      wrap = document.createElement('div'); wrap.id = 'studioStatusFilterWrap'; wrap.className = 'filter-group studio-status-filter';
+      wrap.innerHTML = '<label for="studioCatalogStatus">VISIBILIDAD</label><select id="studioCatalogStatus"><option value="TODOS">Todos</option><option>ACTIVO</option><option>OCULTO</option><option>BORRADOR</option><option>CONSULTAR</option><option>NO_ACTIVO</option></select>';
+      dom.filtersPanel.appendChild(wrap);
+      wrap.querySelector('select').addEventListener('change', event => { state.studioStatus = event.target.value; state.page = 1; applyFilters(); });
+    }
+    if (wrap) wrap.hidden = !state.isStudio;
+  }
+
+  function openContact(product) {
+    const modal = document.getElementById('contactModal'); const backdrop = document.getElementById('contactBackdrop');
+    if (!modal || !backdrop) return;
+    const customer = loadJson(STORAGE_KEYS.CUSTOMER, {});
+    document.getElementById('contactName').value = state.user?.name || customer.name || '';
+    document.getElementById('contactEmail').value = state.user?.email || customer.email || '';
+    document.getElementById('contactPhone').value = state.user?.phone || customer.phone || '';
+    const related = product || (state.detailProductCode ? getProduct(state.detailProductCode) : null);
+    document.getElementById('contactProduct').value = related ? related.displayName : '';
+    document.getElementById('contactProductCode').value = related ? related.code : '';
+    document.getElementById('contactMessage').value = related ? 'Quiero información, disponibilidad o una cotización de este producto.' : '';
+    modal.classList.add('is-open'); backdrop.classList.add('is-open'); document.body.classList.add('no-scroll');
+  }
+
+  async function submitContactForm(event) {
+    event.preventDefault();
+    const error = document.getElementById('contactError'); const button = document.getElementById('btnSubmitContact');
+    error.textContent = ''; button.disabled = true;
+    try {
+      const result = await gasRun('submitContactLead', {
+        name: document.getElementById('contactName').value,
+        email: document.getElementById('contactEmail').value,
+        phone: document.getElementById('contactPhone').value,
+        company: document.getElementById('contactCompany').value,
+        city: document.getElementById('contactCity').value,
+        type: document.getElementById('contactType').value,
+        product: document.getElementById('contactProduct').value,
+        productCode: document.getElementById('contactProductCode').value,
+        message: document.getElementById('contactMessage').value,
+        website: document.getElementById('contactWebsite').value
+      });
+      if (!result?.ok) throw new Error(result?.error || 'No se pudo enviar la solicitud.');
+      toast(result.message || 'Solicitud enviada.', 'success');
+      document.getElementById('contactForm').reset();
+      document.getElementById('contactModal').classList.remove('is-open'); document.getElementById('contactBackdrop').classList.remove('is-open'); document.body.classList.remove('no-scroll');
+    } catch (e) { error.textContent = e.message || String(e); error.classList.add('is-visible'); }
+    finally { button.disabled = false; }
+  }
+
+  async function refreshStudioCatalog(forceRender) {
+    if (!state.isStudio || !state.sessionToken) return;
+    const result = await gasRun('getStudioCatalog', state.sessionToken);
+    if (!result?.ok) throw new Error(result?.error || 'No se pudo cargar Studio.');
+    state.studioProducts = Array.isArray(result.products) ? result.products : [];
+    const activeMap = new Map(state.products.map(product => [String(product.code), product]));
+    state.studioProducts.forEach(item => {
+      const existing = activeMap.get(String(item.code));
+      if (existing) Object.assign(existing, item, { canonicalName: item.displayName, description: item.originalName || item.displayName });
+      else activeMap.set(String(item.code), normalizeProductRecord(Object.assign({
+        canonicalName: item.displayName, description: item.originalName || item.displayName, unit: item.presentation,
+        volume: item.presentation, pdpHighlights: [], pdpFacts: [], available: item.webStatus !== 'CONSULTAR' && Number(item.priceNet) > 0
+      }, item)));
+    });
+    state.products = Array.from(activeMap.values());
+    state.categories = Array.from(new Set(state.products.map(p => p.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'})).map(name => ({ name, count: state.products.filter(p => p.category === name).length }));
+    state.brands = Array.from(new Set(state.products.map(p => p.brand).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}));
+    renderCategories(); renderBrands(); syncStudioControls(); applyFilters();
+    if (forceRender || document.getElementById('studioModal')?.classList.contains('is-open')) renderStudioProducts();
+  }
+
+  function openStudio() {
+    if (!state.isStudio) { toast('Inicia sesión con una cuenta Studio o Admin.', 'error'); return; }
+    document.getElementById('studioModal').classList.add('is-open'); document.getElementById('studioBackdrop').classList.add('is-open'); document.body.classList.add('no-scroll');
+    setStudioTab('products'); refreshStudioCatalog(true).catch(e => toast(e.message,'error'));
+  }
+
+  function setStudioTab(tabName) {
+    document.querySelectorAll('[data-studio-tab]').forEach(btn => btn.classList.toggle('is-active', btn.dataset.studioTab === tabName));
+    document.querySelectorAll('[data-studio-panel]').forEach(panel => panel.hidden = panel.dataset.studioPanel !== tabName);
+    if (tabName === 'banners') loadStudioBanners();
+    if (tabName === 'documents') loadStudioOrders();
+  }
+
+  function renderStudioProducts() {
+    const container = document.getElementById('studioProductList'); if (!container) return;
+    const q = normalize(document.getElementById('studioSearch')?.value || '');
+    const status = document.getElementById('studioStatus')?.value || 'TODOS';
+    const rows = state.studioProducts.filter(item => {
+      if (status !== 'TODOS' && item.webStatus !== status) return false;
+      return !q || normalize([item.displayName,item.brand,item.category,item.specialty].join(' ')).includes(q);
+    }).slice(0,250);
+    container.innerHTML = rows.length ? rows.map(item => `<article class="studio-product-row ${item.isHidden ? 'is-hidden-product' : ''}">
+      <label class="studio-select"><input type="checkbox" data-studio-select="${escapeAttr(item.code)}" ${state.studioSelected.has(String(item.code)) ? 'checked' : ''}><span></span></label>
+      <div class="studio-product-thumb">${item.imageUrl ? `<img src="${escapeAttr(item.imageUrl)}" alt="">` : '<span>◇</span>'}</div>
+      <div class="studio-product-copy"><strong>${escapeHtml(item.displayName)}</strong><span>${escapeHtml([item.brand,item.category,item.presentation].filter(Boolean).join(' · '))}</span></div>
+      <span class="studio-row-status studio-row-status--${escapeAttr(item.webStatus.toLowerCase())}">${escapeHtml(item.webStatus.replace('_',' '))}</span>
+      <button type="button" data-studio-edit-code="${escapeAttr(item.code)}">Editar</button>
+    </article>`).join('') : '<div class="studio-empty">No hay productos con esos filtros.</div>';
+    updateStudioSelection();
+  }
+
+  function updateStudioSelection() {
+    const label = document.getElementById('studioSelectionCount'); if (label) label.textContent = `${state.studioSelected.size} seleccionados`;
+  }
+
+  async function setSelectedStudioStatus(status) {
+    const codes = Array.from(state.studioSelected); if (!codes.length) { toast('Selecciona productos primero.','error'); return; }
+    const result = await gasRun('bulkSetProductStatus', state.sessionToken, codes, status);
+    if (!result?.ok) { toast(result?.error || 'No se pudo cambiar el estado.','error'); return; }
+    state.studioSelected.clear(); toast(`${result.changed} productos actualizados.`, 'success'); await refreshStudioCatalog(true);
+  }
+
+  function findStudioProduct(code) { return state.studioProducts.find(item => String(item.code) === String(code)) || getProduct(code); }
+  function openStudioEditor(code) {
+    if (!state.isStudio) return;
+    const item = findStudioProduct(code); if (!item) return;
+    const values = {
+      studioEditCode: item.code, studioEditName: item.displayName, studioEditBrand: item.brand, studioEditCategory: item.category,
+      studioEditSpecialty: item.specialty, studioEditPresentation: item.presentation || item.volume, studioEditStatus: item.webStatus || 'ACTIVO',
+      studioEditPrice: item.priceNet || '', studioEditCompare: item.priceCompare || '', studioEditSummary: item.pdpSummary || '',
+      studioEditDescription: item.pdpDescription || '', studioEditProfile: item.pdpProfile || '', studioEditServing: item.pdpServing || '',
+      studioEditPairing: item.pdpPairing || '', studioEditOrigin: item.origin || '', studioEditAlcohol: item.alcohol || '',
+      studioEditFacts: item.pdpFactsJson || JSON.stringify(item.pdpFacts || [], null, 2), studioEditProcessedImage: item.processedImageUrl || ''
+    };
+    Object.keys(values).forEach(id => { const el=document.getElementById(id); if(el) el.value=values[id] ?? ''; });
+    document.getElementById('studioEditorModal').classList.add('is-open'); document.getElementById('studioEditorBackdrop').classList.add('is-open'); document.body.classList.add('no-scroll');
+  }
+
+  async function saveStudioProduct(event) {
+    event.preventDefault(); const error=document.getElementById('studioEditorError'); error.textContent='';
+    const code=document.getElementById('studioEditCode').value;
+    const patch={
+      displayName:document.getElementById('studioEditName').value, brand:document.getElementById('studioEditBrand').value,
+      category:document.getElementById('studioEditCategory').value, specialty:document.getElementById('studioEditSpecialty').value,
+      presentation:document.getElementById('studioEditPresentation').value, webStatus:document.getElementById('studioEditStatus').value,
+      priceNet:document.getElementById('studioEditPrice').value, priceCompare:document.getElementById('studioEditCompare').value,
+      pdpSummary:document.getElementById('studioEditSummary').value, pdpDescription:document.getElementById('studioEditDescription').value,
+      pdpProfile:document.getElementById('studioEditProfile').value, pdpServing:document.getElementById('studioEditServing').value,
+      pdpPairing:document.getElementById('studioEditPairing').value, origin:document.getElementById('studioEditOrigin').value,
+      alcohol:document.getElementById('studioEditAlcohol').value, pdpFactsJson:document.getElementById('studioEditFacts').value,
+      processedImageUrl:document.getElementById('studioEditProcessedImage').value
+    };
+    const result=await gasRun('updateProductFromStudio',state.sessionToken,code,patch);
+    if(!result?.ok){error.textContent=result?.error||'No se pudo guardar.';error.classList.add('is-visible');return;}
+    toast('Publicación actualizada.','success'); document.getElementById('studioEditorModal').classList.remove('is-open'); document.getElementById('studioEditorBackdrop').classList.remove('is-open'); await loadStore({background:false}); await refreshStudioCatalog(true);
+    if(state.detailProductCode===String(code)){closeProductDetail();setTimeout(()=>openProductDetail(code),150);}
+  }
+
+  async function loadStudioBanners() {
+    const container=document.getElementById('studioBannerList'); if(!container)return; container.innerHTML='<div class="studio-empty">Cargando banners…</div>';
+    const result=await gasRun('getStudioBanners',state.sessionToken); if(!result?.ok){container.innerHTML=`<div class="studio-empty">${escapeHtml(result?.error||'Error')}</div>`;return;}
+    container.innerHTML=(result.banners||[]).map(item=>`<article class="studio-banner-editor" data-banner-row="${item.rowNumber}"><strong>Banner ${escapeHtml(item.Orden||String(item.rowNumber-1))}</strong><label>Kicker<input data-banner-field="kicker" value="${escapeAttr(item.Kicker||'')}"></label><label>Título<input data-banner-field="title" value="${escapeAttr(item['Título']||'')}"></label><label>Descripción<textarea data-banner-field="text" rows="3">${escapeHtml(item['Descripción']||'')}</textarea></label><label>Texto botón<input data-banner-field="ctaText" value="${escapeAttr(item['Texto botón']||'')}"></label><button type="button" data-banner-save="${item.rowNumber}">Guardar banner</button></article>`).join('');
+  }
+
+  async function saveStudioBanner(rowNumber) {
+    const card=document.querySelector(`[data-banner-row="${rowNumber}"]`); if(!card)return;
+    const patch={}; card.querySelectorAll('[data-banner-field]').forEach(input=>patch[input.dataset.bannerField]=input.value);
+    const result=await gasRun('updateBannerTextFromStudio',state.sessionToken,rowNumber,patch); if(!result?.ok){toast(result?.error||'No se pudo guardar.','error');return;} toast('Banner actualizado.','success'); await loadStore({background:false});
+  }
+
+  async function loadStudioOrders() {
+    const container=document.getElementById('studioOrderList'); if(!container)return; container.innerHTML='<div class="studio-empty">Cargando pedidos…</div>';
+    const result=await gasRun('getStudioOrders',state.sessionToken,40); if(!result?.ok){container.innerHTML=`<div class="studio-empty">${escapeHtml(result?.error||'Error')}</div>`;return;}
+    container.innerHTML=(result.orders||[]).map(order=>`<article class="studio-order-row"><div><strong>${escapeHtml(order.Folio||'')}</strong><span>${escapeHtml(order.Nombre||'')} · ${escapeHtml(order.Fecha||'')}</span></div><strong>${escapeHtml(order.Total||'')}</strong><div class="studio-order-actions"><button type="button" data-generate-document="NOTA DE VENTA" data-folio="${escapeAttr(order.Folio||'')}">Nota</button><button type="button" data-generate-document="COTIZACIÓN" data-folio="${escapeAttr(order.Folio||'')}">Cotización</button><button type="button" data-generate-document="NOTA DE VENTA" data-send="true" data-folio="${escapeAttr(order.Folio||'')}">Enviar nota</button></div></article>`).join('')||'<div class="studio-empty">No hay pedidos.</div>';
+  }
+
+  async function generateStudioDocument(folio,type,send) {
+    const result=await gasRun('generarDocumentoVenta',state.sessionToken,folio,type,Boolean(send));
+    if(!result?.ok){toast(result?.error||'No se pudo generar el documento.','error');return;} toast(send?'Documento enviado.':'Documento generado.','success'); if(result.fileUrl&&!send) window.open(result.fileUrl,'_blank','noopener');
+  }
+
+  const originalUpdateAuthUi = updateAuthUi;
+  updateAuthUi = function () { originalUpdateAuthUi(); ensureOperationalUi(); syncStudioControls(); };
+
   onReady(function () {
     installDesignSignals();
     installFooter();
+    ensureOperationalUi();
+    syncStudioControls();
     installFilterFollower();
   });
 })();

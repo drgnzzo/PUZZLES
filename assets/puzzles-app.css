@@ -8064,3 +8064,429 @@ body > main {
     gap: 10px !important;
   }
 }
+
+/* ==========================================================
+   PUZZLES · FASE OPERATIVA / STUDIO / CONTACTO
+   ========================================================== */
+.product-card__code,
+.cart-item__code,
+.product-table__product small:empty {
+  display: none !important;
+}
+
+.footer__contact-button,
+.studio-header-button,
+.studio-toolbar button,
+.studio-bulk button,
+.studio-product-row > button,
+.studio-banner-editor button,
+.studio-order-actions button,
+.studio-inline-edit {
+  appearance: none;
+  border: 1px solid rgba(216,154,0,.58);
+  background: transparent;
+  color: #f5f2e9;
+  min-height: 40px;
+  padding: 0 16px;
+  font: 700 11px/1.2 Inter, Arial, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+}
+.footer__contact-button:hover,
+.studio-toolbar button:hover,
+.studio-bulk button:hover,
+.studio-product-row > button:hover,
+.studio-banner-editor button:hover,
+.studio-order-actions button:hover,
+.studio-inline-edit:hover {
+  background: #d89a00;
+  border-color: #d89a00;
+  color: #090909;
+  transform: translateY(-1px);
+}
+
+.operational-backdrop {
+  z-index: 1195;
+}
+.operational-modal {
+  z-index: 1200;
+  padding: 24px;
+}
+.operational-card {
+  width: min(760px, 100%);
+  max-height: min(88vh, 920px);
+  border: 1px solid rgba(216,154,0,.42);
+  background: #111211;
+  box-shadow: 0 32px 90px rgba(0,0,0,.72);
+  overflow: hidden;
+}
+.operational-card .modal__head {
+  min-height: 88px;
+  align-items: center;
+  border-bottom-color: rgba(255,255,255,.13);
+}
+.operational-kicker {
+  display: block;
+  color: #d89a00;
+  margin-bottom: 7px;
+  font: 800 10px/1 Inter,Arial,sans-serif;
+  letter-spacing: .22em;
+}
+.operational-card .modal__head h2 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1;
+  text-transform: uppercase;
+}
+.operational-card .modal__body {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.operational-form label {
+  display: grid;
+  gap: 8px;
+  color: #bdbdbd;
+  font: 700 10px/1.2 Inter,Arial,sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.operational-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.operational-form__wide {
+  grid-column: 1 / -1;
+  margin-top: 18px;
+}
+.operational-form input,
+.operational-form textarea,
+.operational-form select,
+.studio-toolbar input,
+.studio-toolbar select,
+.studio-banner-editor input,
+.studio-banner-editor textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 0;
+  outline: 0;
+  background: #191a19;
+  color: #fff;
+  padding: 12px 14px;
+  font: 500 14px/1.5 Inter,Arial,sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+.operational-form textarea,
+.studio-banner-editor textarea { resize: vertical; }
+.operational-form input:focus,
+.operational-form textarea:focus,
+.operational-form select:focus,
+.studio-toolbar input:focus,
+.studio-toolbar select:focus,
+.studio-banner-editor input:focus,
+.studio-banner-editor textarea:focus {
+  border-color: #d89a00;
+  box-shadow: 0 0 0 3px rgba(216,154,0,.12);
+  background: #1c1d1c;
+}
+.hp-field {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+}
+
+.studio-header-button.hidden { display: none !important; }
+.studio-header-mark {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border: 1px solid #d89a00;
+  color: #d89a00;
+  font: 800 12px/1 Inter,Arial,sans-serif;
+}
+.studio-card {
+  width: min(1220px, 100%);
+  height: min(88vh, 920px);
+}
+.studio-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  background: #0d0e0d;
+}
+.studio-tabs button {
+  min-height: 52px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #8f918f;
+  padding: 0 20px;
+  font: 800 11px/1 Inter,Arial,sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.studio-tabs button.is-active {
+  color: #fff;
+  border-bottom-color: #d89a00;
+}
+.studio-body {
+  height: calc(100% - 141px);
+}
+.studio-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 210px auto;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.studio-bulk {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 54px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: #0c0d0c;
+}
+.studio-bulk span {
+  margin-right: auto;
+  color: #aeb0ae;
+  font-size: 12px;
+}
+.studio-product-list,
+.studio-banner-list,
+.studio-order-list {
+  display: grid;
+  gap: 8px;
+}
+.studio-product-row {
+  display: grid;
+  grid-template-columns: 34px 62px minmax(0,1fr) 126px 88px;
+  align-items: center;
+  gap: 13px;
+  min-height: 76px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.11);
+  background: #171817;
+}
+.studio-product-row.is-hidden-product {
+  background: #101110;
+  opacity: .68;
+}
+.studio-select {
+  display: grid;
+  place-items: center;
+}
+.studio-select input {
+  width: 18px;
+  height: 18px;
+  accent-color: #d89a00;
+}
+.studio-product-thumb {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #efeee9;
+}
+.studio-product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.studio-product-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.studio-product-copy strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-product-copy span {
+  overflow: hidden;
+  color: #8e918e;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-row-status,
+.studio-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid rgba(255,255,255,.18);
+  color: #dadada;
+  background: #222;
+  font: 800 9px/1 Inter,Arial,sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.studio-row-status--activo { color: #b8e7c1; border-color: rgba(87,174,105,.5); }
+.studio-row-status--oculto,
+.studio-row-status--no_activo { color: #f0b4b4; border-color: rgba(205,74,74,.5); }
+.studio-row-status--borrador { color: #e8d49c; border-color: rgba(216,154,0,.5); }
+.studio-status-badge {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  right: 12px;
+  background: rgba(8,8,8,.9);
+  color: #d89a00;
+  border-color: #d89a00;
+}
+.product-card { position: relative; }
+.product-card--hidden {
+  filter: grayscale(.8);
+  opacity: .58;
+}
+.product-card--hidden:hover {
+  opacity: .78;
+}
+.studio-status-filter {
+  border-top: 1px solid rgba(255,255,255,.12);
+  padding-top: 20px;
+}
+.studio-status-filter select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: #171817;
+  color: #fff;
+  padding: 0 12px;
+}
+.studio-inline-edit {
+  margin: 12px 0 4px;
+}
+.studio-editor-card {
+  width: min(920px, 100%);
+}
+.studio-banner-editor {
+  display: grid;
+  grid-template-columns: 130px 1fr 1.3fr 1.8fr 1fr auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.11);
+  background: #161716;
+}
+.studio-banner-editor label {
+  display: grid;
+  gap: 6px;
+  color: #999;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.studio-order-row {
+  display: grid;
+  grid-template-columns: minmax(260px,1fr) 120px auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.11);
+  background: #171817;
+}
+.studio-order-row > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+.studio-order-row span { color: #929492; font-size: 11px; }
+.studio-order-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.studio-empty {
+  padding: 42px 18px;
+  border: 1px dashed rgba(255,255,255,.15);
+  color: #858785;
+  text-align: center;
+}
+
+/* La imagen procesada es la solución definitiva. Mientras se genera, el
+   contenedor evita el blanco puro y conserva una lectura editorial estable. */
+.product-card__visual,
+.pdp-image-button,
+.mobile-list-card__visual,
+.product-table__thumb,
+.cart-item__visual {
+  --product-paper: #efeee8;
+  background:
+    radial-gradient(circle at 50% 54%, rgba(255,255,255,.88) 0 24%, rgba(235,233,225,.72) 62%, rgba(218,216,207,.72) 100%),
+    var(--product-paper);
+}
+.product-card__image,
+.pdp-image,
+.mobile-list-card__image,
+.product-table__image,
+.cart-item__image {
+  filter: contrast(1.025) saturate(.99);
+}
+
+@media (max-width: 920px) {
+  .operational-modal { padding: 0; }
+  .operational-card,
+  .studio-card,
+  .studio-editor-card {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+  }
+  .operational-grid { grid-template-columns: 1fr; }
+  .operational-form__wide { grid-column: auto; }
+  .studio-toolbar { grid-template-columns: 1fr; }
+  .studio-product-row { grid-template-columns: 30px 52px minmax(0,1fr) 80px; }
+  .studio-product-row > button { grid-column: 3 / -1; }
+  .studio-row-status { font-size: 8px; }
+  .studio-banner-editor { grid-template-columns: 1fr; }
+  .studio-order-row { grid-template-columns: 1fr; }
+}
+
+/* PUZZLES · documentos comerciales posteriores al pedido */
+.success-document-actions {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(183, 134, 0, .34);
+  background: rgba(183, 134, 0, .055);
+  text-align: left;
+}
+.success-document-actions p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.success-document-actions > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.success-document-actions .btn {
+  min-height: 42px;
+  font-size: 11px;
+}
+#successDocumentStatus {
+  min-height: 18px;
+  color: var(--text-muted, #a5a5a5);
+  font-size: 12px;
+  line-height: 1.45;
+}
+@media (max-width: 560px) {
+  .success-document-actions > div { grid-template-columns: 1fr; }
+}
