@@ -81,7 +81,7 @@
       sort: 'featured',
       view: 'grid',
       page: 1,
-      pageSize: 60,
+      pageSize: 25,
       cart: loadJson(STORAGE_KEYS.CART, {}),
       quantities: {},
       submitting: false,
@@ -1748,7 +1748,7 @@
       const pageProducts = state.filtered.slice(start, end);
 
       setText(dom.resultCount, state.filtered.length.toLocaleString('es-MX') + (state.filtered.length === 1 ? ' resultado' : ' resultados'));
-      setText(dom.resultRange, '· Mostrando ' + (start + 1).toLocaleString('es-MX') + '–' + end.toLocaleString('es-MX'));
+      setText(dom.resultRange, '· Mostrando ' + (start + 1).toLocaleString('es-MX') + '–' + end.toLocaleString('es-MX') + ' · 25 por página');
       renderActiveFilter();
 
       if (state.view === 'table') {
@@ -4033,5 +4033,185 @@
   } else {
     run();
   }
+})();
+
+/* ============================================================
+   PUZZLES · SISTEMA DE DISEÑO REVISITADO
+   Función, proporción, claridad, cuidado y continuidad.
+   ============================================================ */
+(function installPuzzlesRevisitedSystem() {
+  function onReady(callback) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', callback, { once: true });
+    } else {
+      callback();
+    }
+  }
+
+  function installFooter() {
+    const footer = document.querySelector('.footer');
+    const inner = footer && footer.querySelector('.footer__inner');
+    const bottom = footer && footer.querySelector('.footer__bottom');
+    if (!footer || !inner || footer.dataset.revisited === 'true') return;
+
+    footer.dataset.revisited = 'true';
+    footer.classList.add('footer--revisited');
+
+    const columns = Array.from(inner.children);
+    const brandColumn = columns[0] || null;
+    const responsibleColumn = columns[1] || null;
+    const serviceColumn = columns[2] || null;
+
+    if (brandColumn) {
+      brandColumn.classList.add('footer__brand-column');
+      const paragraph = brandColumn.querySelector('p');
+      if (paragraph) {
+        paragraph.textContent = 'Una colección de vinos, licores y destilados elegida para celebrar, compartir, regalar y descubrir con intención.';
+      }
+    }
+
+    if (responsibleColumn) {
+      responsibleColumn.classList.add('footer__column');
+      const heading = responsibleColumn.querySelector('h4');
+      if (heading) heading.textContent = 'Compra responsable';
+    }
+
+    if (serviceColumn) {
+      serviceColumn.classList.add('footer__column');
+      const catalogButton = serviceColumn.querySelector('[data-scroll-catalog]');
+      const conciergeButton = serviceColumn.querySelector('#btnFooterWhatsApp');
+      serviceColumn.innerHTML = '<h4>Explorar</h4><ul class="footer__links"></ul>';
+      const list = serviceColumn.querySelector('ul');
+
+      if (catalogButton) {
+        catalogButton.classList.add('footer__link-control');
+        catalogButton.textContent = 'Ver catálogo completo';
+        const item = document.createElement('li');
+        item.appendChild(catalogButton);
+        list.appendChild(item);
+      }
+
+      if (conciergeButton) {
+        conciergeButton.classList.add('footer__link-control');
+        conciergeButton.textContent = 'Atención y concierge';
+        const item = document.createElement('li');
+        item.appendChild(conciergeButton);
+        list.appendChild(item);
+      }
+    }
+
+    if (!inner.querySelector('.footer__contact-column')) {
+      const contact = document.createElement('div');
+      contact.className = 'footer__column footer__contact-column';
+      contact.innerHTML = [
+        '<h4>Contacto y mayoreo</h4>',
+        '<p>Cotizaciones, pedidos especiales y consultas para compras por volumen.</p>',
+        '<a class="footer__email" href="mailto:id.vicvic@gmail.com?subject=Cotizaci%C3%B3n%20o%20consulta%20de%20mayoreo%20-%20PUZZLES">id.vicvic@gmail.com</a>',
+        '<span class="footer__response-note">Escríbenos con los productos, cantidades y ciudad de entrega.</span>'
+      ].join('');
+      inner.appendChild(contact);
+    }
+
+    if (!inner.querySelector('.footer__legal-column')) {
+      const legal = document.createElement('div');
+      legal.className = 'footer__column footer__legal-column';
+      legal.innerHTML = [
+        '<h4>Información</h4>',
+        '<ul class="footer__policy-list">',
+        '<li>Venta exclusiva para mayores de 18 años</li>',
+        '<li>Precios y disponibilidad sujetos a confirmación</li>',
+        '<li>Imágenes de carácter ilustrativo</li>',
+        '<li>Evita el exceso</li>',
+        '</ul>'
+      ].join('');
+      inner.appendChild(legal);
+    }
+
+    if (bottom) {
+      const year = new Date().getFullYear();
+      bottom.innerHTML = [
+        '<span id="footerText">Venta exclusiva para mayores de 18 años. Precios y disponibilidad sujetos a confirmación.</span>',
+        '<span>PUZZLES · VINOS · LICORES · DESTILADOS · ' + year + '</span>'
+      ].join('');
+    }
+  }
+
+  function installFilterFollower() {
+    const panel = document.getElementById('filtersPanel');
+    const layout = document.querySelector('.catalog-layout');
+    if (!panel || !layout || panel.dataset.followInstalled === 'true') return;
+
+    panel.dataset.followInstalled = 'true';
+    panel.classList.add('filters-panel--follow-ready');
+
+    let scheduled = false;
+
+    function fixedChromeHeight() {
+      const value = parseFloat(
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--puzzles-fixed-chrome-real-h')
+      );
+      return Number.isFinite(value) ? value : 104;
+    }
+
+    function reset() {
+      panel.classList.remove('is-js-following');
+      panel.style.removeProperty('--filters-follow-y');
+      panel.style.removeProperty('transform');
+    }
+
+    function update() {
+      scheduled = false;
+
+      if (window.matchMedia('(max-width: 960px)').matches) {
+        reset();
+        return;
+      }
+
+      const layoutRect = layout.getBoundingClientRect();
+      const layoutTop = window.scrollY + layoutRect.top;
+      const offset = fixedChromeHeight() + 16;
+      const panelHeight = panel.offsetHeight;
+      const layoutHeight = layout.offsetHeight;
+      const maxTravel = Math.max(0, layoutHeight - panelHeight);
+      const requestedTravel = window.scrollY + offset - layoutTop;
+      const travel = Math.max(0, Math.min(maxTravel, requestedTravel));
+
+      panel.classList.add('is-js-following');
+      panel.style.setProperty('--filters-follow-y', Math.round(travel) + 'px');
+      panel.style.transform = 'translate3d(0,' + Math.round(travel) + 'px,0)';
+    }
+
+    function schedule() {
+      if (scheduled) return;
+      scheduled = true;
+      window.requestAnimationFrame(update);
+    }
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+
+    if ('ResizeObserver' in window) {
+      const observer = new ResizeObserver(schedule);
+      observer.observe(layout);
+      observer.observe(panel);
+    }
+
+    schedule();
+  }
+
+  function installDesignSignals() {
+    document.documentElement.classList.add('puzzles-design-revisited');
+    document.body.classList.add('puzzles-design-revisited');
+
+    const catalog = document.getElementById('catalogo');
+    if (catalog) catalog.setAttribute('data-page-size', '25');
+  }
+
+  onReady(function () {
+    installDesignSignals();
+    installFooter();
+    installFilterFollower();
+  });
 })();
 

@@ -7759,3 +7759,308 @@ body > main {
     transition-duration: .01ms !important;
   }
 }
+
+/* ============================================================
+   PUZZLES · SISTEMA DE DISEÑO REVISITADO
+   Bauhaus: función y sistema.
+   Le Corbusier: proporción y recorrido.
+   Munari: claridad y método.
+   Ive: reducción, continuidad y cuidado.
+   ============================================================ */
+:root {
+  --puzzles-space-1: 4px;
+  --puzzles-space-2: 8px;
+  --puzzles-space-3: 12px;
+  --puzzles-space-4: 16px;
+  --puzzles-space-5: 24px;
+  --puzzles-space-6: 32px;
+  --puzzles-space-7: 48px;
+  --puzzles-space-8: 64px;
+  --puzzles-border-subtle: #242424;
+  --puzzles-surface-raised: #151515;
+  --puzzles-gold: #d89a00;
+  --puzzles-gold-soft: rgba(216,154,0,.16);
+}
+
+/* Veinticinco productos por página forman una retícula más legible de 5 × 5
+   en pantallas amplias, sin sacrificar densidad en tamaños intermedios. */
+@media (min-width: 1580px) {
+  .product-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 20px !important;
+  }
+}
+
+@media (min-width: 1220px) and (max-width: 1579px) {
+  .product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+  }
+}
+
+@media (min-width: 961px) and (max-width: 1219px) {
+  .product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+}
+
+.product-card {
+  display: flex !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  flex-direction: column !important;
+  border-color: var(--puzzles-border-subtle) !important;
+  background: var(--puzzles-surface-raised) !important;
+}
+
+.product-card__body {
+  display: flex !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+}
+
+.product-card__price-block {
+  margin-top: auto !important;
+}
+
+.product-card__actions {
+  margin-top: 12px !important;
+}
+
+.pagination {
+  margin-top: 36px !important;
+  padding-top: 20px !important;
+  border-top: 1px solid var(--puzzles-border-subtle) !important;
+}
+
+.pagination button {
+  min-width: 38px !important;
+  height: 38px !important;
+}
+
+/* El filtro se mantiene como parte de la retícula, pero el movimiento se
+   calcula en JS para no depender de ancestros con overflow o transform. */
+@media (min-width: 961px) {
+  .catalog-layout {
+    position: relative !important;
+    align-items: start !important;
+    overflow: visible !important;
+  }
+
+  .filters-panel.filters-panel--follow-ready,
+  .filters-panel.filters-panel--follow-ready.is-js-following {
+    position: relative !important;
+    top: 0 !important;
+    align-self: start !important;
+    height: max-content !important;
+    max-height: calc(100dvh - var(--puzzles-fixed-chrome-real-h) - 32px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    transition: none !important;
+    will-change: transform !important;
+    z-index: 45 !important;
+  }
+
+  .filters-panel.filters-panel--follow-ready::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .filters-panel.filters-panel--follow-ready::-webkit-scrollbar-thumb {
+    border: 2px solid #181818;
+    border-radius: 999px;
+    background: #686868;
+  }
+}
+
+/* Herramientas y metadatos del catálogo comparten ejes claros. */
+.catalog-toolbar,
+.catalog-meta {
+  border-color: var(--puzzles-border-subtle) !important;
+}
+
+.catalog-meta {
+  min-height: 44px !important;
+  align-items: center !important;
+}
+
+/* Footer reconstruido como sistema de información, no como sobrante. */
+.footer.footer--revisited {
+  position: relative;
+  padding: 64px 0 28px !important;
+  border-top: 1px solid #2a2a2a !important;
+  background:
+    linear-gradient(180deg, #080808 0%, #050505 100%) !important;
+}
+
+.footer.footer--revisited::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: min(180px, 28vw);
+  height: 2px;
+  transform: translateX(-50%);
+  background: var(--puzzles-gold);
+}
+
+.footer--revisited .footer__inner {
+  display: grid !important;
+  width: min(1480px, calc(100% - 64px)) !important;
+  grid-template-columns: minmax(260px, 1.45fr) repeat(4, minmax(145px, .72fr)) !important;
+  align-items: start !important;
+  gap: 48px 34px !important;
+}
+
+.footer--revisited .footer__brand-column {
+  padding-right: 18px;
+}
+
+.footer--revisited .footer__brand-column p {
+  max-width: 390px !important;
+  margin: 18px 0 0 !important;
+  color: #aaa !important;
+  font-size: 13px !important;
+  line-height: 1.75 !important;
+}
+
+.footer--revisited .footer__column h4 {
+  position: relative;
+  margin: 0 0 20px !important;
+  padding-top: 12px;
+  color: #f0f0f0 !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  letter-spacing: .16em !important;
+}
+
+.footer--revisited .footer__column h4::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 1px;
+  background: var(--puzzles-gold);
+}
+
+.footer--revisited .footer__column p,
+.footer--revisited .footer__column li,
+.footer--revisited .footer__response-note {
+  color: #9b9b9b !important;
+  font-size: 12px !important;
+  line-height: 1.65 !important;
+}
+
+.footer--revisited .footer__links,
+.footer--revisited .footer__policy-list {
+  display: grid;
+  gap: 11px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.footer--revisited .footer__links li,
+.footer--revisited .footer__policy-list li {
+  margin: 0 !important;
+}
+
+.footer--revisited .footer__link-control,
+.footer--revisited .footer__email {
+  display: inline-flex !important;
+  width: fit-content;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #e8e8e8 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  text-align: left;
+  text-decoration: none !important;
+}
+
+.footer--revisited .footer__link-control:hover,
+.footer--revisited .footer__email:hover {
+  color: var(--puzzles-gold) !important;
+  box-shadow: none !important;
+  transform: translateX(3px) !important;
+}
+
+.footer--revisited .footer__email {
+  margin: 8px 0 10px;
+  border-bottom: 1px solid rgba(216,154,0,.52) !important;
+  color: #f0bc37 !important;
+  overflow-wrap: anywhere;
+}
+
+.footer--revisited .footer__response-note {
+  display: block;
+  max-width: 240px;
+}
+
+.footer--revisited .footer__bottom {
+  width: min(1480px, calc(100% - 64px)) !important;
+  margin-top: 48px !important;
+  padding-top: 22px !important;
+  border-top: 1px solid #242424 !important;
+  color: #777 !important;
+  font-size: 10px !important;
+  letter-spacing: .04em;
+}
+
+/* Foco visible y coherente: una interfaz cuidada también se navega con teclado. */
+.puzzles-design-revisited :focus-visible {
+  outline: 2px solid var(--puzzles-gold) !important;
+  outline-offset: 3px !important;
+}
+
+@media (max-width: 1280px) {
+  .footer--revisited .footer__inner {
+    grid-template-columns: minmax(260px, 1.3fr) repeat(2, minmax(170px, 1fr)) !important;
+  }
+
+  .footer--revisited .footer__brand-column {
+    grid-row: span 2;
+  }
+}
+
+@media (max-width: 820px) {
+  .footer.footer--revisited {
+    padding: 48px 0 96px !important;
+  }
+
+  .footer--revisited .footer__inner,
+  .footer--revisited .footer__bottom {
+    width: calc(100% - 32px) !important;
+  }
+
+  .footer--revisited .footer__inner {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 34px 22px !important;
+  }
+
+  .footer--revisited .footer__brand-column {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .footer--revisited .footer__inner {
+    grid-template-columns: 1fr !important;
+  }
+
+  .footer--revisited .footer__brand-column {
+    grid-column: auto !important;
+  }
+
+  .footer--revisited .footer__bottom {
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+}
