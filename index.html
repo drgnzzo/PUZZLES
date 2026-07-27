@@ -58,31 +58,6 @@
       touch-action: pan-x pan-y;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    .puzzles-shell-loader {
-      position: fixed;
-      inset: 0;
-      z-index: 2;
-      display: grid;
-      place-items: center;
-      background: #0b0b0b;
-      transition: opacity 280ms cubic-bezier(.22,1,.36,1), visibility 280ms step-end;
-    }
-    .puzzles-shell-loader div { text-align: center; }
-    .puzzles-shell-loader strong { display: block; font-size: 22px; letter-spacing: .22em; }
-    .puzzles-shell-loader span { display: block; margin-top: 12px; color: #aaa397; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
-    .puzzles-shell-loader::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: #d1ad65;
-      transform-origin: left;
-      animation: puzzles-shell-progress 1.5s cubic-bezier(.22,1,.36,1) infinite;
-    }
-    body.is-app-loaded .puzzles-shell-loader { opacity: 0; visibility: hidden; }
-    @keyframes puzzles-shell-progress { 0% { transform: scaleX(.08); } 65% { transform: scaleX(.74); } 100% { transform: scaleX(1); } }
     iframe {
       position: fixed;
       inset: 0;
@@ -93,10 +68,8 @@
       max-width: 100vw;
       border: 0;
       background: #0b0b0b;
-      opacity: 0;
-      transition: opacity 260ms ease;
+      opacity: 1;
     }
-    body.is-app-loaded iframe { opacity: 1; }
     noscript { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; padding: 24px; background: #0b0b0b; text-align: center; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
@@ -104,7 +77,6 @@
   </style>
 </head>
 <body>
-  <div class="puzzles-shell-loader" aria-live="polite"><div><strong>PUZZLES</strong><span>Preparando la colección</span></div></div>
   <iframe
     id="puzzlesAppFrame"
     src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&rev=stable"
@@ -117,7 +89,6 @@
     (function () {
       var frame = document.getElementById('puzzlesAppFrame');
       var description = document.querySelector('meta[name="description"]');
-      frame.addEventListener('load', function () { document.body.classList.add('is-app-loaded'); });
       window.addEventListener('message', function (event) {
         if (event.source !== frame.contentWindow || !event.data || event.data.type !== 'PUZZLES_META') return;
         if (typeof event.data.title === 'string' && event.data.title.trim()) {
@@ -128,7 +99,6 @@
           description.setAttribute('content', event.data.description.trim());
         }
       });
-      window.setTimeout(function () { document.body.classList.add('is-app-loaded'); }, 9000);
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
           navigator.serviceWorker.register('./sw.js').catch(function () {});

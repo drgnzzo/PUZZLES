@@ -5774,7 +5774,7 @@ a,
   touch-action: manipulation;
 }
 
-/* Fondo de exhibición tipo ecommerce: gris cálido y una base suave. */
+/* Superficie neutra para producto: sin spotlight, círculo, halo ni filtros. */
 .product-card__visual,
 .product-table__thumb,
 .mobile-list-card__visual,
@@ -5782,31 +5782,28 @@ a,
 .cart-item__visual {
   position: relative !important;
   isolation: isolate !important;
-  background:
-    radial-gradient(circle at 50% 46%, #f7f7f5 0%, #efefec 55%, #e6e6e2 100%) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(120,120,112,.16),
-    inset 0 -18px 32px rgba(80,80,70,.035) !important;
+  background: #f5f3ed !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
   color-scheme: only light;
   forced-color-adjust: none;
 }
 
+.product-card__visual::before,
 .product-card__visual::after,
+.product-table__thumb::before,
 .product-table__thumb::after,
+.mobile-list-card__visual::before,
 .mobile-list-card__visual::after,
+.pdp-image-button::before,
 .pdp-image-button::after,
+.cart-item__visual::before,
 .cart-item__visual::after {
-  content: '' !important;
-  position: absolute !important;
-  z-index: 0 !important;
-  left: 20% !important;
-  right: 20% !important;
-  bottom: 7% !important;
-  height: 7% !important;
-  display: block !important;
-  border-radius: 50% !important;
-  background: radial-gradient(ellipse, rgba(25,25,20,.20) 0%, rgba(25,25,20,0) 72%) !important;
-  pointer-events: none !important;
+  content: none !important;
+  display: none !important;
+  background: none !important;
+  box-shadow: none !important;
 }
 
 .product-card__image,
@@ -5818,17 +5815,14 @@ a,
   position: relative;
   z-index: 1;
   background: transparent !important;
-  mix-blend-mode: multiply !important;
-  filter:
-    contrast(1.075)
-    brightness(.995)
-    saturate(1.025)
-    drop-shadow(0 5px 5px rgba(0,0,0,.13)) !important;
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  box-shadow: none !important;
   color-scheme: only light;
   forced-color-adjust: none;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px) {@media (max-width: 760px) {
   html,
   body,
   #app,
@@ -6008,8 +6002,9 @@ a,
   min-width: 0 !important;
   padding: clamp(20px, 3vw, 38px) !important;
   border-right: 1px solid #2d2d2d !important;
-  background:
-    radial-gradient(circle at 50% 46%, #fafaf7 0%, #efefeb 62%, #e3e3de 100%) !important;
+  background: #f5f3ed !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }
 
 .pdp-simple .pdp-image-button {
@@ -6020,12 +6015,10 @@ a,
   max-height: 430px !important;
   padding: 0 !important;
   overflow: hidden !important;
-  border: 1px solid #d7d7d1 !important;
-  background:
-    radial-gradient(circle at 50% 48%, #ffffff 0%, #f3f3ef 58%, #e9e9e4 100%) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.72),
-    0 18px 44px rgba(0,0,0,.12) !important;
+  border: 0 !important;
+  background: #f8f6f0 !important;
+  background-image: none !important;
+  box-shadow: none !important;
   cursor: zoom-in !important;
 }
 
@@ -9493,3 +9486,397 @@ body > main {
   .puzzles-final-pass img[data-puzzles-image-tuned="true"] { opacity: 1 !important; }
   .puzzles-cellar__architecture > span { transform: none !important; }
 }
+
+/* ============================================================
+   PUZZLES · FLUJO FINAL PRE-MEDUSA
+   Un solo splash → mayoría de edad → introducción → tienda.
+   ============================================================ */
+
+#intentWelcomeBackdrop,
+#intentWelcomeModal,
+#btnMomentsHeader,
+.puzzles-cellar-launch,
+#btnOpenCellar {
+  display: none !important;
+}
+
+body:not(.entry-sequence-complete) #ageGate,
+body.entry-sequence-active #ageGate {
+  display: none !important;
+}
+
+.entry-splash {
+  z-index: 1700 !important;
+}
+
+.puzzles-cellar {
+  z-index: 1800 !important;
+}
+
+/* La introducción usa profundidad moderada, no una escena 3D artificial. */
+.puzzles-cellar__architecture {
+  display: none !important;
+}
+
+.puzzles-cellar__scene {
+  background: #070707 !important;
+}
+
+.puzzles-cellar__media {
+  transform:
+    translate3d(
+      0,
+      calc(var(--cellar-shift, 0px) * .35),
+      0
+    )
+    scale(
+      calc(
+        1.035 +
+        var(--cellar-visibility, 0) * .025
+      )
+    ) !important;
+  filter: saturate(.88) contrast(1.02) !important;
+  transition:
+    filter 500ms ease,
+    opacity 500ms ease !important;
+}
+
+.puzzles-cellar__shade {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0,0,0,.82) 0%,
+      rgba(0,0,0,.42) 48%,
+      rgba(0,0,0,.18) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(0,0,0,.15),
+      rgba(0,0,0,.42)
+    ) !important;
+}
+
+.puzzles-cellar__actions {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.puzzles-cellar__actions button {
+  min-height: 40px !important;
+  padding: 0 15px !important;
+  border: 1px solid rgba(255,255,255,.32) !important;
+  background: rgba(0,0,0,.28) !important;
+  color: #fff !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  letter-spacing: .14em !important;
+}
+
+.puzzles-cellar__moments {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  width: min(560px, 100%);
+  margin-top: 22px;
+}
+
+.puzzles-cellar__moment-button {
+  min-height: 82px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255,255,255,.24);
+  background: rgba(7,7,7,.54);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.puzzles-cellar__moment-button:hover,
+.puzzles-cellar__moment-button:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(209,173,101,.9);
+  background: rgba(23,18,11,.74);
+}
+
+.puzzles-cellar__moment-button span,
+.puzzles-cellar__moment-button strong {
+  display: block;
+}
+
+.puzzles-cellar__moment-button span {
+  margin-bottom: 7px;
+  color: #d1ad65;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.puzzles-cellar__moment-button strong {
+  font-family:
+    var(--display, "Barlow Condensed", sans-serif);
+  font-size: 20px;
+  font-weight: 550;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* La atmósfera continúa en la tienda real y responde a la colección elegida. */
+.catalog-section {
+  position: relative !important;
+  isolation: isolate;
+  background:
+    radial-gradient(
+      circle at
+      calc(
+        74% -
+        var(--puzzles-catalog-progress, 0) * 20%
+      )
+      calc(
+        8% +
+        var(--puzzles-catalog-progress, 0) * 28%
+      ),
+      rgba(209,173,101,.065),
+      transparent 29%
+    ),
+    linear-gradient(
+      180deg,
+      #080808 0%,
+      #0b0a09 42%,
+      #070707 100%
+    ) !important;
+  background-attachment: fixed !important;
+  transition: background-color 600ms ease !important;
+}
+
+body[data-catalog-mood="wine"] .catalog-section {
+  background:
+    radial-gradient(
+      circle at
+      calc(
+        76% -
+        var(--puzzles-catalog-progress, 0) * 22%
+      )
+      calc(
+        10% +
+        var(--puzzles-catalog-progress, 0) * 24%
+      ),
+      rgba(104,22,28,.19),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      #090707 0%,
+      #11090a 44%,
+      #070707 100%
+    ) !important;
+  background-attachment: fixed !important;
+}
+
+body[data-catalog-mood="bubbles"] .catalog-section {
+  background:
+    radial-gradient(
+      circle at
+      calc(
+        76% -
+        var(--puzzles-catalog-progress, 0) * 20%
+      )
+      calc(
+        8% +
+        var(--puzzles-catalog-progress, 0) * 26%
+      ),
+      rgba(209,173,101,.19),
+      transparent 31%
+    ),
+    linear-gradient(
+      180deg,
+      #080807 0%,
+      #121009 45%,
+      #070707 100%
+    ) !important;
+  background-attachment: fixed !important;
+}
+
+body[data-catalog-mood="spirits"] .catalog-section {
+  background:
+    radial-gradient(
+      circle at
+      calc(
+        74% -
+        var(--puzzles-catalog-progress, 0) * 18%
+      )
+      calc(
+        9% +
+        var(--puzzles-catalog-progress, 0) * 28%
+      ),
+      rgba(130,71,21,.18),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      #080706 0%,
+      #110d08 44%,
+      #070707 100%
+    ) !important;
+  background-attachment: fixed !important;
+}
+
+/* Sticky real del panel: hijo directo del layout y contenedor de altura completa. */
+@media (min-width: 961px) {
+  .catalog-section,
+  .catalog-layout,
+  .catalog-main,
+  #gridView,
+  #tableView,
+  .product-grid,
+  .table-wrap {
+    overflow: visible !important;
+  }
+
+  .catalog-layout {
+    display: grid !important;
+    grid-template-columns:
+      clamp(220px, 15vw, 292px)
+      minmax(0, 1fr) !important;
+    gap: clamp(22px, 2.2vw, 42px) !important;
+    align-items: start !important;
+    position: relative !important;
+  }
+
+  .catalog-layout > .filters-panel {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    position: sticky !important;
+    top:
+      var(
+        --filters-sticky-top,
+        118px
+      ) !important;
+    align-self: start !important;
+    width: 100% !important;
+    max-height:
+      calc(
+        100dvh -
+        var(
+          --filters-sticky-top,
+          118px
+        ) -
+        16px
+      ) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  .catalog-layout > .catalog-main {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .filters-panel-slot {
+    display: contents !important;
+  }
+}
+
+/* Contacto claro: producto editable y campos obligatorios visibles. */
+.operational-required-note {
+  margin: 0 0 16px !important;
+  color: #aaa !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+
+.operational-required-note span,
+.required-mark {
+  color: #d89a00 !important;
+  font-weight: 900 !important;
+}
+
+#contactProduct:not([readonly]) {
+  cursor: text !important;
+  background: #111211 !important;
+}
+
+#contactForm [aria-invalid="true"] {
+  border-color: #d86655 !important;
+  box-shadow:
+    0 0 0 2px rgba(216,102,85,.16) !important;
+}
+
+#contactError.is-visible {
+  display: block !important;
+  margin-top: 4px !important;
+}
+
+@media (max-width: 760px) {
+  .puzzles-cellar__moments {
+    grid-template-columns: 1fr;
+    max-height: 42dvh;
+    overflow-y: auto;
+  }
+
+  .puzzles-cellar__moment-button {
+    min-height: 66px;
+  }
+
+  .catalog-section,
+  body[data-catalog-mood] .catalog-section {
+    background-attachment: scroll !important;
+  }
+}
+
+/* Tratamiento definitivo de imágenes de producto. */
+.product-card__visual,
+.product-table__thumb,
+.mobile-list-card__visual,
+.pdp-image-button,
+.cart-item__visual,
+.pdp-simple__media,
+.pdp-editorial__media {
+  background: #f5f3ed !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.product-card__visual::before,
+.product-card__visual::after,
+.product-table__thumb::before,
+.product-table__thumb::after,
+.mobile-list-card__visual::before,
+.mobile-list-card__visual::after,
+.pdp-image-button::before,
+.pdp-image-button::after,
+.cart-item__visual::before,
+.cart-item__visual::after,
+.pdp-simple__media::before,
+.pdp-simple__media::after,
+.pdp-editorial__media::before,
+.pdp-editorial__media::after {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.product-card__image,
+.product-table__image,
+.mobile-list-card__image,
+.pdp-image,
+.cart-item__image,
+.js-product-image,
+.pdp-simple .pdp-image,
+.pdp-editorial .pdp-image {
+  background: transparent !important;
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
