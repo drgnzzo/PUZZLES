@@ -7201,3 +7201,561 @@ a,
     box-shadow: 0 -14px 34px rgba(0,0,0,.35);
   }
 }
+
+/* ============================================================
+   PUZZLES · CORRECCIÓN FINAL DE PDP, GRIDS E IMÁGENES
+   ============================================================ */
+
+/* El monograma solo es un respaldo. Al cargar una imagen real desaparece
+   por completo, incluso cuando la botella tiene transparencias. */
+.product-card__visual.has-loaded-image > .product-image-fallback,
+.mobile-list-card__visual.has-loaded-image > .product-image-fallback,
+.product-table__thumb.has-loaded-image > .product-image-fallback,
+.pdp-image-button.has-loaded-image > .product-image-fallback,
+.cart-item__visual.has-loaded-image > .product-image-fallback {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.product-image-fallback {
+  z-index: 0 !important;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .14s ease, visibility .14s ease;
+}
+
+.product-card__visual .js-product-image,
+.mobile-list-card__visual .js-product-image,
+.product-table__thumb .js-product-image,
+.pdp-image-button .js-product-image,
+.cart-item__visual .js-product-image {
+  z-index: 2 !important;
+}
+
+/* Las dos etiquetas superiores deben compartir exactamente la misma línea,
+   altura y alineación. Se neutraliza el margin-bottom heredado de PDP viejos. */
+.pdp-editorial__kickers {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+}
+
+.pdp-editorial__kickers .pdp-category,
+.pdp-editorial__kickers .pdp-brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  align-self: stretch !important;
+  min-height: 30px !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 7px 11px !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  vertical-align: middle !important;
+}
+
+/* Identidad, destacados y ficha técnica: grids fluidos sin bloques caídos,
+   alturas disparejas ni columnas vacías visualmente. */
+.pdp-identity-line {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+}
+
+.pdp-identity-line span {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 34px !important;
+  margin: 0 !important;
+}
+
+.pdp-highlights {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)) !important;
+  grid-auto-rows: 1fr !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+}
+
+.pdp-highlights > div {
+  height: 100% !important;
+  min-width: 0 !important;
+  align-items: center !important;
+}
+
+.pdp-tech-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+  grid-auto-rows: 1fr !important;
+  align-items: stretch !important;
+}
+
+.pdp-tech-grid > div {
+  height: 100% !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .pdp-editorial__kickers .pdp-category,
+  .pdp-editorial__kickers .pdp-brand {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* En móvil el bloque de acciones ocupa la fila completa del buybox. */
+  .pdp-buybox .pdp-actions {
+    grid-column: 1 / -1 !important;
+  }
+
+  .pdp-highlights,
+  .pdp-tech-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ============================================================
+   PUZZLES · CORRECCIONES EDITORIALES, STICKY UI Y MODALES
+   ============================================================ */
+:root {
+  --puzzles-announcement-real-h: 28px;
+  --puzzles-header-real-h: 76px;
+  --puzzles-fixed-chrome-real-h: 104px;
+  --puzzles-motion-fast: 180ms;
+  --puzzles-motion-normal: 280ms;
+  --puzzles-motion-slow: 420ms;
+  --puzzles-ease: cubic-bezier(.2,.72,.22,1);
+}
+
+/* Barra superior y header siempre disponibles. */
+body > .announcement {
+  position: fixed !important;
+  inset: 0 0 auto 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  z-index: 5100 !important;
+  transform: translateZ(0);
+}
+
+body > .site-header {
+  position: fixed !important;
+  inset: auto 0 auto 0 !important;
+  top: var(--puzzles-announcement-real-h) !important;
+  width: 100% !important;
+  z-index: 5090 !important;
+  transform: translateZ(0);
+  box-shadow: 0 10px 30px rgba(0,0,0,.28) !important;
+}
+
+body > main {
+  padding-top: var(--puzzles-fixed-chrome-real-h) !important;
+}
+
+#catalogo {
+  scroll-margin-top: calc(var(--puzzles-fixed-chrome-real-h) + 18px) !important;
+}
+
+/* Firma textual real, no imagen, dentro del hero. */
+.hero-carousel {
+  isolation: isolate;
+}
+
+.hero-brand-signature {
+  position: absolute;
+  z-index: 8;
+  top: 22px;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transform: translateX(-50%);
+  color: #fff;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 3px 18px rgba(0,0,0,.75);
+}
+
+.hero-brand-signature strong {
+  font-family: var(--display, var(--sans)) !important;
+  font-size: clamp(19px, 2vw, 28px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .24em;
+}
+
+.hero-brand-signature span {
+  color: #d89a00;
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1.2;
+  letter-spacing: .22em;
+  white-space: nowrap;
+}
+
+/* Controles del carrusel por debajo del banner, centrados y sin taparlo. */
+.hero-carousel__controls--external {
+  position: relative !important;
+  z-index: 20 !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  min-height: 58px !important;
+  margin: 0 !important;
+  padding: 10px 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 14px !important;
+  transform: none !important;
+  border-top: 1px solid #262626 !important;
+  border-bottom: 1px solid #262626 !important;
+  background: #0d0d0d !important;
+}
+
+.hero-carousel__controls--external > button {
+  position: relative;
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 38px;
+  border-color: #454545 !important;
+  background: #151515 !important;
+  transition: border-color var(--puzzles-motion-fast) ease,
+              color var(--puzzles-motion-fast) ease,
+              background var(--puzzles-motion-fast) ease,
+              transform var(--puzzles-motion-fast) ease !important;
+}
+
+.hero-carousel__controls--external > button:hover {
+  border-color: #d89a00 !important;
+  color: #d89a00 !important;
+  background: #1d1a12 !important;
+  transform: translateY(-1px);
+}
+
+.hero-carousel__controls--external .hero-carousel__dots {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.hero-carousel__controls--external .hero-carousel__dots button {
+  width: 30px !important;
+  height: 4px !important;
+  transition: width var(--puzzles-motion-normal) var(--puzzles-ease),
+              background var(--puzzles-motion-normal) ease !important;
+}
+
+.hero-carousel__controls--external .hero-carousel__dots button.is-active {
+  width: 48px !important;
+}
+
+/* El filtro acompaña todo el catálogo, tanto en cuadrícula como en lista. */
+@media (min-width: 961px) {
+  .catalog-section,
+  .catalog-layout,
+  .catalog-main,
+  #gridView,
+  #tableView {
+    overflow: visible !important;
+  }
+
+  .catalog-layout {
+    align-items: start !important;
+  }
+
+  .filters-panel {
+    position: sticky !important;
+    top: calc(var(--puzzles-fixed-chrome-real-h) + 16px) !important;
+    align-self: start !important;
+    max-height: calc(100dvh - var(--puzzles-fixed-chrome-real-h) - 30px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scrollbar-gutter: stable !important;
+    z-index: 35 !important;
+  }
+}
+
+/* Las dos etiquetas del PDP comparten línea base, alto y caja. */
+.pdp-editorial__kickers {
+  display: flex !important;
+  flex-flow: row wrap !important;
+  align-items: center !important;
+  align-content: center !important;
+  gap: 8px !important;
+  margin: 0 0 16px !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+}
+
+.pdp-editorial__kickers > .pdp-category,
+.pdp-editorial__kickers > .pdp-brand {
+  position: static !important;
+  top: auto !important;
+  bottom: auto !important;
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  max-height: 32px !important;
+  margin: 0 !important;
+  padding: 0 11px !important;
+  transform: none !important;
+  font-size: 10px !important;
+  line-height: 30px !important;
+  vertical-align: top !important;
+  box-sizing: border-box !important;
+}
+
+/* Carrito lateral: dos columnas claras, sin texto ni precio encimados. */
+.drawer,
+.cart-drawer {
+  width: min(470px, 100vw) !important;
+  max-width: 100vw !important;
+}
+
+.drawer__body {
+  padding: 10px 22px 18px !important;
+}
+
+.cart-item {
+  display: grid !important;
+  grid-template-columns: 82px minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 14px !important;
+  padding: 18px 0 !important;
+}
+
+.cart-item__visual {
+  width: 82px !important;
+  height: 96px !important;
+  min-width: 82px !important;
+  border-radius: 3px !important;
+}
+
+.cart-item__content {
+  min-width: 0;
+}
+
+.cart-item__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+}
+
+.cart-item__name {
+  min-width: 0;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  overflow-wrap: anywhere;
+}
+
+.cart-item__price {
+  justify-self: end;
+  color: #f5f5f5 !important;
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+  white-space: nowrap !important;
+}
+
+.cart-item__code {
+  margin-top: 5px !important;
+}
+
+.cart-item__bottom {
+  margin-top: 13px !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.cart-item .qty-control {
+  flex: 0 0 104px;
+  width: 104px !important;
+}
+
+.cart-item .remove-button {
+  margin-left: auto;
+}
+
+/* Transiciones uniformes: aperturas y cierres dejan de sentirse bruscos. */
+.backdrop {
+  transition: opacity var(--puzzles-motion-normal) var(--puzzles-ease),
+              visibility var(--puzzles-motion-normal) var(--puzzles-ease) !important;
+}
+
+.modal,
+.image-zoom-modal,
+.intent-welcome-modal {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--puzzles-motion-normal) var(--puzzles-ease),
+              visibility var(--puzzles-motion-normal) var(--puzzles-ease) !important;
+}
+
+.modal.is-open,
+.image-zoom-modal.is-open,
+.intent-welcome-modal.is-open {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.modal__card,
+.intent-welcome-card {
+  transform: translateY(16px) scale(.985) !important;
+  transition: transform var(--puzzles-motion-normal) var(--puzzles-ease),
+              opacity var(--puzzles-motion-normal) var(--puzzles-ease) !important;
+}
+
+.modal.is-open .modal__card,
+.intent-welcome-modal.is-open .intent-welcome-card {
+  transform: translateY(0) scale(1) !important;
+}
+
+.drawer {
+  transition: transform var(--puzzles-motion-normal) var(--puzzles-ease),
+              box-shadow var(--puzzles-motion-normal) ease !important;
+}
+
+.entry-splash,
+.age-gate {
+  transition: opacity var(--puzzles-motion-slow) var(--puzzles-ease),
+              visibility var(--puzzles-motion-slow) var(--puzzles-ease) !important;
+}
+
+/* Hovers más claros sin romper el lenguaje sobrio. */
+.product-card,
+.mobile-list-card,
+.product-title-button,
+.category-option,
+.icon-button,
+.btn,
+.add-button,
+.table-add,
+.close-button,
+.link-button,
+.remove-button {
+  transition-property: transform, border-color, background-color, color, opacity, box-shadow !important;
+  transition-duration: var(--puzzles-motion-fast) !important;
+  transition-timing-function: ease !important;
+}
+
+.product-card:hover,
+.mobile-list-card:hover {
+  transform: translateY(-3px) !important;
+  border-color: rgba(216,154,0,.62) !important;
+  box-shadow: 0 18px 42px rgba(0,0,0,.28) !important;
+}
+
+.close-button:hover,
+.icon-button:hover,
+.category-option:hover {
+  border-color: #d89a00 !important;
+  color: #d89a00 !important;
+}
+
+.add-button:hover:not(:disabled),
+.table-add:hover:not(:disabled),
+.btn--gold:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 8px 24px rgba(216,154,0,.2) !important;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --puzzles-announcement-real-h: 26px;
+    --puzzles-header-real-h: 60px;
+    --puzzles-fixed-chrome-real-h: 86px;
+  }
+
+  .hero-brand-signature {
+    top: 14px;
+    width: calc(100% - 32px);
+  }
+
+  .hero-brand-signature strong {
+    font-size: 18px;
+  }
+
+  .hero-brand-signature span {
+    font-size: 8px;
+    white-space: normal;
+  }
+
+  .hero-carousel__controls--external {
+    min-height: 52px !important;
+    padding: 8px 12px !important;
+    gap: 10px !important;
+  }
+
+  .hero-carousel__controls--external > button {
+    width: 34px !important;
+    height: 34px !important;
+    flex-basis: 34px;
+  }
+
+  .hero-carousel__controls--external .hero-carousel__dots button {
+    width: 18px !important;
+  }
+
+  .hero-carousel__controls--external .hero-carousel__dots button.is-active {
+    width: 30px !important;
+  }
+
+  .pdp-editorial__kickers > .pdp-category,
+  .pdp-editorial__kickers > .pdp-brand {
+    height: auto !important;
+    min-height: 30px !important;
+    max-height: none !important;
+    padding: 7px 9px !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .drawer__body {
+    padding: 8px 14px 16px !important;
+  }
+
+  .cart-item {
+    grid-template-columns: 70px minmax(0, 1fr) !important;
+    gap: 11px !important;
+  }
+
+  .cart-item__visual {
+    width: 70px !important;
+    height: 84px !important;
+    min-width: 70px !important;
+  }
+
+  .cart-item__top {
+    grid-template-columns: 1fr !important;
+    gap: 5px !important;
+  }
+
+  .cart-item__price {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

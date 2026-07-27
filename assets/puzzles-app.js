@@ -2050,18 +2050,32 @@
     function bindProductImageFallbacks(container) {
       if (!container) return;
 
+      const visualSelector = [
+        '.product-card__visual',
+        '.mobile-list-card__visual',
+        '.product-table__thumb',
+        '.pdp-image-button',
+        '.cart-item__visual'
+      ].join(',');
+
+      const setLoadedState = (image, loaded) => {
+        const visual = image.closest(visualSelector) || image.parentElement;
+        if (loaded) {
+          image.classList.add('is-loaded');
+          image.classList.remove('is-broken');
+          if (visual) visual.classList.add('has-loaded-image');
+        } else {
+          image.classList.remove('is-loaded');
+          if (visual) visual.classList.remove('has-loaded-image');
+        }
+      };
+
       container
         .querySelectorAll('.js-product-image')
         .forEach(image => {
-          image.addEventListener(
-            'load',
-            () => image.classList.add('is-loaded'),
-            { once: true }
-          );
-
-          image.addEventListener('error', () => {
-            const original =
-              image.dataset.originalSrc || '';
+          const markLoaded = () => setLoadedState(image, true);
+          const markBroken = () => {
+            const original = image.dataset.originalSrc || '';
 
             if (
               original &&
@@ -2069,12 +2083,24 @@
               image.src !== original
             ) {
               image.dataset.originalTried = 'true';
+              setLoadedState(image, false);
               image.src = original;
               return;
             }
 
+            setLoadedState(image, false);
             image.classList.add('is-broken');
-          });
+          };
+
+          image.addEventListener('load', markLoaded, { once: true });
+          image.addEventListener('error', markBroken);
+
+          // Las imágenes recuperadas de caché pueden haber terminado de cargar
+          // antes de registrar el evento. Se valida su estado inmediatamente.
+          if (image.complete) {
+            if (image.naturalWidth > 0) markLoaded();
+            else markBroken();
+          }
         });
     }
 
@@ -2751,11 +2777,15 @@
 
       dom.cartBody.innerHTML = lines.map(line => `
         <article class="cart-item">
-          <div class="cart-item__visual">${line.product.imageUrl
-            ? `<img src="${escapeAttr(line.product.imageUrl)}" alt="" style="--img-zoom:${Number(line.product.imageZoom||0.92)};--img-x:${Number(line.product.imageX||0)}%;--img-y:${Number(line.product.imageY||0)}%" onerror="this.style.display='none'">`
-            : escapeHtml(categoryLetter(line.product.category))}</div>
-          <div>
-            <div class="cart-item__name">${escapeHtml(line.product.description)}</div>
+          <div class="cart-item__visual">
+            <span class="product-image-fallback" aria-hidden="true"><span>${escapeHtml(categoryLetter(line.product.category))}</span></span>
+            ${productImageMarkup(line.product, 'cart-item__image', line.product.displayName || line.product.description)}
+          </div>
+          <div class="cart-item__content">
+            <div class="cart-item__top">
+              <div class="cart-item__name">${escapeHtml(line.product.displayName || line.product.description)}</div>
+              <div class="cart-item__price">${money(line.lineNet)}</div>
+            </div>
             <div class="cart-item__code">CÓDIGO ${escapeHtml(line.product.code)}</div>
             <div class="cart-item__bottom">
               <div class="qty-control">
@@ -2766,7 +2796,6 @@
               <button class="remove-button" type="button" data-cart-remove="${escapeAttr(line.product.code)}">Quitar</button>
             </div>
           </div>
-          <div class="cart-item__price">${money(line.lineNet)}</div>
         </article>
       `).join('');
 
@@ -3908,4 +3937,101 @@
         setTimeout(() => item.remove(), 220);
       }, 3200);
     }
+
+/* ============================================================
+   PUZZLES · CAPA EDITORIAL DE INTERACCIÓN Y NAVEGACIÓN
+   ============================================================ */
+(function installPuzzlesEditorialExperience() {
+  function run() {
+    const root = document.documentElement;
+    const announcement = document.querySelector('.announcement');
+    const header = document.querySelector('.site-header');
+    const hero = document.getElementById('heroCarousel');
+    const controls = hero && hero.querySelector('.hero-carousel__controls');
+
+    function updateChromeMetrics() {
+      const announcementHeight = announcement ? Math.ceil(announcement.getBoundingClientRect().height) : 0;
+      const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+      root.style.setProperty('--puzzles-announcement-real-h', announcementHeight + 'px');
+      root.style.setProperty('--puzzles-header-real-h', headerHeight + 'px');
+      root.style.setProperty('--puzzles-fixed-chrome-real-h', (announcementHeight + headerHeight) + 'px');
+    }
+
+    updateChromeMetrics();
+    window.addEventListener('resize', debounceEditorial(updateChromeMetrics, 100), { passive: true });
+
+    if (hero && !hero.querySelector('.hero-brand-signature')) {
+      const signature = document.createElement('div');
+      signature.className = 'hero-brand-signature';
+      signature.setAttribute('aria-label', 'PUZZLES, vinos, licores y destilados');
+      signature.innerHTML = '<strong>PUZZLES</strong><span>VINOS · LICORES · DESTILADOS</span>';
+      hero.appendChild(signature);
+    }
+
+    if (hero && controls && controls.parentElement === hero) {
+      controls.classList.add('hero-carousel__controls--external');
+      hero.insertAdjacentElement('afterend', controls);
+    }
+
+    const closeControlByModalId = {
+      checkoutModal: 'btnCloseCheckout',
+      authModal: 'btnCloseAuth',
+      productDetailModal: 'btnCloseProductDetail',
+      imageZoomModal: 'btnCloseImageZoom',
+      successModal: 'btnSuccessClose',
+      intentWelcomeModal: 'btnCloseIntentWelcome'
+    };
+
+    const closeControlByBackdropId = {
+      mainBackdrop: 'btnCloseCart',
+      checkoutBackdrop: 'btnCloseCheckout',
+      authBackdrop: 'btnCloseAuth',
+      productDetailBackdrop: 'btnCloseProductDetail',
+      imageZoomBackdrop: 'btnCloseImageZoom',
+      successBackdrop: 'btnSuccessClose',
+      intentWelcomeBackdrop: 'btnCloseIntentWelcome'
+    };
+
+    document.addEventListener('pointerup', function (event) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const backdropButtonId = closeControlByBackdropId[target.id];
+      if (backdropButtonId && target.classList.contains('is-open')) {
+        const button = document.getElementById(backdropButtonId);
+        if (button) button.click();
+        return;
+      }
+
+      const modal = target.closest('.modal.is-open, .image-zoom-modal.is-open, .intent-welcome-modal.is-open');
+      if (!modal) return;
+
+      const isOutsideCard = modal.classList.contains('image-zoom-modal')
+        ? target === modal
+        : !target.closest('.modal__card, .intent-welcome-card, .image-zoom-modal img');
+
+      if (!isOutsideCard) return;
+      const buttonId = closeControlByModalId[modal.id];
+      const button = buttonId ? document.getElementById(buttonId) : null;
+      if (button) button.click();
+    });
+
+    document.body.classList.add('puzzles-editorial-ready');
+  }
+
+  function debounceEditorial(fn, wait) {
+    let timer = 0;
+    return function () {
+      const args = arguments;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(function () { fn.apply(null, args); }, wait);
+    };
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', run, { once: true });
+  } else {
+    run();
+  }
+})();
 
