@@ -4196,60 +4196,36 @@
     panel.dataset.followInstalled = 'true';
     panel.classList.add('filters-panel--follow-ready');
 
-    let scheduled = false;
+    let slot = panel.parentElement && panel.parentElement.classList.contains('filters-panel-slot')
+      ? panel.parentElement
+      : null;
 
-    function fixedChromeHeight() {
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.className = 'filters-panel-slot';
+      panel.parentNode.insertBefore(slot, panel);
+      slot.appendChild(panel);
+    }
+
+    function updateStickyOffset() {
+      const root = document.documentElement;
       const value = parseFloat(
-        getComputedStyle(document.documentElement)
-          .getPropertyValue('--puzzles-fixed-chrome-real-h')
+        getComputedStyle(root).getPropertyValue('--puzzles-fixed-chrome-real-h')
       );
-      return Number.isFinite(value) ? value : 104;
+      const offset = Number.isFinite(value) ? value : 104;
+      slot.style.setProperty('--filters-sticky-top', Math.round(offset + 16) + 'px');
     }
 
-    function reset() {
-      panel.classList.remove('is-js-following');
-      panel.style.removeProperty('--filters-follow-y');
-      panel.style.removeProperty('transform');
-    }
-
-    function update() {
-      scheduled = false;
-
-      if (window.matchMedia('(max-width: 960px)').matches) {
-        reset();
-        return;
-      }
-
-      const layoutRect = layout.getBoundingClientRect();
-      const layoutTop = window.scrollY + layoutRect.top;
-      const offset = fixedChromeHeight() + 16;
-      const panelHeight = panel.offsetHeight;
-      const layoutHeight = layout.offsetHeight;
-      const maxTravel = Math.max(0, layoutHeight - panelHeight);
-      const requestedTravel = window.scrollY + offset - layoutTop;
-      const travel = Math.max(0, Math.min(maxTravel, requestedTravel));
-
-      panel.classList.add('is-js-following');
-      panel.style.setProperty('--filters-follow-y', Math.round(travel) + 'px');
-      panel.style.transform = 'translate3d(0,' + Math.round(travel) + 'px,0)';
-    }
-
-    function schedule() {
-      if (scheduled) return;
-      scheduled = true;
-      window.requestAnimationFrame(update);
-    }
-
-    window.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', schedule, { passive: true });
+    updateStickyOffset();
+    window.addEventListener('resize', updateStickyOffset, { passive: true });
 
     if ('ResizeObserver' in window) {
-      const observer = new ResizeObserver(schedule);
-      observer.observe(layout);
-      observer.observe(panel);
+      const observer = new ResizeObserver(updateStickyOffset);
+      const announcement = document.querySelector('.announcement');
+      const header = document.querySelector('.site-header');
+      if (announcement) observer.observe(announcement);
+      if (header) observer.observe(header);
     }
-
-    schedule();
   }
 
   function installDesignSignals() {
@@ -4702,3 +4678,374 @@
   });
 })();
 
+
+
+/* ============================================================
+   PUZZLES · EXPERIENCIA Y MOVIMIENTO CONSOLIDADO
+   Recorrido opcional, revelado progresivo y sistema de interacción.
+   ============================================================ */
+(function installPuzzlesExperienceLayer() {
+  'use strict';
+
+  const CELLAR_SCENES = [
+    {
+      image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-01-editorial.png',
+      kicker: 'EL UMBRAL',
+      title: 'Entra a PUZZLES',
+      text: 'Un recorrido breve por vinos, licores y destilados antes de abrir la colección.'
+    },
+    {
+      image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png',
+      kicker: 'LA CAVA',
+      title: 'Vinos con intención',
+      text: 'Selecciones para la mesa, el regalo y los momentos que merecen permanecer.'
+    },
+    {
+      image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-03-editorial.png',
+      kicker: 'CELEBRAR',
+      title: 'Burbujas y champagne',
+      text: 'Formatos y etiquetas pensados para brindar, compartir y marcar una ocasión.'
+    },
+    {
+      image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-04-botellas.png',
+      kicker: 'CARÁCTER',
+      title: 'Destilados',
+      text: 'Tequila, whisky, ron, ginebra, mezcal y otras expresiones reunidas con criterio.'
+    },
+    {
+      image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-05-editorial.png',
+      kicker: 'DESCUBRIR',
+      title: 'Una colección viva',
+      text: 'La disponibilidad cambia. La selección se actualiza y cada solicitud se confirma personalmente.'
+    },
+    {
+      image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png',
+      kicker: 'PUZZLES',
+      title: 'Abre el catálogo',
+      text: 'Explora la colección completa, filtra por categoría o marca y guarda tus elecciones.'
+    }
+  ];
+
+  function ready(callback) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', callback, { once: true });
+    } else {
+      callback();
+    }
+  }
+
+  function escapeText(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function installCellarExperience() {
+    if (document.getElementById('puzzlesCellar')) return;
+
+    const hero = document.getElementById('heroCarousel') || document.querySelector('.hero-carousel');
+    if (hero && !document.getElementById('btnOpenCellar')) {
+      const launch = document.createElement('div');
+      launch.className = 'puzzles-cellar-launch';
+      launch.innerHTML = [
+        '<button id="btnOpenCellar" class="puzzles-cellar-launch__button" type="button">',
+        '<span>ENTRAR A LA CAVA</span>',
+        '<small>Recorrido inmersivo opcional</small>',
+        '</button>'
+      ].join('');
+      hero.insertAdjacentElement('afterend', launch);
+    }
+
+    const scenes = CELLAR_SCENES.map(function (scene, index) {
+      const finalScene = index === CELLAR_SCENES.length - 1;
+      return [
+        '<article class="puzzles-cellar__scene" data-cellar-scene="', index, '" style="--cellar-image:url(\'', escapeText(scene.image), '\')">',
+        '<div class="puzzles-cellar__media" aria-hidden="true"></div>',
+        '<div class="puzzles-cellar__shade" aria-hidden="true"></div>',
+        '<div class="puzzles-cellar__copy">',
+        '<span class="puzzles-cellar__kicker">', escapeText(scene.kicker), '</span>',
+        '<h2>', escapeText(scene.title), '</h2>',
+        '<p>', escapeText(scene.text), '</p>',
+        finalScene
+          ? '<button class="puzzles-cellar__catalog-button" type="button" data-cellar-catalog>EXPLORAR CATÁLOGO</button>'
+          : '<span class="puzzles-cellar__scroll-cue">Desliza para continuar</span>',
+        '</div>',
+        '</article>'
+      ].join('');
+    }).join('');
+
+    document.body.insertAdjacentHTML('beforeend', [
+      '<section id="puzzlesCellar" class="puzzles-cellar" aria-hidden="true">',
+      '<header class="puzzles-cellar__topbar">',
+      '<div><strong>PUZZLES</strong><span>VINOS · LICORES · DESTILADOS</span></div>',
+      '<div class="puzzles-cellar__actions">',
+      '<button type="button" data-cellar-catalog>Saltar recorrido</button>',
+      '<button id="btnCloseCellar" type="button" aria-label="Cerrar recorrido">×</button>',
+      '</div>',
+      '</header>',
+      '<div class="puzzles-cellar__progress" aria-hidden="true"><span></span></div>',
+      '<div class="puzzles-cellar__viewport" tabindex="0">',
+      scenes,
+      '</div>',
+      '<nav class="puzzles-cellar__dots" aria-label="Escenas del recorrido">',
+      CELLAR_SCENES.map(function (_, index) {
+        return '<button type="button" data-cellar-jump="' + index + '" aria-label="Ir a escena ' + (index + 1) + '"></button>';
+      }).join(''),
+      '</nav>',
+      '</section>'
+    ].join(''));
+
+    const cellar = document.getElementById('puzzlesCellar');
+    const viewport = cellar.querySelector('.puzzles-cellar__viewport');
+    const progress = cellar.querySelector('.puzzles-cellar__progress span');
+    const sceneNodes = Array.from(cellar.querySelectorAll('[data-cellar-scene]'));
+    const dots = Array.from(cellar.querySelectorAll('[data-cellar-jump]'));
+    let returnFocus = null;
+    let scheduled = false;
+
+    function update() {
+      scheduled = false;
+      const max = Math.max(1, viewport.scrollHeight - viewport.clientHeight);
+      const ratio = Math.max(0, Math.min(1, viewport.scrollTop / max));
+      progress.style.transform = 'scaleX(' + ratio + ')';
+
+      let activeIndex = 0;
+      let nearest = Infinity;
+      sceneNodes.forEach(function (scene, index) {
+        const rect = scene.getBoundingClientRect();
+        const viewportRect = viewport.getBoundingClientRect();
+        const centerDistance = Math.abs((rect.top + rect.height / 2) - (viewportRect.top + viewportRect.height / 2));
+        const visibility = Math.max(0, Math.min(1, 1 - centerDistance / Math.max(1, viewportRect.height)));
+        const localProgress = Math.max(-1, Math.min(1, (viewportRect.top - rect.top) / Math.max(1, rect.height)));
+        scene.style.setProperty('--cellar-visibility', visibility.toFixed(3));
+        scene.style.setProperty('--cellar-shift', (localProgress * 44).toFixed(2) + 'px');
+        if (centerDistance < nearest) {
+          nearest = centerDistance;
+          activeIndex = index;
+        }
+      });
+      dots.forEach(function (dot, index) {
+        dot.classList.toggle('is-active', index === activeIndex);
+        dot.setAttribute('aria-current', index === activeIndex ? 'true' : 'false');
+      });
+    }
+
+    function schedule() {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(update);
+    }
+
+    function openCellar(trigger) {
+      returnFocus = trigger || document.activeElement;
+      cellar.classList.add('is-open');
+      cellar.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('no-scroll', 'cellar-is-open');
+      viewport.scrollTop = 0;
+      window.setTimeout(function () {
+        viewport.focus({ preventScroll: true });
+        update();
+      }, 40);
+    }
+
+    function closeCellar(goCatalog) {
+      cellar.classList.remove('is-open');
+      cellar.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('no-scroll', 'cellar-is-open');
+      if (goCatalog) {
+        const catalog = document.getElementById('catalogo');
+        if (catalog) {
+          window.setTimeout(function () {
+            catalog.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+          }, 80);
+        }
+      } else if (returnFocus && typeof returnFocus.focus === 'function') {
+        returnFocus.focus({ preventScroll: true });
+      }
+    }
+
+    document.getElementById('btnOpenCellar')?.addEventListener('click', function (event) {
+      openCellar(event.currentTarget);
+    });
+    document.getElementById('btnCloseCellar')?.addEventListener('click', function () {
+      closeCellar(false);
+    });
+    cellar.querySelectorAll('[data-cellar-catalog]').forEach(function (button) {
+      button.addEventListener('click', function () { closeCellar(true); });
+    });
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        const index = Number(dot.dataset.cellarJump || 0);
+        sceneNodes[index]?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      });
+    });
+    viewport.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && cellar.classList.contains('is-open')) {
+        event.stopPropagation();
+        closeCellar(false);
+      }
+    }, true);
+    update();
+  }
+
+  function installRevealSystem() {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const selectors = [
+      '.feature-card',
+      '.product-card',
+      '.mobile-list-card',
+      '.catalog-toolbar',
+      '.catalog-meta',
+      '.footer__column',
+      '.studio-workspace',
+      '.pdp-section'
+    ];
+
+    function mark(root) {
+      selectors.forEach(function (selector) {
+        const nodes = [];
+        if (root && root.matches && root.matches(selector)) nodes.push(root);
+        if (root && root.querySelectorAll) nodes.push.apply(nodes, root.querySelectorAll(selector));
+        nodes.forEach(function (node, index) {
+          if (node.dataset.puzzlesReveal === 'true') return;
+          node.dataset.puzzlesReveal = 'true';
+          node.style.setProperty('--reveal-index', String(index % 8));
+          if (reduceMotion) node.classList.add('is-revealed');
+          else revealObserver.observe(node);
+        });
+      });
+    }
+
+    const revealObserver = reduceMotion || !('IntersectionObserver' in window)
+      ? { observe: function (node) { node.classList.add('is-revealed'); } }
+      : new IntersectionObserver(function (entries, observer) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-revealed');
+            observer.unobserve(entry.target);
+          });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+    mark(document);
+    const mutationObserver = new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        record.addedNodes.forEach(function (node) {
+          if (node.nodeType === 1) mark(node);
+        });
+      });
+    });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function installLegalInformation() {
+    if (document.getElementById('puzzlesLegalModal')) return;
+    const legalColumn = document.querySelector('.footer__legal-column');
+    if (legalColumn) {
+      legalColumn.innerHTML = [
+        '<h4>Información</h4>',
+        '<ul class="footer__policy-list">',
+        '<li><button type="button" data-legal-topic="responsible">Compra responsable</button></li>',
+        '<li><button type="button" data-legal-topic="privacy">Aviso de privacidad</button></li>',
+        '<li><button type="button" data-legal-topic="terms">Términos comerciales</button></li>',
+        '<li>Venta exclusiva para mayores de 18 años</li>',
+        '</ul>'
+      ].join('');
+    }
+
+    document.body.insertAdjacentHTML('beforeend', [
+      '<div id="puzzlesLegalBackdrop" class="backdrop puzzles-legal-backdrop"></div>',
+      '<section id="puzzlesLegalModal" class="modal puzzles-legal-modal" role="dialog" aria-modal="true" aria-labelledby="puzzlesLegalTitle">',
+      '<div class="modal__card puzzles-legal-card">',
+      '<div class="modal__head"><div><span class="operational-kicker">PUZZLES</span><h2 id="puzzlesLegalTitle">Información</h2></div><button id="btnClosePuzzlesLegal" class="modal-close" type="button" aria-label="Cerrar">×</button></div>',
+      '<div id="puzzlesLegalBody" class="modal__body puzzles-legal-body"></div>',
+      '</div></section>'
+    ].join(''));
+
+    const copy = {
+      responsible: {
+        title: 'Compra responsable',
+        body: '<p>La venta de bebidas alcohólicas es exclusiva para mayores de 18 años. PUZZLES puede solicitar confirmación de edad y rechazar una solicitud cuando no sea posible verificarla.</p><p>Disfruta con responsabilidad. Evita el exceso y no conduzcas después de consumir alcohol.</p>'
+      },
+      privacy: {
+        title: 'Aviso de privacidad',
+        body: '<p>Los datos proporcionados en formularios, registro, pedidos y solicitudes se utilizan únicamente para atender la operación comercial, dar seguimiento y entregar información solicitada.</p><p>Los datos de contacto internos de PUZZLES no se publican. La información del cliente no se muestra públicamente ni se utiliza para fines ajenos a la solicitud registrada.</p>'
+      },
+      terms: {
+        title: 'Términos comerciales',
+        body: '<p>Los precios, promociones, imágenes y disponibilidad están sujetos a confirmación antes de cerrar el pedido. Una solicitud enviada desde la tienda no representa por sí sola una venta confirmada.</p><p>Las notas de venta y cotizaciones son documentos comerciales y no sustituyen un comprobante fiscal CFDI.</p>'
+      }
+    };
+
+    const modal = document.getElementById('puzzlesLegalModal');
+    const backdrop = document.getElementById('puzzlesLegalBackdrop');
+    const title = document.getElementById('puzzlesLegalTitle');
+    const body = document.getElementById('puzzlesLegalBody');
+    let returnFocus = null;
+
+    function open(topic, trigger) {
+      const item = copy[topic] || copy.terms;
+      returnFocus = trigger || document.activeElement;
+      title.textContent = item.title;
+      body.innerHTML = item.body;
+      modal.classList.add('is-open');
+      backdrop.classList.add('is-open');
+      document.body.classList.add('no-scroll');
+      window.setTimeout(function () { document.getElementById('btnClosePuzzlesLegal')?.focus(); }, 30);
+    }
+
+    function close() {
+      modal.classList.remove('is-open');
+      backdrop.classList.remove('is-open');
+      if (!document.querySelector('.modal.is-open, .cart-drawer.is-open, .puzzles-cellar.is-open')) {
+        document.body.classList.remove('no-scroll');
+      }
+      if (returnFocus && typeof returnFocus.focus === 'function') returnFocus.focus({ preventScroll: true });
+    }
+
+    document.addEventListener('click', function (event) {
+      const trigger = event.target.closest('[data-legal-topic]');
+      if (!trigger) return;
+      open(trigger.dataset.legalTopic, trigger);
+    });
+    document.getElementById('btnClosePuzzlesLegal')?.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && modal.classList.contains('is-open')) close();
+    });
+  }
+
+  function installPaginationMotion() {
+    document.addEventListener('click', function (event) {
+      const pageButton = event.target.closest('.pagination [data-page]');
+      if (!pageButton) return;
+      [document.getElementById('gridView'), document.getElementById('tableView')]
+        .filter(Boolean)
+        .forEach(function (view) {
+          view.classList.add('is-page-transitioning');
+          window.setTimeout(function () { view.classList.remove('is-page-transitioning'); }, 260);
+        });
+    }, true);
+  }
+
+  function enforceCurrentInterfaceRules() {
+    if (typeof state !== 'undefined') state.pageSize = 25;
+    document.documentElement.classList.add('puzzles-experience-ready');
+    document.body.classList.add('puzzles-experience-ready');
+    document.querySelectorAll('[data-public-sku], .public-sku, .product-code-visible, .product-upc-visible').forEach(function (node) {
+      node.remove();
+    });
+  }
+
+  ready(function () {
+    enforceCurrentInterfaceRules();
+    installCellarExperience();
+    installRevealSystem();
+    installLegalInformation();
+    installPaginationMotion();
+  });
+})();
