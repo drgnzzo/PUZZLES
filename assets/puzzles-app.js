@@ -75,6 +75,7 @@
       brands: [],
       editorialIntent: null,
       ageConfirmedThisVisit: false,
+      ageTransitioning: false,
       minPrice: '',
       maxPrice: '',
       includeConsult: true,
@@ -359,7 +360,7 @@ async function init() {
         'accountPanel','accountName','accountEmail','accountRole','btnLogout',
         'productDetailBackdrop','productDetailModal','btnCloseProductDetail','productDetailTitle','productDetailContent',
         'imageZoomBackdrop','imageZoomModal','btnCloseImageZoom','zoomedProductImage',
-        'entrySplash','entrySplashBar'
+        'entrySplash','entrySplashBar','entryTransitionCurtain'
       ].forEach(id => dom[id] = document.getElementById(id));
     }
 
@@ -3374,19 +3375,57 @@ function restoreAgeGate() {
 }
 
 async function confirmAge() {
-  state.ageConfirmedThisVisit = true;
+  if (state.ageTransitioning) return;
+  state.ageTransitioning = true;
 
-  if (state.user && state.sessionToken) {
-    puzzlesStorageSet(
-      STORAGE_KEYS.AGE,
-      'true'
-    );
-  }
+  const curtain = dom.entryTransitionCurtain;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait = function (milliseconds) {
+    return new Promise(function (resolve) {
+      window.setTimeout(resolve, reduceMotion ? 0 : milliseconds);
+    });
+  };
 
-  restoreAgeGate();
-  window.requestAnimationFrame(function () {
+  try {
+    if (curtain) {
+      curtain.setAttribute('aria-hidden', 'false');
+      curtain.classList.remove('is-revealing');
+      curtain.classList.add('is-active');
+    }
+
+    if (dom.ageGate) {
+      dom.ageGate.classList.add('is-leaving');
+    }
+
+    await wait(260);
+
+    state.ageConfirmedThisVisit = true;
+    if (state.user && state.sessionToken) {
+      puzzlesStorageSet(STORAGE_KEYS.AGE, 'true');
+    }
+
+    restoreAgeGate();
+
+    if (state.initialLoadPromise && typeof state.initialLoadPromise.then === 'function') {
+      await Promise.race([
+        Promise.resolve(state.initialLoadPromise).catch(function () {}),
+        wait(650)
+      ]);
+    }
+
     openImmersiveIntro();
-  });
+    await wait(90);
+
+    if (curtain) {
+      curtain.classList.add('is-revealing');
+      await wait(460);
+      curtain.classList.remove('is-active', 'is-revealing');
+      curtain.setAttribute('aria-hidden', 'true');
+    }
+  } finally {
+    if (dom.ageGate) dom.ageGate.classList.remove('is-leaving');
+    state.ageTransitioning = false;
+  }
 }
 
     function denyAge() {
@@ -4205,55 +4244,52 @@ async function confirmAge() {
 function installFilterFollower() {
   const panel = document.getElementById('filtersPanel');
   const layout = document.querySelector('.catalog-layout');
-  if (!panel || !layout) return;
+  const catalog = document.getElementById('catalogo');
+  if (!panel || !layout || !catalog) return;
 
-  const slot = panel.parentElement &&
-    panel.parentElement.classList.contains('filters-panel-slot')
-      ? panel.parentElement
-      : null;
-
-  if (slot && slot.parentElement) {
-    slot.parentElement.insertBefore(panel, slot);
-    slot.remove();
+  const legacySlot = panel.parentElement && panel.parentElement.classList.contains('filters-panel-slot')
+    ? panel.parentElement
+    : null;
+  if (legacySlot && legacySlot.parentElement) {
+    legacySlot.parentElement.insertBefore(panel, legacySlot);
+    legacySlot.remove();
   }
 
-  panel.dataset.followInstalled = 'native';
+  panel.dataset.followInstalled = 'native-sticky';
   panel.classList.remove(
     'filters-panel--follow-ready',
     'is-follow-top',
     'is-following',
-    'is-follow-end'
+    'is-follow-end',
+    'is-js-following'
   );
 
-  [
-    'position', 'top', 'right', 'bottom', 'left', 'width',
-    'height', 'max-height', 'transform', 'z-index'
-  ].forEach(function (property) {
-    panel.style.removeProperty(property);
-  });
+  ['position','top','right','bottom','left','width','height','max-height','transform','z-index']
+    .forEach(function (property) { panel.style.removeProperty(property); });
 
-  function updateOffset() {
-    const announcement = document.querySelector('.announcement');
-    const header = document.querySelector('.site-header');
-    const offset = Math.max(
-      12,
-      Math.ceil(
-        (announcement ? announcement.getBoundingClientRect().height : 0) +
-        (header ? header.getBoundingClientRect().height : 0) +
-        14
-      )
-    );
-
-    document.documentElement.style.setProperty(
-      '--filters-sticky-top',
-      offset + 'px'
-    );
+  function updateStickyMetrics() {
+    const announcement = document.querySelector('body > .announcement');
+    const header = document.querySelector('body > .site-header');
+    const announcementHeight = announcement ? announcement.getBoundingClientRect().height : 0;
+    const headerHeight = header ? header.getBoundingClientRect().height : 0;
+    const offset = Math.max(12, Math.ceil(announcementHeight + headerHeight + 14));
+    document.documentElement.style.setProperty('--filters-sticky-top', offset + 'px');
+    document.documentElement.style.setProperty('--puzzles-fixed-chrome-real-h', Math.ceil(announcementHeight + headerHeight) + 'px');
   }
 
-  updateOffset();
-  window.addEventListener('resize', updateOffset, { passive: true });
-}
+  updateStickyMetrics();
+  window.addEventListener('resize', updateStickyMetrics, { passive: true });
+  window.addEventListener('orientationchange', updateStickyMetrics, { passive: true });
 
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(updateStickyMetrics);
+    const announcement = document.querySelector('body > .announcement');
+    const header = document.querySelector('body > .site-header');
+    if (announcement) observer.observe(announcement);
+    if (header) observer.observe(header);
+    observer.observe(catalog);
+  }
+}
 
   function installDesignSignals() {
     document.documentElement.classList.add('puzzles-design-revisited');
@@ -5092,81 +5128,176 @@ async function submitContactForm(event) {
     const cellar = document.getElementById('puzzlesCellar');
     if (!cellar) return null;
 
-    if (cellar.dataset.controllerInstalled === 'true') {
-      return cellar;
-    }
+    if (cellar.dataset.controllerInstalled === 'true') return cellar;
     cellar.dataset.controllerInstalled = 'true';
 
-    document
-      .querySelectorAll('.puzzles-cellar-launch, #btnOpenCellar')
-      .forEach(function (node) { node.remove(); });
+    document.querySelectorAll('.puzzles-cellar-launch, #btnOpenCellar').forEach(function (node) {
+      node.remove();
+    });
 
     const viewport = cellar.querySelector('.puzzles-immersive-menu__viewport');
     const background = cellar.querySelector('.puzzles-immersive-menu__background');
-    const collectionTerms = new Map([
-      ['wine', ['vino', 'tinto', 'blanco', 'rosado']],
-      ['bubbles', ['champagne', 'espumoso', 'prosecco', 'cava']],
-      ['spirits', ['tequila', 'whisky', 'mezcal', 'ron', 'ginebra', 'vodka', 'brandy', 'cognac', 'licor', 'anis']],
-      ['all', []]
-    ]);
+    const grid = cellar.querySelector('[data-immersive-grid]');
     const fallbackMoments = [
-      { eyebrow: 'CELEBRAR', title: 'Una celebración', text: 'Selecciones para cumpleaños, aniversarios, logros y reuniones especiales.', action: 'intent:celebration', imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-01-editorial.png' },
-      { eyebrow: 'COMPARTIR', title: 'Mesa y sobremesa', text: 'Vinos, aperitivos y bebidas para acompañar cenas y encuentros.', action: 'intent:table', imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-05-editorial.png' },
-      { eyebrow: 'REGALAR', title: 'Un regalo pensado', text: 'Etiquetas con presencia para agradecer, reconocer o celebrar a alguien.', action: 'intent:gift', imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png' },
-      { eyebrow: 'DESCUBRIR', title: 'Algo nuevo', text: 'Explora orígenes, estilos y perfiles que todavía no forman parte de tu colección.', action: 'intent:discovery', imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png' }
+      { eyebrow: 'CELEBRAR', title: 'Una celebración', text: 'Etiquetas para brindar, compartir y marcar una ocasión especial.', action: 'intent:celebration' },
+      { eyebrow: 'COMPARTIR', title: 'Mesa y sobremesa', text: 'Opciones para acompañar una comida, una reunión o una conversación larga.', action: 'intent:table' },
+      { eyebrow: 'REGALAR', title: 'Un regalo pensado', text: 'Botellas con presencia para agradecer, reconocer o celebrar a alguien.', action: 'intent:gift' },
+      { eyebrow: 'DESCUBRIR', title: 'Algo diferente', text: 'Explora estilos, orígenes y perfiles que todavía no forman parte de tu colección.', action: 'intent:discovery' }
+    ];
+    const fallbackFilters = [
+      'Vinos tintos','Vinos blancos','Vinos rosados','Vinos espumosos','Whisky','Tequila',
+      'Mezcal','Ron','Ginebra','Vodka','Brandy','Cognac','Vermouth','Licores'
+    ];
+    const bannerImages = [
+      'https://drgnzzo.github.io/PUZZLES/assets/banner-01-editorial.png',
+      'https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png',
+      'https://drgnzzo.github.io/PUZZLES/assets/banner-03-editorial.png',
+      'https://drgnzzo.github.io/PUZZLES/assets/banner-04-botellas.png',
+      'https://drgnzzo.github.io/PUZZLES/assets/banner-05-editorial.png',
+      'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png'
     ];
     let returnFocus = null;
+    let renderCounter = 0;
 
     function normalize(value) {
-      return String(value || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase();
+      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
     }
 
-    function categoryNames() {
-      return Array.isArray(state.categories)
-        ? state.categories.map(function (category) {
-            return typeof category === 'string'
-              ? category
-              : String(category && category.name || '');
-          }).filter(Boolean)
-        : [];
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function shuffle(items) {
+      const result = items.slice();
+      for (let index = result.length - 1; index > 0; index--) {
+        const randomIndex = Math.floor(Math.random() * (index + 1));
+        const temporary = result[index];
+        result[index] = result[randomIndex];
+        result[randomIndex] = temporary;
+      }
+      return result;
+    }
+
+    function categoryRecords() {
+      const records = Array.isArray(state.categories) ? state.categories : [];
+      return records.map(function (category) {
+        const name = typeof category === 'string' ? category : String(category && category.name || '');
+        const count = typeof category === 'object' && category ? Number(category.count || 0) : 0;
+        return { name: name.trim(), count: count };
+      }).filter(function (item) {
+        const key = normalize(item.name);
+        return item.name && key !== 'todas' && key !== 'todos' && key !== 'otros' && key !== 'otro';
+      });
+    }
+
+    function brandRecords() {
+      const counts = new Map();
+      (Array.isArray(state.products) ? state.products : []).forEach(function (product) {
+        const brand = String(product && product.brand || '').trim();
+        if (!brand) return;
+        counts.set(brand, (counts.get(brand) || 0) + 1);
+      });
+      return (Array.isArray(state.brands) ? state.brands : [])
+        .map(function (brand) { return { name: String(brand || '').trim(), count: counts.get(String(brand || '').trim()) || 0 }; })
+        .filter(function (item) { return item.name && item.count >= 1; });
+    }
+
+    function cardEditorial(name, kind) {
+      const key = normalize(name);
+      let eyebrow = kind === 'brand' ? 'MARCA DESTACADA' : 'UNA RUTA';
+      let text = kind === 'brand'
+        ? 'Explora las etiquetas disponibles de ' + name + ' y encuentra la presentación que encaja contigo.'
+        : 'Entra directamente a la selección de ' + name.toLowerCase() + ' disponible en el catálogo.';
+
+      if (/espum|champ|prosecco|cava/.test(key)) { eyebrow = 'PARA BRINDAR'; text = 'Burbujas y etiquetas para una celebración, un regalo o una mesa especial.'; }
+      else if (/tinto|blanco|rosado|vino/.test(key)) { eyebrow = 'DE LA BODEGA'; text = 'Vinos para la mesa, la sobremesa, el regalo y la cava personal.'; }
+      else if (/whisk/.test(key)) { eyebrow = 'CARÁCTER'; text = 'Whiskies con distintos orígenes, estilos, barricas y perfiles.'; }
+      else if (/tequila|mezcal|agave/.test(key)) { eyebrow = 'AGAVE'; text = 'Destilados de agave para descubrir perfiles jóvenes, reposados y añejos.'; }
+      else if (/gin|ginebra/.test(key)) { eyebrow = 'BOTÁNICOS'; text = 'Ginebras para coctelería, aperitivo y combinaciones de perfil aromático.'; }
+      else if (/vermouth|aperitiv/.test(key)) { eyebrow = 'APERITIVO'; text = 'Vermouths y aperitivos para abrir la mesa o alargar la sobremesa.'; }
+      else if (/licor/.test(key)) { eyebrow = 'SOBREMESA'; text = 'Licores para servir solos, con hielo o dentro de una mezcla.'; }
+      else if (/ron/.test(key)) { eyebrow = 'ORIGEN Y BARRICA'; text = 'Rones blancos, dorados y añejos para coctelería o degustación.'; }
+      else if (/vodka/.test(key)) { eyebrow = 'PUREZA'; text = 'Vodkas para mezclas limpias, coctelería y servicio frío.'; }
+      else if (/brandy|cognac/.test(key)) { eyebrow = 'SOBREMESA'; text = 'Destilados de uva con perfiles cálidos, frutales y de barrica.'; }
+      return { eyebrow: eyebrow, text: text };
+    }
+
+    function cardLimit() {
+      const width = window.innerWidth || document.documentElement.clientWidth || 1280;
+      if (width < 620) return { filters: 3, moments: 1 };
+      if (width < 960) return { filters: 4, moments: 1 };
+      if (width < 1360) return { filters: 5, moments: 2 };
+      return { filters: 6, moments: 2 };
+    }
+
+    function makeFilterPool() {
+      const categories = categoryRecords().map(function (item) {
+        return { kind: 'category', value: item.name, count: item.count };
+      });
+      const brands = brandRecords().map(function (item) {
+        return { kind: 'brand', value: item.name, count: item.count };
+      });
+      const pool = categories.concat(brands.length ? shuffle(brands).slice(0, Math.max(2, Math.ceil(categories.length / 3))) : []);
+      if (pool.length) return shuffle(pool);
+      return shuffle(fallbackFilters.map(function (name) { return { kind: 'search', value: name, count: 0 }; }));
+    }
+
+    function currentMoments() {
+      const remote = Array.isArray(state.store && state.store.moments) ? state.store.moments : [];
+      return shuffle(fallbackMoments.map(function (fallback, index) {
+        return Object.assign({}, fallback, remote[index] || {});
+      }));
+    }
+
+    function cardMarkup(card, index, featured) {
+      const image = card.imageUrl || bannerImages[(index + renderCounter) % bannerImages.length];
+      const title = card.title || card.value;
+      const editorial = card.kind === 'moment' ? { eyebrow: card.eyebrow || 'UN MOMENTO', text: card.text || '' } : cardEditorial(title, card.kind);
+      const attributes = card.kind === 'moment'
+        ? 'data-immersive-action="' + escapeHtml(card.action || 'catalog') + '"'
+        : 'data-immersive-filter-kind="' + escapeHtml(card.kind) + '" data-immersive-filter-value="' + escapeHtml(card.value) + '"';
+      return '<article class="puzzles-immersive-card' + (featured ? ' puzzles-immersive-card--featured' : '') + '" data-immersive-image="' + escapeHtml(image) + '" style="--immersive-card-image:url(\'' + escapeHtml(image) + '\')">' +
+        '<div class="puzzles-immersive-card__image" aria-hidden="true"></div><div class="puzzles-immersive-card__shade" aria-hidden="true"></div>' +
+        '<div class="puzzles-immersive-card__content"><span>' + escapeHtml(editorial.eyebrow) + '</span><h2>' + escapeHtml(title) + '</h2><p>' + escapeHtml(editorial.text) + '</p>' +
+        '<button type="button" ' + attributes + '>EXPLORAR <span aria-hidden="true">→</span></button></div></article>';
+    }
+
+    function renderCards() {
+      if (!grid) return;
+      renderCounter++;
+      const limits = cardLimit();
+      const filterCards = makeFilterPool().slice(0, limits.filters);
+      const momentCards = currentMoments().slice(0, limits.moments).map(function (moment) {
+        return Object.assign({ kind: 'moment' }, moment);
+      });
+      const allCard = {
+        kind: 'all',
+        value: 'Todas',
+        title: 'Catálogo completo',
+        eyebrow: 'TODAS LAS PIEZAS',
+        text: 'Entra sin filtros y recorre la colección completa.',
+        imageUrl: bannerImages[(renderCounter + 4) % bannerImages.length]
+      };
+      const cards = filterCards.concat(momentCards);
+      cards.splice(Math.min(2, cards.length), 0, allCard);
+      grid.innerHTML = cards.map(function (card, index) {
+        if (card.kind === 'all') {
+          return cardMarkup({ kind: 'moment', title: card.title, eyebrow: card.eyebrow, text: card.text, action: 'catalog', imageUrl: card.imageUrl }, index, index === 0);
+        }
+        return cardMarkup(card, index, index === 0);
+      }).join('');
+      cellar.dataset.renderSource = categoryRecords().length ? 'catalog' : 'fallback';
+      const first = grid.querySelector('[data-immersive-image]');
+      if (first) setBackground(first.dataset.immersiveImage, 'tour');
     }
 
     function setBackground(image, mood) {
       if (background && image) {
-        background.style.setProperty(
-          '--immersive-active-image',
-          "url('" + String(image).replace(/'/g, "\\'") + "')"
-        );
+        background.style.setProperty('--immersive-active-image', "url('" + String(image).replace(/'/g, "\\'") + "')");
       }
       cellar.dataset.immersiveMood = mood || 'all';
-    }
-
-    function renderMoments() {
-      const remote = Array.isArray(state.store && state.store.moments)
-        ? state.store.moments.slice(0, 4)
-        : [];
-      const moments = fallbackMoments.map(function (fallback, index) {
-        return Object.assign({}, fallback, remote[index] || {});
-      });
-
-      cellar.querySelectorAll('[data-immersive-moment-slot]').forEach(function (card) {
-        const index = Number(card.dataset.immersiveMomentSlot || 0);
-        const moment = moments[index] || fallbackMoments[index % fallbackMoments.length];
-        const image = moment.imageUrl || moment.image || fallbackMoments[index % fallbackMoments.length].imageUrl;
-        const eyebrow = card.querySelector('.puzzles-immersive-card__content > span');
-        const title = card.querySelector('.puzzles-immersive-card__content h2');
-        const text = card.querySelector('.puzzles-immersive-card__content p');
-        const button = card.querySelector('[data-immersive-moment-action]');
-        card.dataset.immersiveImage = image;
-        card.style.setProperty('--immersive-card-image', "url('" + String(image).replace(/'/g, "\\'") + "')");
-        if (eyebrow) eyebrow.textContent = moment.eyebrow || fallbackMoments[index].eyebrow;
-        if (title) title.textContent = moment.title || fallbackMoments[index].title;
-        if (text) text.textContent = moment.text || fallbackMoments[index].text;
-        if (button) button.dataset.immersiveMomentAction = moment.action || fallbackMoments[index].action;
-      });
     }
 
     function resetCatalog() {
@@ -5182,78 +5313,56 @@ async function submitContactForm(event) {
     function refreshCatalogUi() {
       if (typeof renderCategories === 'function') renderCategories();
       if (typeof renderBrands === 'function') renderBrands();
+      if (dom.brandFilter) dom.brandFilter.value = state.brand || 'Todas';
       if (typeof applyFilters === 'function') applyFilters();
     }
 
-    function applyCollection(key) {
+    function applyFilter(kind, value) {
       resetCatalog();
-      const terms = collectionTerms.get(key) || [];
-      if (terms.length) {
-        const categories = categoryNames().filter(function (category) {
-          const categoryText = normalize(category);
-          return terms.some(function (term) {
-            return categoryText.includes(normalize(term));
-          });
-        });
-        state.editorialIntent = categories.length
-          ? { key: 'immersive-' + key, categories: categories, sort: 'featured' }
-          : null;
-        if (!categories.length) {
-          state.search = terms[0] || '';
-          if (dom.searchInput) dom.searchInput.value = state.search;
-        }
+      if (kind === 'category') state.category = value || 'Todas';
+      else if (kind === 'brand') state.brand = value || 'Todas';
+      else if (kind === 'search') {
+        state.search = value || '';
+        if (dom.searchInput) dom.searchInput.value = state.search;
       }
-      document.body.dataset.catalogMood = key || 'all';
+      document.body.dataset.catalogMood = normalize(value || kind || 'all').replace(/[^a-z0-9]+/g, '-');
       refreshCatalogUi();
     }
 
     function openCellar(trigger) {
-      renderMoments();
       returnFocus = trigger || document.activeElement;
+      renderCards();
       cellar.classList.add('is-open');
       cellar.setAttribute('aria-hidden', 'false');
       document.body.classList.remove('age-gate-visible');
       document.body.classList.add('no-scroll', 'cellar-is-open');
       if (viewport) viewport.scrollTop = 0;
-      const firstCard = cellar.querySelector('[data-immersive-mood]');
-      setBackground(
-        firstCard && firstCard.dataset.immersiveImage,
-        firstCard && firstCard.dataset.immersiveMood
-      );
 
       if (state.initialLoadPromise && typeof state.initialLoadPromise.then === 'function') {
         Promise.resolve(state.initialLoadPromise).then(function () {
-          if (cellar.classList.contains('is-open')) renderMoments();
+          if (cellar.classList.contains('is-open') && cellar.dataset.renderSource === 'fallback') renderCards();
         }).catch(function () {});
       }
 
       window.setTimeout(function () {
-        const first = cellar.querySelector('[data-immersive-collection]');
-        if (first) {
-          try { first.focus({ preventScroll: true }); }
-          catch (_) { first.focus(); }
+        const firstButton = cellar.querySelector('.puzzles-immersive-card button');
+        if (firstButton) {
+          try { firstButton.focus({ preventScroll: true }); }
+          catch (_) { firstButton.focus(); }
         }
-      }, 40);
+      }, 380);
     }
 
     function closeCellar(goCatalog) {
       cellar.classList.remove('is-open');
       cellar.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('cellar-is-open');
-      if (!document.querySelector('.modal.is-open, .drawer.is-open, .image-zoom-modal.is-open')) {
-        document.body.classList.remove('no-scroll');
-      }
-
+      if (!document.querySelector('.modal.is-open, .drawer.is-open, .image-zoom-modal.is-open')) document.body.classList.remove('no-scroll');
       if (goCatalog) {
         const catalog = document.getElementById('catalogo');
-        if (catalog) {
-          window.setTimeout(function () {
-            catalog.scrollIntoView({
-              behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-              block: 'start'
-            });
-          }, 40);
-        }
+        if (catalog) window.setTimeout(function () {
+          catalog.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+        }, 60);
       } else if (returnFocus && typeof returnFocus.focus === 'function') {
         try { returnFocus.focus({ preventScroll: true }); }
         catch (_) { returnFocus.focus(); }
@@ -5265,43 +5374,48 @@ async function submitContactForm(event) {
 
     cellar.addEventListener('pointerover', function (event) {
       const target = event.target.closest('[data-immersive-image]');
-      if (!target) return;
-      setBackground(target.dataset.immersiveImage, target.dataset.immersiveMood || 'moment');
+      if (target) setBackground(target.dataset.immersiveImage, 'tour');
     });
-
     cellar.addEventListener('focusin', function (event) {
       const target = event.target.closest('[data-immersive-image]');
-      if (!target) return;
-      setBackground(target.dataset.immersiveImage, target.dataset.immersiveMood || 'moment');
+      if (target) setBackground(target.dataset.immersiveImage, 'tour');
     });
-
     cellar.addEventListener('click', function (event) {
-      const skip = event.target.closest('[data-cellar-catalog]');
-      if (skip) {
-        event.preventDefault();
+      const card = event.target.closest('.puzzles-immersive-card');
+      const button = event.target.closest('.puzzles-immersive-card button, [data-cellar-catalog]');
+      if (card && !button) {
+        const cardButton = card.querySelector('button');
+        if (cardButton) cardButton.click();
+        return;
+      }
+      if (!button) return;
+      event.preventDefault();
+
+      if (button.matches('[data-cellar-catalog]')) {
         resetCatalog();
-        document.body.dataset.catalogMood = 'all';
         refreshCatalogUi();
         closeCellar(true);
         return;
       }
 
-      const collectionButton = event.target.closest('[data-immersive-collection]');
-      if (collectionButton) {
-        event.preventDefault();
-        applyCollection(collectionButton.dataset.immersiveCollection || 'all');
+      if (button.dataset.immersiveFilterKind) {
+        applyFilter(button.dataset.immersiveFilterKind, button.dataset.immersiveFilterValue || '');
         closeCellar(true);
         return;
       }
 
-      const momentButton = event.target.closest('[data-immersive-moment-action]');
-      if (momentButton) {
-        event.preventDefault();
-        const action = momentButton.dataset.immersiveMomentAction || 'catalog';
-        closeCellar(false);
-        window.setTimeout(function () {
-          if (typeof handleEditorialAction === 'function') handleEditorialAction(action);
-        }, 20);
+      if (button.dataset.immersiveAction) {
+        const action = button.dataset.immersiveAction || 'catalog';
+        if (action === 'catalog') {
+          resetCatalog();
+          refreshCatalogUi();
+          closeCellar(true);
+        } else {
+          closeCellar(false);
+          window.setTimeout(function () {
+            if (typeof handleEditorialAction === 'function') handleEditorialAction(action);
+          }, 30);
+        }
       }
     });
 
@@ -5312,6 +5426,13 @@ async function submitContactForm(event) {
       refreshCatalogUi();
       closeCellar(true);
     }, true);
+
+    let resizeTimer = null;
+    window.addEventListener('resize', function () {
+      if (!cellar.classList.contains('is-open')) return;
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(renderCards, 180);
+    }, { passive: true });
 
     return cellar;
   }
