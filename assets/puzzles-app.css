@@ -5774,7 +5774,7 @@ a,
   touch-action: manipulation;
 }
 
-/* Fondo de exhibición tipo ecommerce: gris cálido y una base suave. */
+/* Superficie neutra para producto: sin spotlight, círculo, halo ni filtros. */
 .product-card__visual,
 .product-table__thumb,
 .mobile-list-card__visual,
@@ -5782,31 +5782,28 @@ a,
 .cart-item__visual {
   position: relative !important;
   isolation: isolate !important;
-  background:
-    radial-gradient(circle at 50% 46%, #f7f7f5 0%, #efefec 55%, #e6e6e2 100%) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(120,120,112,.16),
-    inset 0 -18px 32px rgba(80,80,70,.035) !important;
+  background: #f5f3ed !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
   color-scheme: only light;
   forced-color-adjust: none;
 }
 
+.product-card__visual::before,
 .product-card__visual::after,
+.product-table__thumb::before,
 .product-table__thumb::after,
+.mobile-list-card__visual::before,
 .mobile-list-card__visual::after,
+.pdp-image-button::before,
 .pdp-image-button::after,
+.cart-item__visual::before,
 .cart-item__visual::after {
-  content: '' !important;
-  position: absolute !important;
-  z-index: 0 !important;
-  left: 20% !important;
-  right: 20% !important;
-  bottom: 7% !important;
-  height: 7% !important;
-  display: block !important;
-  border-radius: 50% !important;
-  background: radial-gradient(ellipse, rgba(25,25,20,.20) 0%, rgba(25,25,20,0) 72%) !important;
-  pointer-events: none !important;
+  content: none !important;
+  display: none !important;
+  background: none !important;
+  box-shadow: none !important;
 }
 
 .product-card__image,
@@ -5818,12 +5815,9 @@ a,
   position: relative;
   z-index: 1;
   background: transparent !important;
-  mix-blend-mode: multiply !important;
-  filter:
-    contrast(1.075)
-    brightness(.995)
-    saturate(1.025)
-    drop-shadow(0 5px 5px rgba(0,0,0,.13)) !important;
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  box-shadow: none !important;
   color-scheme: only light;
   forced-color-adjust: none;
 }
@@ -6008,8 +6002,9 @@ a,
   min-width: 0 !important;
   padding: clamp(20px, 3vw, 38px) !important;
   border-right: 1px solid #2d2d2d !important;
-  background:
-    radial-gradient(circle at 50% 46%, #fafaf7 0%, #efefeb 62%, #e3e3de 100%) !important;
+  background: #f5f3ed !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }
 
 .pdp-simple .pdp-image-button {
@@ -6020,12 +6015,10 @@ a,
   max-height: 430px !important;
   padding: 0 !important;
   overflow: hidden !important;
-  border: 1px solid #d7d7d1 !important;
-  background:
-    radial-gradient(circle at 50% 48%, #ffffff 0%, #f3f3ef 58%, #e9e9e4 100%) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.72),
-    0 18px 44px rgba(0,0,0,.12) !important;
+  border: 0 !important;
+  background: #f8f6f0 !important;
+  background-image: none !important;
+  box-shadow: none !important;
   cursor: zoom-in !important;
 }
 
@@ -8658,324 +8651,6 @@ body > main {
   }
 }
 
-/* Botón de acceso al recorrido: separado del carrusel para no tapar imágenes. */
-.puzzles-cellar-launch {
-  display: flex;
-  justify-content: center;
-  padding: 18px 18px 30px;
-  background: linear-gradient(180deg, rgba(10,10,10,.98), #111);
-}
-
-.puzzles-cellar-launch__button {
-  display: inline-flex;
-  min-width: min(330px, calc(100vw - 36px));
-  align-items: center;
-  justify-content: space-between;
-  gap: 22px;
-  padding: 14px 18px;
-  border: 1px solid rgba(209,173,101,.42);
-  background: rgba(255,255,255,.025);
-  color: #f6f1e6;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    transform var(--puzzles-motion-fast) ease,
-    border-color var(--puzzles-motion-fast) ease,
-    background var(--puzzles-motion-fast) ease,
-    box-shadow var(--puzzles-motion-fast) ease;
-}
-
-.puzzles-cellar-launch__button span {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .18em;
-}
-
-.puzzles-cellar-launch__button small {
-  color: #aaa497;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .04em;
-}
-
-.puzzles-cellar-launch__button:hover,
-.puzzles-cellar-launch__button:focus-visible {
-  transform: translateY(-2px);
-  border-color: rgba(209,173,101,.9);
-  background: rgba(209,173,101,.08);
-  box-shadow: 0 18px 45px rgba(0,0,0,.24);
-}
-
-/* Recorrido 2.5D opcional. */
-.puzzles-cellar {
-  position: fixed;
-  inset: 0;
-  z-index: 9000;
-  display: grid;
-  grid-template-rows: auto 2px minmax(0,1fr);
-  visibility: hidden;
-  opacity: 0;
-  background: #050505;
-  color: #fff;
-  pointer-events: none;
-  transition:
-    opacity var(--puzzles-motion-slow) var(--puzzles-ease-out),
-    visibility var(--puzzles-motion-slow) step-end;
-}
-
-.puzzles-cellar.is-open {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
-  transition:
-    opacity var(--puzzles-motion-slow) var(--puzzles-ease-out),
-    visibility 0s step-start;
-}
-
-.puzzles-cellar__topbar {
-  position: relative;
-  z-index: 20;
-  display: flex;
-  min-height: 72px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 12px clamp(18px,4vw,56px);
-  border-bottom: 1px solid rgba(255,255,255,.12);
-  background: rgba(5,5,5,.84);
-  backdrop-filter: blur(18px);
-}
-
-.puzzles-cellar__topbar > div:first-child {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-}
-
-.puzzles-cellar__topbar strong {
-  color: #fff;
-  font-family: inherit;
-  font-size: clamp(18px,2vw,25px);
-  letter-spacing: .16em;
-}
-
-.puzzles-cellar__topbar span {
-  color: #a8a398;
-  font-size: 10px;
-  letter-spacing: .16em;
-}
-
-.puzzles-cellar__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.puzzles-cellar__actions button,
-.puzzles-cellar__catalog-button {
-  border: 1px solid rgba(255,255,255,.2);
-  background: rgba(0,0,0,.28);
-  color: #fff;
-  font: inherit;
-  cursor: pointer;
-  transition:
-    border-color var(--puzzles-motion-fast) ease,
-    background var(--puzzles-motion-fast) ease,
-    transform var(--puzzles-motion-fast) ease;
-}
-
-.puzzles-cellar__actions button:first-child {
-  padding: 10px 14px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-#btnCloseCellar {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  padding: 0;
-  font-size: 25px;
-  line-height: 1;
-}
-
-.puzzles-cellar__actions button:hover,
-.puzzles-cellar__actions button:focus-visible,
-.puzzles-cellar__catalog-button:hover,
-.puzzles-cellar__catalog-button:focus-visible {
-  border-color: var(--puzzles-cellar-gold);
-  background: rgba(209,173,101,.13);
-  transform: translateY(-1px);
-}
-
-.puzzles-cellar__progress {
-  position: relative;
-  z-index: 25;
-  overflow: hidden;
-  background: rgba(255,255,255,.09);
-}
-
-.puzzles-cellar__progress span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform: scaleX(0);
-  transform-origin: left;
-  background: var(--puzzles-cellar-gold);
-  transition: transform 90ms linear;
-}
-
-.puzzles-cellar__viewport {
-  position: relative;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  overscroll-behavior: contain;
-  outline: none;
-}
-
-.puzzles-cellar__scene {
-  --cellar-visibility: 0;
-  --cellar-shift: 0px;
-  position: relative;
-  display: grid;
-  min-height: 100%;
-  place-items: center;
-  overflow: hidden;
-  scroll-snap-align: start;
-  isolation: isolate;
-}
-
-.puzzles-cellar__media,
-.puzzles-cellar__shade {
-  position: absolute;
-  inset: -5%;
-}
-
-.puzzles-cellar__media {
-  z-index: -3;
-  background-image: var(--cellar-image);
-  background-position: center;
-  background-size: cover;
-  transform: translate3d(0,var(--cellar-shift),0) scale(calc(1.09 - var(--cellar-visibility) * .035));
-  filter: saturate(.86) contrast(1.05) brightness(.7);
-  transition: filter 260ms ease;
-}
-
-.puzzles-cellar__shade {
-  z-index: -2;
-  background:
-    radial-gradient(circle at 50% 46%, rgba(0,0,0,.04), rgba(0,0,0,.66) 68%),
-    linear-gradient(90deg, rgba(0,0,0,.7), rgba(0,0,0,.12) 52%, rgba(0,0,0,.58));
-}
-
-.puzzles-cellar__scene::after {
-  content: '';
-  position: absolute;
-  inset: auto 8% 6% 8%;
-  z-index: -1;
-  height: 25%;
-  border: 1px solid rgba(209,173,101,.13);
-  border-top-color: rgba(209,173,101,.34);
-  background:
-    repeating-linear-gradient(90deg, transparent 0 10%, rgba(209,173,101,.09) 10% 10.2%),
-    linear-gradient(180deg, rgba(255,255,255,.025), transparent);
-  transform: perspective(700px) rotateX(68deg);
-  transform-origin: bottom;
-  opacity: calc(.3 + var(--cellar-visibility) * .65);
-}
-
-.puzzles-cellar__copy {
-  width: min(780px, calc(100% - 38px));
-  padding: clamp(26px,5vw,56px);
-  border-left: 1px solid rgba(209,173,101,.7);
-  background: linear-gradient(90deg, rgba(5,5,5,.72), rgba(5,5,5,.24));
-  backdrop-filter: blur(4px);
-  opacity: calc(.35 + var(--cellar-visibility) * .65);
-  transform: translate3d(0,calc((1 - var(--cellar-visibility)) * 24px),0);
-}
-
-.puzzles-cellar__kicker {
-  display: block;
-  margin-bottom: 12px;
-  color: var(--puzzles-cellar-gold);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .24em;
-}
-
-.puzzles-cellar__copy h2 {
-  max-width: 720px;
-  margin: 0;
-  color: #fff;
-  font-size: clamp(44px,8vw,108px);
-  font-weight: 500;
-  letter-spacing: -.04em;
-  line-height: .9;
-  text-wrap: balance;
-}
-
-.puzzles-cellar__copy p {
-  max-width: 590px;
-  margin: 22px 0 0;
-  color: #e6e1d7;
-  font-size: clamp(15px,1.5vw,20px);
-  line-height: 1.65;
-}
-
-.puzzles-cellar__scroll-cue {
-  display: inline-block;
-  margin-top: 28px;
-  color: #aaa497;
-  font-size: 10px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-}
-
-.puzzles-cellar__catalog-button {
-  margin-top: 30px;
-  padding: 14px 18px;
-  border-color: var(--puzzles-cellar-gold);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .17em;
-}
-
-.puzzles-cellar__dots {
-  position: fixed;
-  top: 50%;
-  right: clamp(10px,2vw,28px);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transform: translateY(-50%);
-}
-
-.puzzles-cellar__dots button {
-  width: 6px;
-  height: 22px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255,255,255,.3);
-  cursor: pointer;
-  transition:
-    height var(--puzzles-motion-fast) ease,
-    background var(--puzzles-motion-fast) ease;
-}
-
-.puzzles-cellar__dots button.is-active {
-  height: 42px;
-  background: var(--puzzles-cellar-gold);
-}
-
 /* Revelado progresivo: el contenido sigue siendo visible sin JS. */
 .puzzles-experience-ready [data-puzzles-reveal="true"] {
   opacity: 0;
@@ -9043,24 +8718,21 @@ body > main {
   margin: 0 0 16px;
 }
 
-/* Control visual de productos claros mientras el procesamiento real llega al Core. */
+/* Imágenes reales, sin edición artificial. */
 .product-card__visual,
 .mobile-list-card__visual,
 .product-detail-visual,
 .product-table__thumb {
-  background:
-    radial-gradient(circle at 50% 58%, rgba(218,211,197,.42), rgba(245,241,232,.92) 57%, #ebe5da 100%) !important;
+  background: #fff !important;
+  background-image: none !important;
 }
 
 .product-card__visual img,
 .mobile-list-card__visual img,
 .product-detail-visual img,
 .product-table__thumb img {
-  filter:
-    contrast(1.055)
-    saturate(1.015)
-    drop-shadow(0 1px 0 rgba(35,30,24,.18))
-    drop-shadow(0 10px 12px rgba(0,0,0,.11)) !important;
+  filter: none !important;
+  box-shadow: none !important;
 }
 
 @media (max-width: 760px) {
@@ -9335,161 +9007,524 @@ body > main {
   box-shadow: none !important;
 }
 
-/* Cava 2.5D: arquitectura, anaqueles y profundidad vinculada al scroll. */
-.puzzles-cellar__architecture {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
-  pointer-events: none;
-  perspective: 900px;
+/* El splash único vive en GitHub index.html. No se muestra un segundo splash
+   dentro de la Web App de Apps Script. */
+#entrySplash,
+.entry-splash {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
-.puzzles-cellar__architecture > span {
-  position: absolute;
-  display: block;
+/* Edad: superficie absolutamente opaca y por encima de toda la aplicación. */
+html body #ageGate,
+html body .age-gate {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  padding: 14px !important;
+  overflow: auto !important;
+  background: #000 !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+html body #ageGate.hidden,
+html body #ageGate[aria-hidden="true"] {
+  display: none !important;
+}
+#ageGate .age-gate__card {
+  background: #101010 !important;
+  opacity: 1 !important;
+}
+body.age-gate-visible .hero-carousel__controls,
+body.age-gate-visible .site-header,
+body.age-gate-visible .announcement,
+body.cellar-is-open .hero-carousel__controls {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
-.puzzles-cellar__light-beam {
-  top: -22%;
-  left: 50%;
-  width: min(78vw, 980px);
-  height: 110%;
-  background: conic-gradient(from 166deg at 50% 0%, transparent 0 43%, rgba(229,205,151,.13) 48%, rgba(229,205,151,.025) 55%, transparent 61% 100%);
-  filter: blur(10px);
-  opacity: calc(.34 + var(--cellar-visibility, 0) * .5);
-  transform: translate3d(calc(-50% + var(--cellar-progress, 0) * -18px), 0, 0);
+/* Las antiguas rutas editoriales dejan de existir en la tienda normal. */
+#intentWelcomeBackdrop,
+#intentWelcomeModal,
+#btnMomentsHeader,
+.feature-strip,
+.puzzles-cellar-launch,
+#btnOpenCellar {
+  display: none !important;
 }
 
-.puzzles-cellar__shelf {
-  right: -6%;
-  left: -6%;
-  height: 33%;
-  border-top: 2px solid rgba(209,173,101,.31);
-  border-bottom: 14px solid rgba(18,13,10,.82);
-  background:
-    repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 7.5%),
-    linear-gradient(180deg, rgba(66,40,23,.28), rgba(9,7,6,.7));
-  box-shadow: 0 25px 55px rgba(0,0,0,.52);
-  transform-origin: center;
+/* Hero limpio: los controles pertenecen al banner y no pueden caer sobre el catálogo. */
+.hero-carousel {
+  position: relative !important;
+  isolation: isolate !important;
+  min-height: clamp(430px, 58vw, 660px) !important;
+  overflow: hidden !important;
+}
+.hero-carousel__slides,
+.hero-slide {
+  position: absolute !important;
+  inset: 0 !important;
+  min-height: 100% !important;
+}
+.hero-carousel > .hero-carousel__controls,
+.hero-carousel .hero-carousel__controls {
+  position: absolute !important;
+  z-index: 30 !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 18px !important;
+  width: min(1180px, calc(100% - 40px)) !important;
+  margin: 0 !important;
+  transform: translateX(-50%) !important;
 }
 
-.puzzles-cellar__shelf--back {
-  top: 16%;
-  opacity: .45;
-  transform: translate3d(calc(var(--cellar-progress, 0) * -12px), calc(var(--cellar-progress, 0) * 24px), -110px) scale(.84);
+/* Introducción inmersiva: aparece justo después de +18 y reúne categorías y
+   momentos dentro de una sola cuadrícula de tarjetas grandes. */
+.puzzles-cellar.puzzles-immersive-menu {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147482000 !important;
+  display: block !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  background: #050505 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: none !important;
+  transition: opacity 220ms cubic-bezier(.22,1,.36,1), visibility 220ms ease !important;
+}
+.puzzles-cellar.puzzles-immersive-menu.is-open {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+.puzzles-immersive-menu__background {
+  position: absolute !important;
+  inset: -3% !important;
+  z-index: 0 !important;
+  background-image:
+    linear-gradient(90deg, rgba(0,0,0,.91), rgba(0,0,0,.48) 52%, rgba(0,0,0,.80)),
+    linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.88)),
+    var(--immersive-active-image, url('https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png')) !important;
+  background-position: center !important;
+  background-size: cover !important;
+  filter: saturate(.88) contrast(1.04) !important;
+  transform: scale(1.035) !important;
+  transition: background-image 300ms ease, filter 300ms ease !important;
+}
+.puzzles-immersive-menu__topbar {
+  position: absolute !important;
+  z-index: 5 !important;
+  top: 0 !important;
+  right: 0 !important;
+  left: 0 !important;
+  min-height: 72px !important;
+  padding: max(14px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 14px max(22px, env(safe-area-inset-left)) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  border-bottom: 1px solid rgba(255,255,255,.15) !important;
+  background: rgba(0,0,0,.76) !important;
+  backdrop-filter: blur(12px) !important;
+}
+.puzzles-immersive-menu__topbar > div {
+  display: grid !important;
+  gap: 2px !important;
+}
+.puzzles-immersive-menu__topbar strong {
+  color: #fff !important;
+  font-size: 16px !important;
+  letter-spacing: .14em !important;
+}
+.puzzles-immersive-menu__topbar span {
+  color: rgba(255,255,255,.60) !important;
+  font-size: 8px !important;
+  letter-spacing: .16em !important;
+}
+.puzzles-immersive-menu__skip {
+  min-height: 42px !important;
+  padding: 0 16px !important;
+  border: 1px solid rgba(255,255,255,.45) !important;
+  background: #080808 !important;
+  color: #fff !important;
+  font-size: 9px !important;
+  font-weight: 850 !important;
+  letter-spacing: .13em !important;
+  cursor: pointer !important;
+}
+.puzzles-immersive-menu__viewport {
+  position: absolute !important;
+  z-index: 2 !important;
+  inset: 0 !important;
+  padding: calc(94px + env(safe-area-inset-top)) max(24px, 4vw) max(46px, env(safe-area-inset-bottom)) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+.puzzles-immersive-menu__intro,
+.puzzles-immersive-menu__grid {
+  width: min(1180px, 100%) !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+.puzzles-immersive-menu__intro {
+  margin-bottom: 24px !important;
+}
+.puzzles-immersive-menu__intro > span {
+  color: var(--puzzles-final-gold) !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  letter-spacing: .18em !important;
+  text-transform: uppercase !important;
+}
+.puzzles-immersive-menu__intro h1 {
+  max-width: 920px !important;
+  margin: 8px 0 10px !important;
+  color: #fff !important;
+  font-family: var(--display, "Barlow Condensed", sans-serif) !important;
+  font-size: clamp(44px, 6.6vw, 88px) !important;
+  font-weight: 500 !important;
+  line-height: .91 !important;
+  letter-spacing: -.025em !important;
+  text-transform: uppercase !important;
+}
+.puzzles-immersive-menu__intro p {
+  max-width: 680px !important;
+  margin: 0 !important;
+  color: rgba(255,255,255,.72) !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+.puzzles-immersive-menu__grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+}
+.puzzles-immersive-card {
+  position: relative !important;
+  min-height: clamp(300px, 37vh, 420px) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255,255,255,.20) !important;
+  background: #111 !important;
+  isolation: isolate !important;
+  transition: transform 200ms cubic-bezier(.22,1,.36,1), border-color 200ms ease, box-shadow 200ms ease !important;
+}
+.puzzles-immersive-card:hover,
+.puzzles-immersive-card:focus-within {
+  z-index: 2 !important;
+  transform: translateY(-3px) !important;
+  border-color: rgba(216,154,0,.90) !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,.45) !important;
+}
+.puzzles-immersive-card__image,
+.puzzles-immersive-card__shade {
+  position: absolute !important;
+  inset: 0 !important;
+}
+.puzzles-immersive-card__image {
+  z-index: -2 !important;
+  background-image: var(--immersive-card-image) !important;
+  background-position: center !important;
+  background-size: cover !important;
+  filter: saturate(.86) contrast(1.03) !important;
+  transform: scale(1.025) !important;
+  transition: transform 600ms cubic-bezier(.22,1,.36,1), filter 250ms ease !important;
+}
+.puzzles-immersive-card:hover .puzzles-immersive-card__image,
+.puzzles-immersive-card:focus-within .puzzles-immersive-card__image {
+  transform: scale(1.065) !important;
+  filter: saturate(.98) contrast(1.04) !important;
+}
+.puzzles-immersive-card__shade {
+  z-index: -1 !important;
+  background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.90)), linear-gradient(90deg, rgba(0,0,0,.55), transparent 72%) !important;
+}
+.puzzles-immersive-card__content {
+  position: absolute !important;
+  inset: auto 0 0 !important;
+  padding: clamp(20px, 3vw, 30px) !important;
+}
+.puzzles-immersive-card__content > span {
+  color: var(--puzzles-final-gold) !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  letter-spacing: .17em !important;
+  text-transform: uppercase !important;
+}
+.puzzles-immersive-card__content h2 {
+  margin: 8px 0 !important;
+  color: #fff !important;
+  font-family: var(--display, "Barlow Condensed", sans-serif) !important;
+  font-size: clamp(36px, 4vw, 58px) !important;
+  font-weight: 500 !important;
+  line-height: .92 !important;
+  text-transform: uppercase !important;
+}
+.puzzles-immersive-card__content p {
+  max-width: 46ch !important;
+  margin: 0 0 18px !important;
+  color: rgba(255,255,255,.74) !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+.puzzles-immersive-card__content button {
+  min-height: 44px !important;
+  padding: 0 18px !important;
+  border: 1px solid var(--puzzles-final-gold) !important;
+  background: var(--puzzles-final-gold) !important;
+  color: #000 !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: .14em !important;
+  cursor: pointer !important;
 }
 
-.puzzles-cellar__shelf--front {
-  bottom: -5%;
-  opacity: .8;
-  transform: translate3d(calc(var(--cellar-progress, 0) * 30px), calc(var(--cellar-progress, 0) * -18px), 40px) scale(1.08);
-}
-
-.puzzles-cellar__bottles {
-  right: 0;
-  left: 0;
-  height: 26%;
-  opacity: .42;
-  background:
-    repeating-linear-gradient(90deg,
-      transparent 0 2.4%,
-      rgba(7,10,8,.9) 2.4% 4.3%,
-      rgba(45,30,16,.82) 4.3% 4.8%,
-      transparent 4.8% 7.4%);
-  mask-image: linear-gradient(180deg, transparent 0 7%, #000 8% 100%);
-  filter: drop-shadow(0 18px 14px rgba(0,0,0,.48));
-}
-
-.puzzles-cellar__bottles--back {
-  top: 5%;
-  transform: translate3d(calc(var(--cellar-progress, 0) * 18px), calc(var(--cellar-progress, 0) * 34px), -80px) scale(.8);
-}
-
-.puzzles-cellar__bottles--front {
-  bottom: 8%;
-  opacity: .66;
-  transform: translate3d(calc(var(--cellar-progress, 0) * -32px), calc(var(--cellar-progress, 0) * -16px), 70px) scale(1.1);
-}
-
-.puzzles-cellar__haze {
-  inset: 0;
-  background:
-    radial-gradient(circle at 28% 55%, rgba(133,51,38,.16), transparent 32%),
-    radial-gradient(circle at 75% 44%, rgba(209,173,101,.11), transparent 30%),
-    linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.46));
-  mix-blend-mode: screen;
-  opacity: calc(.2 + var(--cellar-visibility, 0) * .42);
-  transform: translate3d(calc(var(--cellar-progress, 0) * 18px), 0, 0);
-}
-
-.puzzles-cellar__collection-button {
-  margin-top: 22px;
-  padding: 12px 16px;
-  border: 1px solid rgba(209,173,101,.76);
-  background: rgba(4,4,4,.44);
-  color: #fff;
-  font: inherit;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .16em;
-  cursor: pointer;
-  transition: transform var(--puzzles-motion-fast) ease, background var(--puzzles-motion-fast) ease, border-color var(--puzzles-motion-fast) ease;
-}
-
-.puzzles-cellar__collection-button:hover,
-.puzzles-cellar__collection-button:focus-visible {
-  transform: translateY(-2px);
-  border-color: #f0d397;
-  background: rgba(209,173,101,.15);
-}
-
-.puzzles-cellar__scene.is-active .puzzles-cellar__copy {
-  box-shadow: -26px 0 70px rgba(0,0,0,.24);
-}
-
-/* Evita trabajo visual innecesario fuera del viewport sin alterar el layout. */
-@supports (content-visibility: auto) {
-  .puzzles-final-pass .product-card,
-  .puzzles-final-pass .mobile-list-card,
-  .puzzles-final-pass .footer__column {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 420px;
+/* El panel de filtros comienza con el catálogo y se desplaza únicamente dentro
+   de la altura del mismo catálogo. No existe movimiento fixed por JavaScript. */
+@media (min-width: 961px) {
+  .catalog-section,
+  .catalog-layout,
+  .catalog-main,
+  #gridView,
+  #tableView,
+  .product-grid,
+  .table-wrap,
+  .mobile-product-list {
+    overflow: visible !important;
+  }
+  .catalog-layout {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: clamp(220px, 15vw, 292px) minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: clamp(22px, 2.2vw, 42px) !important;
+  }
+  .filters-panel-slot {
+    display: contents !important;
+  }
+  #filtersPanel,
+  .catalog-layout > .filters-panel,
+  .filters-panel.filters-panel--follow-ready,
+  .filters-panel.is-follow-top,
+  .filters-panel.is-following,
+  .filters-panel.is-follow-end {
+    position: sticky !important;
+    z-index: 20 !important;
+    top: var(--filters-sticky-top, 112px) !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: calc(100dvh - var(--filters-sticky-top, 112px) - 18px) !important;
+    margin: 0 !important;
+    align-self: start !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    transform: none !important;
   }
 }
 
-@media (max-width: 1250px) {
-  .puzzles-skeleton-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* PDP de escritorio proporcionado: no ocupa la pantalla completa. */
+@media (min-width: 761px) {
+  .product-detail-modal {
+    padding: 24px !important;
+    align-items: center !important;
+  }
+  .product-detail-modal .product-detail-card,
+  .product-detail-modal .modal__card,
+  .product-detail-card {
+    width: min(920px, calc(100vw - 96px)) !important;
+    height: auto !important;
+    max-width: 920px !important;
+    max-height: min(80dvh, 720px) !important;
+    overflow: hidden !important;
+  }
+  .product-detail-head {
+    min-height: 58px !important;
+    padding: 10px 16px !important;
+  }
+  .product-detail-content {
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  .pdp-editorial {
+    display: grid !important;
+    grid-template-columns: minmax(260px, 38%) minmax(0, 62%) !important;
+    height: auto !important;
+    max-height: calc(min(80dvh, 720px) - 58px) !important;
+    overflow: hidden !important;
+  }
+  .pdp-editorial__media {
+    min-height: 0 !important;
+    padding: 24px !important;
+    align-self: stretch !important;
+  }
+  .pdp-editorial .pdp-image-button {
+    width: min(100%, 300px) !important;
+    height: min(40dvh, 300px) !important;
+    max-height: 300px !important;
+    aspect-ratio: 1 / 1 !important;
+  }
+  .pdp-editorial .pdp-image {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 5% !important;
+    object-fit: contain !important;
+  }
+  .pdp-editorial__content {
+    min-height: 0 !important;
+    padding: 22px 24px 26px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  .pdp-editorial__header h3 {
+    font-size: clamp(28px, 3vw, 42px) !important;
+  }
+}
+
+/* Las imágenes no reciben edición simulada, círculo, halo, marco ni gris. */
+.product-card__visual,
+.product-table__thumb,
+.mobile-list-card__visual,
+.pdp-image-button,
+.cart-item__visual,
+.pdp-editorial__media {
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+.product-card__visual::before,
+.product-card__visual::after,
+.product-table__thumb::before,
+.product-table__thumb::after,
+.mobile-list-card__visual::before,
+.mobile-list-card__visual::after,
+.pdp-image-button::before,
+.pdp-image-button::after,
+.cart-item__visual::before,
+.cart-item__visual::after {
+  content: none !important;
+  display: none !important;
+}
+.product-card__image,
+.product-table__image,
+.mobile-list-card__image,
+.pdp-image,
+.cart-item__image,
+.js-product-image {
+  background: transparent !important;
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  box-shadow: none !important;
 }
 
 @media (max-width: 960px) {
-  .puzzles-skeleton-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .catalog-layout {
+    display: block !important;
+  }
+  #filtersPanel {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: min(360px, 92vw) !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
 }
 
 @media (max-width: 760px) {
-  .puzzles-skeleton-grid { grid-template-columns: 1fr; }
-  .puzzles-skeleton-card {
-    min-height: 170px;
-    grid-template-columns: 128px 1fr;
-    grid-template-rows: 22px 40px 18px;
+  .hero-carousel {
+    min-height: 470px !important;
   }
-  .puzzles-skeleton-card > span { grid-row: 1 / -1; }
-  .puzzles-cellar__shelf--front { bottom: 2%; }
-  .puzzles-cellar__bottles--front { bottom: 12%; opacity: .48; }
-  .puzzles-cellar__architecture { opacity: .78; }
+  .puzzles-immersive-menu__topbar > div span {
+    display: none !important;
+  }
+  .puzzles-immersive-menu__viewport {
+    padding: calc(82px + env(safe-area-inset-top)) 12px max(28px, env(safe-area-inset-bottom)) !important;
+  }
+  .puzzles-immersive-menu__intro h1 {
+    font-size: clamp(40px, 12vw, 62px) !important;
+  }
+  .puzzles-immersive-menu__grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .puzzles-immersive-card {
+    min-height: 285px !important;
+  }
+  .puzzles-immersive-card__content {
+    padding: 18px !important;
+  }
+  .puzzles-immersive-card__content h2 {
+    font-size: clamp(34px, 10vw, 48px) !important;
+  }
+  .puzzles-immersive-card__content button {
+    width: 100% !important;
+  }
+  .product-detail-modal .product-detail-card,
+  .product-detail-card {
+    width: 100% !important;
+    max-width: none !important;
+  }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .puzzles-final-pass *,
-  .puzzles-final-pass *::before,
-  .puzzles-final-pass *::after {
-    scroll-behavior: auto !important;
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
-    transition-delay: 0ms !important;
-  }
 
-  .puzzles-final-pass img[data-puzzles-image-tuned="true"] { opacity: 1 !important; }
-  .puzzles-cellar__architecture > span { transform: none !important; }
+/* El recorrido es parte permanente de AppsScript/Index.html. JS sólo controla estado y datos. */
+#puzzlesCellar[aria-hidden="true"] {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+#puzzlesCellar[aria-hidden="false"],
+#puzzlesCellar.is-open {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+body.cellar-is-open { overflow: hidden !important; }
+body.cellar-is-open #ageGate { display: none !important; }
+.puzzles-immersive-card[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .puzzles-cellar.puzzles-immersive-menu,
+  .puzzles-immersive-card,
+  .puzzles-immersive-card__image {
+    transition: none !important;
+  }
+}
+
+/* Capas de interacción finales: los popups, cajones y sus fondos siempre
+   quedan por encima del anuncio y del encabezado fijo/sticky. */
+body > .backdrop,
+.backdrop {
+  z-index: 9000 !important;
+}
+.drawer,
+body > .drawer {
+  z-index: 9010 !important;
+}
+.modal,
+body > .modal {
+  z-index: 9020 !important;
+}
+.image-zoom-backdrop {
+  z-index: 9030 !important;
+}
+.image-zoom-modal {
+  z-index: 9040 !important;
+}
+.toast-stack {
+  z-index: 9050 !important;
 }

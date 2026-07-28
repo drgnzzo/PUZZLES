@@ -6,8 +6,8 @@
      * exterior; no se requiere una URL CORS directa aquí.
      */
     const GITHUB_GAS_URL = '';
-    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?rev=stable';
-    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?rev=stable';
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?rev=20260727-tour-recovery-1';
+    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?rev=20260727-tour-recovery-1';
 
     const STORAGE_KEYS = Object.freeze({
       CART: 'puzzles_cart_v3',
@@ -103,6 +103,9 @@
       initialLoadPromise: null,
       initialLoadComplete: false,
       entrySplashActive: false,
+      entrySplashStartedAt: 0,
+      entrySequenceComplete: false,
+      immersiveIntroShown: false,
       intentWelcomeShown: false,
       lastOrder: null
     };
@@ -270,71 +273,65 @@
       });
     }
 
-    async function init() {
-      puzzlesStorageRemove('puzzles_cart_v1');
-      puzzlesStorageRemove('puzzles_cart_v2');
+async function init() {
+  puzzlesStorageRemove('puzzles_cart_v1');
+  puzzlesStorageRemove('puzzles_cart_v2');
 
-      repairEntryStructure();
-      cleanupLegacyBrandArtifacts();
-      cacheDom();
-      installInteractionFeedback();
+  cleanupLegacyBrandArtifacts();
+  cacheDom();
+  installInteractionFeedback();
 
-      // La vista inicial depende del dispositivo:
-      // móvil abre en lista y escritorio abre en cuadrícula.
-      // No se recuperan preferencias antiguas.
-      puzzlesStorageRemove(
-        STORAGE_KEYS.VIEW
-      );
+  puzzlesStorageRemove(
+    STORAGE_KEYS.VIEW
+  );
 
-      state.view = window.matchMedia(
-        '(max-width: 760px)'
-      ).matches
-        ? 'table'
-        : 'grid';
-      bindEvents();
-      restoreAgeGate();
-      restoreCustomer();
+  state.view = window.matchMedia(
+    '(max-width: 760px)'
+  ).matches
+    ? 'table'
+    : 'grid';
 
-      if (dom.footerYear) {
-        dom.footerYear.textContent =
-          new Date().getFullYear();
-      }
+  bindEvents();
+  beginInitialEntrySplash();
+  restoreCustomer();
 
-      state.loading = false;
-      renderCarousel();
-      setView(state.view, false);
-      renderCart();
-      window.setTimeout(cleanupLegacyBrandArtifacts, 0);
+  if (dom.footerYear) {
+    dom.footerYear.textContent =
+      new Date().getFullYear();
+  }
 
-      const restored = restoreStoreSnapshot();
+  state.loading = false;
+  renderCarousel();
+  setView(state.view, false);
+  renderCart();
+  window.setTimeout(cleanupLegacyBrandArtifacts, 0);
 
-      if (!restored) {
-        showCatalogShell();
-      }
+  const restored = restoreStoreSnapshot();
 
-      const storeRequest = loadStore({
-        background: restored
-      });
+  if (!restored) {
+    showCatalogShell();
+  }
 
-      const sessionRequest = restoreSession();
+  const storeRequest = loadStore({
+    background: restored
+  });
 
-      state.initialLoadPromise = Promise
-        .allSettled([
-          storeRequest,
-          sessionRequest
-        ])
-        .then(function () {
-          state.initialLoadComplete = true;
-          restoreAgeGate();
-        });
+  const sessionRequest = restoreSession();
 
-      await state.initialLoadPromise;
+  state.initialLoadPromise = Promise
+    .allSettled([
+      storeRequest,
+      sessionRequest
+    ])
+    .then(function () {
+      state.initialLoadComplete = true;
+    });
 
-      setTimeout(
-        maybeOpenIntentWelcome,
-        220
-      );
-    }
+  // El catálogo y la sesión continúan cargando en segundo plano.
+  // La entrada no espera la respuesta de Apps Script: el usuario pasa de
+  // inmediato a la confirmación de edad y después al recorrido.
+  await finishInitialEntrySplash();
+}
 
     function cacheDom() {
       [
@@ -394,6 +391,9 @@
       listen(dom.btnAccountHeader, 'click', openAuth);
       listen(dom.btnCloseAuth, 'click', closeAuth);
       listen(dom.authBackdrop, 'click', closeAuth);
+      listen(dom.authModal, 'click', event => {
+        if (event.target === dom.authModal) closeAuth();
+      });
       listen(dom.btnAuthLoginTab, 'click', () => setAuthTab('login'));
       listen(dom.btnAuthRegisterTab, 'click', () => setAuthTab('register'));
       listen(dom.loginForm, 'submit', submitLogin);
@@ -507,17 +507,29 @@
       listen(dom.btnCheckout, 'click', openCheckout);
 
       listen(dom.checkoutBackdrop, 'click', closeCheckout);
+      listen(dom.checkoutModal, 'click', event => {
+        if (event.target === dom.checkoutModal) closeCheckout();
+      });
       listen(dom.btnCloseCheckout, 'click', closeCheckout);
       listen(dom.btnCancelCheckout, 'click', closeCheckout);
       listen(dom.checkoutForm, 'submit', submitOrder);
       listen(dom.fulfillmentOptions, 'change', updateAddressVisibility);
 
       listen(dom.successBackdrop, 'click', closeSuccess);
+      listen(dom.successModal, 'click', event => {
+        if (event.target === dom.successModal) closeSuccess();
+      });
       listen(dom.btnSuccessClose, 'click', closeSuccess);
 
       listen(dom.productDetailBackdrop, 'click', closeProductDetail);
+      listen(dom.productDetailModal, 'click', event => {
+        if (event.target === dom.productDetailModal) closeProductDetail();
+      });
       listen(dom.btnCloseProductDetail, 'click', closeProductDetail);
       listen(dom.imageZoomBackdrop, 'click', closeImageZoom);
+      listen(dom.imageZoomModal, 'click', event => {
+        if (event.target === dom.imageZoomModal) closeImageZoom();
+      });
       listen(dom.btnCloseImageZoom, 'click', closeImageZoom);
 
       document.addEventListener('click', event => {
@@ -1187,78 +1199,139 @@
       );
     }
 
-    function maybeOpenIntentWelcome() {
-      if (
-        state.intentWelcomeShown ||
-        state.entrySplashActive ||
-        !state.initialLoadComplete ||
-        !isAgeConfirmed()
-      ) {
-        return;
-      }
+function hideLegacyIntentWelcome() {
+  state.intentWelcomeShown = true;
 
-      openIntentWelcome(false);
+  [
+    dom.intentWelcomeModal,
+    dom.intentWelcomeBackdrop,
+    dom.btnMomentsHeader,
+    document.querySelector('.feature-strip'),
+    document.querySelector('.puzzles-cellar-launch'),
+    document.getElementById('btnOpenCellar')
+  ].filter(Boolean).forEach(function (node) {
+    node.classList.remove('is-open');
+    node.classList.add('hidden');
+    node.setAttribute('aria-hidden', 'true');
+    node.hidden = true;
+    node.style.display = 'none';
+  });
+}
+
+function beginInitialEntrySplash() {
+  state.entrySplashActive = false;
+  state.entrySplashStartedAt = Date.now();
+  state.entrySequenceComplete = true;
+  state.ageConfirmedThisVisit = false;
+
+  hideLegacyIntentWelcome();
+
+  if (dom.entrySplash) {
+    dom.entrySplash.classList.add('hidden');
+    dom.entrySplash.setAttribute('aria-hidden', 'true');
+    dom.entrySplash.style.display = 'none';
+  }
+
+  document.body.classList.remove('entry-sequence-active');
+  document.body.classList.add('entry-sequence-complete');
+  restoreAgeGate();
+
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'PUZZLES_FRAME_READY' }, '*');
+    }
+  } catch (_) {}
+}
+
+async function finishInitialEntrySplash() {
+  state.entrySplashActive = false;
+  state.entrySequenceComplete = true;
+  document.body.classList.remove('entry-sequence-active');
+  document.body.classList.add('entry-sequence-complete');
+  restoreAgeGate();
+}
+
+function openImmersiveIntro() {
+  hideLegacyIntentWelcome();
+  document.body.classList.remove('age-gate-visible');
+
+  try {
+    const installer =
+      window.PUZZLES_INSTALL_IMMERSIVE_INTRO;
+
+    if (typeof installer === 'function') {
+      installer();
     }
 
-    function openIntentWelcome(force) {
-      if (
-        !isAgeConfirmed() ||
-        (
-          state.intentWelcomeShown &&
-          !force
-        )
-      ) {
-        return;
-      }
+    const open =
+      window.PUZZLES_OPEN_IMMERSIVE_INTRO;
 
-      state.intentWelcomeShown = true;
-      renderEditorialSections();
-
-      if (dom.intentWelcomeModal) {
-        dom.intentWelcomeModal.classList.add(
-          'is-open'
-        );
-      }
-
-      if (dom.intentWelcomeBackdrop) {
-        dom.intentWelcomeBackdrop.classList.add(
-          'is-open'
-        );
-      }
-
-      document.body.classList.add(
-        'no-scroll'
-      );
+    if (typeof open === 'function') {
+      state.immersiveIntroShown = true;
+      open(dom.btnAgeYes || document.activeElement);
+      return;
     }
+  } catch (error) {
+    console.error(
+      'No fue posible abrir la introducción:',
+      error
+    );
+  }
 
-    function closeIntentWelcome(
-      scrollToCatalog
-    ) {
-      if (dom.intentWelcomeModal) {
-        dom.intentWelcomeModal.classList.remove(
-          'is-open'
-        );
-      }
+  document.body.classList.remove(
+    'no-scroll',
+    'cellar-is-open'
+  );
+  toast(
+    'No se pudo abrir la introducción. Puedes continuar en el catálogo.',
+    'error'
+  );
+}
 
-      if (dom.intentWelcomeBackdrop) {
-        dom.intentWelcomeBackdrop.classList.remove(
-          'is-open'
-        );
-      }
+function maybeOpenIntentWelcome() {
+  hideLegacyIntentWelcome();
+}
 
-      document.body.classList.remove(
-        'no-scroll'
-      );
+function openIntentWelcome(force) {
+  hideLegacyIntentWelcome();
 
-      if (scrollToCatalog) {
-        document
-          .getElementById('catalogo')
-          .scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-      }
+  if (force && isAgeConfirmed()) {
+    openImmersiveIntro();
+  }
+}
+
+function closeIntentWelcome(
+  scrollToCatalog
+) {
+  hideLegacyIntentWelcome();
+
+  if (
+    !document.body.classList.contains(
+      'cellar-is-open'
+    )
+  ) {
+    document.body.classList.remove(
+      'no-scroll'
+    );
+  }
+
+  if (scrollToCatalog) {
+    const catalog =
+      document.getElementById('catalogo');
+
+    if (catalog) {
+      catalog.scrollIntoView({
+        behavior:
+          window.matchMedia(
+            '(prefers-reduced-motion: reduce)'
+          ).matches
+            ? 'auto'
+            : 'smooth',
+        block: 'start'
+      });
     }
+  }
+}
 
     function handleEditorialAction(action) {
       const value = String(action || 'catalog').trim();
@@ -3248,141 +3321,73 @@
     // EDAD Y CONCIERGE
     // ==========================================================
 
-    function restoreAgeGate() {
-      const logged = Boolean(
-        state.user &&
-        state.sessionToken
-      );
+function restoreAgeGate() {
+  const confirmed = Boolean(
+    state.ageConfirmedThisVisit
+  );
 
-      const remembered = logged &&
-        puzzlesStorageGet(
-          STORAGE_KEYS.AGE
-        ) === 'true';
+  if (dom.agePrompt) {
+    dom.agePrompt.classList.remove('hidden');
+  }
 
-      const confirmed =
-        state.ageConfirmedThisVisit ||
-        remembered;
+  if (dom.ageDenied) {
+    dom.ageDenied.classList.add('hidden');
+  }
 
-      if (dom.agePrompt) {
-        dom.agePrompt.classList.remove('hidden');
-      }
+  if (dom.ageGate) {
+    dom.ageGate.classList.toggle(
+      'hidden',
+      confirmed || state.entrySplashActive
+    );
 
-      if (dom.ageDenied) {
-        dom.ageDenied.classList.add('hidden');
-      }
+    dom.ageGate.setAttribute(
+      'aria-hidden',
+      confirmed || state.entrySplashActive
+        ? 'true'
+        : 'false'
+    );
 
-      if (dom.ageGate) {
-        dom.ageGate.classList.toggle(
-          'hidden',
-          confirmed
-        );
+    dom.ageGate.style.display =
+      confirmed || state.entrySplashActive
+        ? 'none'
+        : '';
+  }
 
-        dom.ageGate.setAttribute(
-          'aria-hidden',
-          confirmed ? 'true' : 'false'
-        );
+  const ageVisible = Boolean(
+    !confirmed &&
+    !state.entrySplashActive
+  );
 
-        dom.ageGate.style.display =
-          confirmed ? 'none' : '';
-      }
+  document.body.classList.toggle(
+    'age-gate-visible',
+    ageVisible
+  );
 
-      document.body.classList.toggle(
-        'no-scroll',
-        !confirmed ||
-        state.entrySplashActive ||
-        Boolean(
-          dom.intentWelcomeModal &&
-          dom.intentWelcomeModal.classList.contains(
-            'is-open'
-          )
-        )
-      );
-    }
+  document.body.classList.toggle(
+    'no-scroll',
+    ageVisible ||
+    state.entrySplashActive ||
+    document.body.classList.contains(
+      'cellar-is-open'
+    )
+  );
+}
 
-    async function confirmAge() {
-      state.ageConfirmedThisVisit = true;
+async function confirmAge() {
+  state.ageConfirmedThisVisit = true;
 
-      if (state.user && state.sessionToken) {
-        puzzlesStorageSet(
-          STORAGE_KEYS.AGE,
-          'true'
-        );
-      } else {
-        puzzlesStorageRemove(
-          STORAGE_KEYS.AGE
-        );
-      }
+  if (state.user && state.sessionToken) {
+    puzzlesStorageSet(
+      STORAGE_KEYS.AGE,
+      'true'
+    );
+  }
 
-      state.entrySplashActive = true;
-      restoreAgeGate();
-
-      if (dom.entrySplash) {
-        dom.entrySplash.classList.remove('hidden');
-        dom.entrySplash.setAttribute('aria-hidden', 'false');
-      }
-
-      if (dom.entrySplashBar) {
-        dom.entrySplashBar.style.animation = 'none';
-        void dom.entrySplashBar.offsetWidth;
-        dom.entrySplashBar.style.animation =
-          'entrySplashProgress 5s linear forwards';
-      }
-
-      document.body.classList.add('no-scroll');
-
-      const minimumTime = new Promise(
-        resolve => setTimeout(resolve, 5000)
-      );
-
-      const initialLoad =
-        state.initialLoadPromise ||
-        Promise.resolve();
-
-      const guardedInitialLoad = Promise.race([
-        initialLoad,
-        new Promise(resolve => setTimeout(resolve, 8000))
-      ]);
-
-      await Promise.allSettled([
-        minimumTime,
-        guardedInitialLoad
-      ]);
-
-      state.entrySplashActive = false;
-
-      const finishEntrySplash = () => {
-        if (dom.entrySplash) {
-          dom.entrySplash.classList.add('hidden');
-          dom.entrySplash.classList.remove('is-leaving');
-          dom.entrySplash.setAttribute('aria-hidden', 'true');
-        }
-
-        if (
-          state.ageConfirmedThisVisit ||
-          (
-            state.user &&
-            state.sessionToken &&
-            puzzlesStorageGet(STORAGE_KEYS.AGE) === 'true'
-          )
-        ) {
-          openIntentWelcome(false);
-
-          if (
-            !dom.intentWelcomeModal ||
-            !dom.intentWelcomeModal.classList.contains('is-open')
-          ) {
-            document.body.classList.remove('no-scroll');
-          }
-        }
-      };
-
-      if (dom.entrySplash) {
-        dom.entrySplash.classList.add('is-leaving');
-        setTimeout(finishEntrySplash, 320);
-      } else {
-        finishEntrySplash();
-      }
-    }
+  restoreAgeGate();
+  window.requestAnimationFrame(function () {
+    openImmersiveIntro();
+  });
+}
 
     function denyAge() {
       state.ageConfirmedThisVisit = false;
@@ -3883,11 +3888,11 @@
           );
           proxyUrl.searchParams.set(
             'cbg',
-            'ececea'
+            'ffffff'
           );
           proxyUrl.searchParams.set(
             'bg',
-            'ececea'
+            'ffffff'
           );
           proxyUrl.searchParams.set(
             'output',
@@ -3904,7 +3909,7 @@
         'https://images.weserv.nl/?url=' +
         encodeURIComponent(source) +
         '&w=900&h=900&fit=contain' +
-        '&cbg=ececea&bg=ececea&output=webp&q=88&we=1'
+        '&cbg=ffffff&bg=ffffff&output=webp&q=88&we=1'
       );
     }
 
@@ -4024,9 +4029,14 @@
       hero.appendChild(signature);
     }
 
-    if (hero && controls && controls.parentElement === hero) {
-      controls.classList.add('hero-carousel__controls--external');
-      hero.insertAdjacentElement('afterend', controls);
+    if (hero && controls) {
+      controls.classList.remove(
+        'hero-carousel__controls--external'
+      );
+
+      if (controls.parentElement !== hero) {
+        hero.appendChild(controls);
+      }
     }
 
     const closeControlByModalId = {
@@ -4192,45 +4202,58 @@
     }
   }
 
-  function installFilterFollower() {
-    const panel = document.getElementById('filtersPanel');
-    const layout = document.querySelector('.catalog-layout');
-    if (!panel || !layout || panel.dataset.followInstalled === 'true') return;
+function installFilterFollower() {
+  const panel = document.getElementById('filtersPanel');
+  const layout = document.querySelector('.catalog-layout');
+  if (!panel || !layout) return;
 
-    panel.dataset.followInstalled = 'true';
-    panel.classList.add('filters-panel--follow-ready');
-
-    let slot = panel.parentElement && panel.parentElement.classList.contains('filters-panel-slot')
+  const slot = panel.parentElement &&
+    panel.parentElement.classList.contains('filters-panel-slot')
       ? panel.parentElement
       : null;
 
-    if (!slot) {
-      slot = document.createElement('div');
-      slot.className = 'filters-panel-slot';
-      panel.parentNode.insertBefore(slot, panel);
-      slot.appendChild(panel);
-    }
-
-    function updateStickyOffset() {
-      const root = document.documentElement;
-      const value = parseFloat(
-        getComputedStyle(root).getPropertyValue('--puzzles-fixed-chrome-real-h')
-      );
-      const offset = Number.isFinite(value) ? value : 104;
-      slot.style.setProperty('--filters-sticky-top', Math.round(offset + 16) + 'px');
-    }
-
-    updateStickyOffset();
-    window.addEventListener('resize', updateStickyOffset, { passive: true });
-
-    if ('ResizeObserver' in window) {
-      const observer = new ResizeObserver(updateStickyOffset);
-      const announcement = document.querySelector('.announcement');
-      const header = document.querySelector('.site-header');
-      if (announcement) observer.observe(announcement);
-      if (header) observer.observe(header);
-    }
+  if (slot && slot.parentElement) {
+    slot.parentElement.insertBefore(panel, slot);
+    slot.remove();
   }
+
+  panel.dataset.followInstalled = 'native';
+  panel.classList.remove(
+    'filters-panel--follow-ready',
+    'is-follow-top',
+    'is-following',
+    'is-follow-end'
+  );
+
+  [
+    'position', 'top', 'right', 'bottom', 'left', 'width',
+    'height', 'max-height', 'transform', 'z-index'
+  ].forEach(function (property) {
+    panel.style.removeProperty(property);
+  });
+
+  function updateOffset() {
+    const announcement = document.querySelector('.announcement');
+    const header = document.querySelector('.site-header');
+    const offset = Math.max(
+      12,
+      Math.ceil(
+        (announcement ? announcement.getBoundingClientRect().height : 0) +
+        (header ? header.getBoundingClientRect().height : 0) +
+        14
+      )
+    );
+
+    document.documentElement.style.setProperty(
+      '--filters-sticky-top',
+      offset + 'px'
+    );
+  }
+
+  updateOffset();
+  window.addEventListener('resize', updateOffset, { passive: true });
+}
+
 
   function installDesignSignals() {
     document.documentElement.classList.add('puzzles-design-revisited');
@@ -4292,19 +4315,21 @@
             <div class="modal__head"><div><span class="operational-kicker">PUZZLES</span><h2 id="contactTitle">Contacto y mayoreo</h2></div><button id="btnCloseContact" class="modal-close" type="button" aria-label="Cerrar">×</button></div>
             <div class="modal__body">
               <form id="contactForm" class="operational-form">
+                <p class="operational-required-note"><span aria-hidden="true">*</span> Campos obligatorios</p>
                 <div class="operational-grid">
-                  <label>Nombre<input id="contactName" required maxlength="120"></label>
-                  <label>Correo<input id="contactEmail" type="email" maxlength="180"></label>
-                  <label>Teléfono / WhatsApp<input id="contactPhone" inputmode="tel" maxlength="18"></label>
-                  <label>Empresa<input id="contactCompany" maxlength="160"></label>
-                  <label>Ciudad<input id="contactCity" maxlength="120"></label>
-                  <label>Tipo de solicitud<select id="contactType"><option>Cotización</option><option>Mayoreo</option><option>Disponibilidad</option><option>Nota de venta</option><option>Consulta general</option></select></label>
+                  <label>Nombre <span class="required-mark" aria-hidden="true">*</span><input id="contactName" required autocomplete="name" maxlength="120"></label>
+                  <label>Correo <span class="required-mark" aria-hidden="true">*</span><input id="contactEmail" type="email" required autocomplete="email" maxlength="180"></label>
+                  <label>Teléfono / WhatsApp<input id="contactPhone" inputmode="tel" autocomplete="tel" maxlength="18"></label>
+                  <label>Empresa<input id="contactCompany" autocomplete="organization" maxlength="160"></label>
+                  <label>Ciudad<input id="contactCity" autocomplete="address-level2" maxlength="120"></label>
+                  <label>Tipo de solicitud <span class="required-mark" aria-hidden="true">*</span><select id="contactType" required><option value="">Selecciona una opción</option><option>Cotización</option><option>Mayoreo</option><option>Disponibilidad</option><option>Nota de venta</option><option>Consulta general</option></select></label>
                 </div>
-                <label class="operational-form__wide">Producto relacionado<input id="contactProduct" readonly></label>
+                <label class="operational-form__wide">Producto relacionado<input id="contactProduct" list="contactProductOptions" autocomplete="off" placeholder="Escribe o selecciona un producto"></label>
+                <datalist id="contactProductOptions"></datalist>
                 <input id="contactProductCode" type="hidden">
                 <input id="contactWebsite" class="hp-field" autocomplete="off" tabindex="-1">
-                <label class="operational-form__wide">¿Qué necesitas?<textarea id="contactMessage" required maxlength="1800" rows="5"></textarea></label>
-                <div id="contactError" class="form-error"></div>
+                <label class="operational-form__wide">¿Qué necesitas? <span class="required-mark" aria-hidden="true">*</span><textarea id="contactMessage" required minlength="10" maxlength="1800" rows="6" placeholder="Cuéntanos qué producto, cantidad o información necesitas."></textarea></label>
+                <div id="contactError" class="form-error" role="alert" aria-live="assertive"></div>
                 <div class="modal__actions"><button type="button" class="btn btn--ghost" id="btnCancelContact">Cancelar</button><button type="submit" class="btn btn--primary" id="btnSubmitContact">Enviar solicitud</button></div>
               </form>
             </div>
@@ -4390,7 +4415,19 @@
     };
     document.addEventListener('click', event => {
       const contactTrigger = event.target.closest('[data-open-contact]');
-      if (contactTrigger) { event.preventDefault(); openContact(); return; }
+      if (contactTrigger) {
+        event.preventDefault();
+        const relatedCode =
+          contactTrigger.dataset.productCode ||
+          contactTrigger.dataset.code ||
+          '';
+        openContact(
+          relatedCode
+            ? getProduct(relatedCode)
+            : null
+        );
+        return;
+      }
       const studioTrigger = event.target.closest('#btnStudioHeader');
       if (studioTrigger) { event.preventDefault(); openStudio(); return; }
       const editCurrent = event.target.closest('[data-studio-edit-current]');
@@ -4419,7 +4456,14 @@
     document.getElementById('btnCloseContact')?.addEventListener('click', () => closePair('contactModal','contactBackdrop'));
     document.getElementById('btnCancelContact')?.addEventListener('click', () => closePair('contactModal','contactBackdrop'));
     document.getElementById('contactBackdrop')?.addEventListener('click', () => closePair('contactModal','contactBackdrop'));
+    document.getElementById('contactModal')?.addEventListener('click', event => {
+      if (event.target === event.currentTarget) closePair('contactModal','contactBackdrop');
+    });
+    document.getElementById('studioEditorModal')?.addEventListener('click', event => {
+      if (event.target === event.currentTarget) closePair('studioEditorModal','studioEditorBackdrop');
+    });
     document.getElementById('contactForm')?.addEventListener('submit', submitContactForm);
+    document.getElementById('contactProduct')?.addEventListener('input', syncContactProductCode);
     document.getElementById('btnStudioRefresh')?.addEventListener('click', () => refreshStudioCatalog(true));
     document.getElementById('studioSearch')?.addEventListener('input', renderStudioProducts);
     document.getElementById('studioStatus')?.addEventListener('change', renderStudioProducts);
@@ -4472,44 +4516,341 @@
     if (wrap) wrap.hidden = !state.isStudio;
   }
 
-  function openContact(product) {
-    const modal = document.getElementById('contactModal'); const backdrop = document.getElementById('contactBackdrop');
-    if (!modal || !backdrop) return;
-    const customer = loadJson(STORAGE_KEYS.CUSTOMER, {});
-    document.getElementById('contactName').value = state.user?.name || customer.name || '';
-    document.getElementById('contactEmail').value = state.user?.email || customer.email || '';
-    document.getElementById('contactPhone').value = state.user?.phone || customer.phone || '';
-    const related = product || (state.detailProductCode ? getProduct(state.detailProductCode) : null);
-    document.getElementById('contactProduct').value = related ? related.displayName : '';
-    document.getElementById('contactProductCode').value = related ? related.code : '';
-    document.getElementById('contactMessage').value = related ? 'Quiero información, disponibilidad o una cotización de este producto.' : '';
-    modal.classList.add('is-open'); backdrop.classList.add('is-open'); document.body.classList.add('no-scroll');
+function populateContactProductOptions() {
+  const datalist =
+    document.getElementById(
+      'contactProductOptions'
+    );
+
+  if (!datalist) return;
+
+  const products =
+    Array.isArray(state.products)
+      ? state.products
+      : [];
+
+  datalist.innerHTML = products
+    .slice()
+    .sort(function (a, b) {
+      return String(
+        a.displayName || ''
+      ).localeCompare(
+        String(b.displayName || ''),
+        'es',
+        { sensitivity: 'base' }
+      );
+    })
+    .map(function (product) {
+      return '<option value="' +
+        escapeAttr(
+          product.displayName ||
+          product.description ||
+          ''
+        ) +
+        '"></option>';
+    })
+    .join('');
+}
+
+function syncContactProductCode() {
+  const productInput =
+    document.getElementById('contactProduct');
+  const codeInput =
+    document.getElementById(
+      'contactProductCode'
+    );
+
+  if (!productInput || !codeInput) return;
+
+  const typed = String(
+    productInput.value || ''
+  )
+    .trim()
+    .toLocaleLowerCase('es-MX');
+
+  const match = (
+    Array.isArray(state.products)
+      ? state.products
+      : []
+  ).find(function (product) {
+    return String(
+      product.displayName ||
+      product.description ||
+      ''
+    )
+      .trim()
+      .toLocaleLowerCase('es-MX') === typed;
+  });
+
+  codeInput.value =
+    match
+      ? String(match.code || '')
+      : '';
+}
+
+function openContact(product) {
+  const modal =
+    document.getElementById('contactModal');
+  const backdrop =
+    document.getElementById(
+      'contactBackdrop'
+    );
+
+  if (!modal || !backdrop) return;
+
+  const customer = loadJson(
+    STORAGE_KEYS.CUSTOMER,
+    {}
+  );
+  const form =
+    document.getElementById('contactForm');
+  const error =
+    document.getElementById('contactError');
+
+  populateContactProductOptions();
+
+  document.getElementById(
+    'contactName'
+  ).value =
+    state.user?.name ||
+    customer.name ||
+    '';
+
+  document.getElementById(
+    'contactEmail'
+  ).value =
+    state.user?.email ||
+    customer.email ||
+    '';
+
+  document.getElementById(
+    'contactPhone'
+  ).value =
+    state.user?.phone ||
+    customer.phone ||
+    '';
+
+  const related =
+    product ||
+    (
+      state.detailProductCode
+        ? getProduct(
+            state.detailProductCode
+          )
+        : null
+    );
+
+  document.getElementById(
+    'contactProduct'
+  ).value =
+    related
+      ? related.displayName
+      : '';
+
+  document.getElementById(
+    'contactProductCode'
+  ).value =
+    related
+      ? related.code
+      : '';
+
+  document.getElementById(
+    'contactMessage'
+  ).value =
+    related
+      ? 'Quiero información, disponibilidad o una cotización de este producto.'
+      : '';
+
+  if (error) {
+    error.textContent = '';
+    error.classList.remove('is-visible');
   }
 
-  async function submitContactForm(event) {
-    event.preventDefault();
-    const error = document.getElementById('contactError'); const button = document.getElementById('btnSubmitContact');
-    error.textContent = ''; button.disabled = true;
-    try {
-      const result = await gasRun('submitContactLead', {
-        name: document.getElementById('contactName').value,
-        email: document.getElementById('contactEmail').value,
-        phone: document.getElementById('contactPhone').value,
-        company: document.getElementById('contactCompany').value,
-        city: document.getElementById('contactCity').value,
-        type: document.getElementById('contactType').value,
-        product: document.getElementById('contactProduct').value,
-        productCode: document.getElementById('contactProductCode').value,
-        message: document.getElementById('contactMessage').value,
-        website: document.getElementById('contactWebsite').value
+  if (form) {
+    form
+      .querySelectorAll(
+        '[aria-invalid="true"]'
+      )
+      .forEach(function (field) {
+        field.removeAttribute(
+          'aria-invalid'
+        );
       });
-      if (!result?.ok) throw new Error(result?.error || 'No se pudo enviar la solicitud.');
-      toast(result.message || 'Solicitud enviada.', 'success');
-      document.getElementById('contactForm').reset();
-      document.getElementById('contactModal').classList.remove('is-open'); document.getElementById('contactBackdrop').classList.remove('is-open'); document.body.classList.remove('no-scroll');
-    } catch (e) { error.textContent = e.message || String(e); error.classList.add('is-visible'); }
-    finally { button.disabled = false; }
   }
+
+  modal.classList.add('is-open');
+  backdrop.classList.add('is-open');
+  document.body.classList.add(
+    'no-scroll'
+  );
+
+  window.setTimeout(function () {
+    const firstEmpty = [
+      document.getElementById(
+        'contactName'
+      ),
+      document.getElementById(
+        'contactEmail'
+      ),
+      document.getElementById(
+        'contactType'
+      ),
+      document.getElementById(
+        'contactMessage'
+      )
+    ].find(function (field) {
+      return field &&
+        !String(field.value || '').trim();
+    });
+
+    if (firstEmpty) {
+      try {
+        firstEmpty.focus({
+          preventScroll: true
+        });
+      } catch (_) {
+        firstEmpty.focus();
+      }
+    }
+  }, 80);
+}
+
+async function submitContactForm(event) {
+  event.preventDefault();
+
+  const form =
+    document.getElementById('contactForm');
+  const error =
+    document.getElementById('contactError');
+  const button =
+    document.getElementById(
+      'btnSubmitContact'
+    );
+  const originalButtonText =
+    button
+      ? button.textContent
+      : 'Enviar solicitud';
+
+  if (!form || !button) return;
+
+  syncContactProductCode();
+  error.textContent = '';
+  error.classList.remove('is-visible');
+
+  if (!form.checkValidity()) {
+    const invalid =
+      form.querySelector(':invalid');
+
+    form
+      .querySelectorAll(':invalid')
+      .forEach(function (field) {
+        field.setAttribute(
+          'aria-invalid',
+          'true'
+        );
+      });
+
+    error.textContent =
+      'Revisa los campos marcados con *. El correo debe tener un formato válido y el mensaje debe contener al menos 10 caracteres.';
+    error.classList.add('is-visible');
+
+    if (invalid) {
+      try {
+        invalid.focus({
+          preventScroll: false
+        });
+      } catch (_) {
+        invalid.focus();
+      }
+    }
+
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Enviando…';
+
+  try {
+    const result = await gasRun(
+      'submitContactLead',
+      {
+        name:
+          document.getElementById(
+            'contactName'
+          ).value.trim(),
+        email:
+          document.getElementById(
+            'contactEmail'
+          ).value.trim(),
+        phone:
+          document.getElementById(
+            'contactPhone'
+          ).value.trim(),
+        company:
+          document.getElementById(
+            'contactCompany'
+          ).value.trim(),
+        city:
+          document.getElementById(
+            'contactCity'
+          ).value.trim(),
+        type:
+          document.getElementById(
+            'contactType'
+          ).value,
+        product:
+          document.getElementById(
+            'contactProduct'
+          ).value.trim(),
+        productCode:
+          document.getElementById(
+            'contactProductCode'
+          ).value,
+        message:
+          document.getElementById(
+            'contactMessage'
+          ).value.trim(),
+        website:
+          document.getElementById(
+            'contactWebsite'
+          ).value
+      }
+    );
+
+    if (!result?.ok) {
+      throw new Error(
+        result?.error ||
+        'No se pudo enviar la solicitud.'
+      );
+    }
+
+    toast(
+      result.message ||
+      'Solicitud enviada.',
+      'success'
+    );
+
+    form.reset();
+    document.getElementById(
+      'contactModal'
+    ).classList.remove('is-open');
+    document.getElementById(
+      'contactBackdrop'
+    ).classList.remove('is-open');
+    document.body.classList.remove(
+      'no-scroll'
+    );
+  } catch (submitError) {
+    error.textContent =
+      submitError.message ||
+      'No se pudo enviar la solicitud. Revisa la información e inténtalo nuevamente.';
+    error.classList.add('is-visible');
+  } finally {
+    button.disabled = false;
+    button.textContent =
+      originalButtonText;
+  }
+}
 
   async function refreshStudioCatalog(forceRender) {
     if (!state.sessionToken) return;
@@ -4718,9 +5059,9 @@
     },
     {
       image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-05-editorial.png',
-      kicker: 'DESCUBRIR',
-      title: 'Una colección viva',
-      text: 'La disponibilidad cambia. La selección se actualiza y cada solicitud se confirma personalmente.'
+      kicker: 'TU MOMENTO',
+      title: '¿Qué estás buscando?',
+      text: 'Elige una intención y la tienda preparará la colección adecuada al entrar.'
     },
     {
       image: 'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png',
@@ -4748,156 +5089,235 @@
   }
 
   function installCellarExperience() {
-    if (document.getElementById('puzzlesCellar')) return;
-
-    const hero = document.getElementById('heroCarousel') || document.querySelector('.hero-carousel');
-    if (hero && !document.getElementById('btnOpenCellar')) {
-      const launch = document.createElement('div');
-      launch.className = 'puzzles-cellar-launch';
-      launch.innerHTML = [
-        '<button id="btnOpenCellar" class="puzzles-cellar-launch__button" type="button">',
-        '<span>ENTRAR A LA CAVA</span>',
-        '<small>Recorrido inmersivo opcional</small>',
-        '</button>'
-      ].join('');
-      hero.insertAdjacentElement('afterend', launch);
-    }
-
-    const scenes = CELLAR_SCENES.map(function (scene, index) {
-      const finalScene = index === CELLAR_SCENES.length - 1;
-      return [
-        '<article class="puzzles-cellar__scene" data-cellar-scene="', index, '" style="--cellar-image:url(\'', escapeText(scene.image), '\')">',
-        '<div class="puzzles-cellar__media" aria-hidden="true"></div>',
-        '<div class="puzzles-cellar__shade" aria-hidden="true"></div>',
-        '<div class="puzzles-cellar__copy">',
-        '<span class="puzzles-cellar__kicker">', escapeText(scene.kicker), '</span>',
-        '<h2>', escapeText(scene.title), '</h2>',
-        '<p>', escapeText(scene.text), '</p>',
-        finalScene
-          ? '<button class="puzzles-cellar__catalog-button" type="button" data-cellar-catalog>EXPLORAR CATÁLOGO</button>'
-          : '<span class="puzzles-cellar__scroll-cue">Desliza para continuar</span>',
-        '</div>',
-        '</article>'
-      ].join('');
-    }).join('');
-
-    document.body.insertAdjacentHTML('beforeend', [
-      '<section id="puzzlesCellar" class="puzzles-cellar" aria-hidden="true">',
-      '<header class="puzzles-cellar__topbar">',
-      '<div><strong>PUZZLES</strong><span>VINOS · LICORES · DESTILADOS</span></div>',
-      '<div class="puzzles-cellar__actions">',
-      '<button type="button" data-cellar-catalog>Saltar recorrido</button>',
-      '<button id="btnCloseCellar" type="button" aria-label="Cerrar recorrido">×</button>',
-      '</div>',
-      '</header>',
-      '<div class="puzzles-cellar__progress" aria-hidden="true"><span></span></div>',
-      '<div class="puzzles-cellar__viewport" tabindex="0">',
-      scenes,
-      '</div>',
-      '<nav class="puzzles-cellar__dots" aria-label="Escenas del recorrido">',
-      CELLAR_SCENES.map(function (_, index) {
-        return '<button type="button" data-cellar-jump="' + index + '" aria-label="Ir a escena ' + (index + 1) + '"></button>';
-      }).join(''),
-      '</nav>',
-      '</section>'
-    ].join(''));
-
     const cellar = document.getElementById('puzzlesCellar');
-    const viewport = cellar.querySelector('.puzzles-cellar__viewport');
-    const progress = cellar.querySelector('.puzzles-cellar__progress span');
-    const sceneNodes = Array.from(cellar.querySelectorAll('[data-cellar-scene]'));
-    const dots = Array.from(cellar.querySelectorAll('[data-cellar-jump]'));
+    if (!cellar) return null;
+
+    if (cellar.dataset.controllerInstalled === 'true') {
+      return cellar;
+    }
+    cellar.dataset.controllerInstalled = 'true';
+
+    document
+      .querySelectorAll('.puzzles-cellar-launch, #btnOpenCellar')
+      .forEach(function (node) { node.remove(); });
+
+    const viewport = cellar.querySelector('.puzzles-immersive-menu__viewport');
+    const background = cellar.querySelector('.puzzles-immersive-menu__background');
+    const collectionTerms = new Map([
+      ['wine', ['vino', 'tinto', 'blanco', 'rosado']],
+      ['bubbles', ['champagne', 'espumoso', 'prosecco', 'cava']],
+      ['spirits', ['tequila', 'whisky', 'mezcal', 'ron', 'ginebra', 'vodka', 'brandy', 'cognac', 'licor', 'anis']],
+      ['all', []]
+    ]);
+    const fallbackMoments = [
+      { eyebrow: 'CELEBRAR', title: 'Una celebración', text: 'Selecciones para cumpleaños, aniversarios, logros y reuniones especiales.', action: 'intent:celebration', imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-01-editorial.png' },
+      { eyebrow: 'COMPARTIR', title: 'Mesa y sobremesa', text: 'Vinos, aperitivos y bebidas para acompañar cenas y encuentros.', action: 'intent:table', imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-05-editorial.png' },
+      { eyebrow: 'REGALAR', title: 'Un regalo pensado', text: 'Etiquetas con presencia para agradecer, reconocer o celebrar a alguien.', action: 'intent:gift', imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png' },
+      { eyebrow: 'DESCUBRIR', title: 'Algo nuevo', text: 'Explora orígenes, estilos y perfiles que todavía no forman parte de tu colección.', action: 'intent:discovery', imageUrl: 'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png' }
+    ];
     let returnFocus = null;
-    let scheduled = false;
 
-    function update() {
-      scheduled = false;
-      const max = Math.max(1, viewport.scrollHeight - viewport.clientHeight);
-      const ratio = Math.max(0, Math.min(1, viewport.scrollTop / max));
-      progress.style.transform = 'scaleX(' + ratio + ')';
+    function normalize(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    }
 
-      let activeIndex = 0;
-      let nearest = Infinity;
-      sceneNodes.forEach(function (scene, index) {
-        const rect = scene.getBoundingClientRect();
-        const viewportRect = viewport.getBoundingClientRect();
-        const centerDistance = Math.abs((rect.top + rect.height / 2) - (viewportRect.top + viewportRect.height / 2));
-        const visibility = Math.max(0, Math.min(1, 1 - centerDistance / Math.max(1, viewportRect.height)));
-        const localProgress = Math.max(-1, Math.min(1, (viewportRect.top - rect.top) / Math.max(1, rect.height)));
-        scene.style.setProperty('--cellar-visibility', visibility.toFixed(3));
-        scene.style.setProperty('--cellar-shift', (localProgress * 44).toFixed(2) + 'px');
-        scene.style.setProperty('--cellar-progress', localProgress.toFixed(3));
-        scene.classList.toggle('is-active', visibility > 0.56);
-        if (centerDistance < nearest) {
-          nearest = centerDistance;
-          activeIndex = index;
-        }
+    function categoryNames() {
+      return Array.isArray(state.categories)
+        ? state.categories.map(function (category) {
+            return typeof category === 'string'
+              ? category
+              : String(category && category.name || '');
+          }).filter(Boolean)
+        : [];
+    }
+
+    function setBackground(image, mood) {
+      if (background && image) {
+        background.style.setProperty(
+          '--immersive-active-image',
+          "url('" + String(image).replace(/'/g, "\\'") + "')"
+        );
+      }
+      cellar.dataset.immersiveMood = mood || 'all';
+    }
+
+    function renderMoments() {
+      const remote = Array.isArray(state.store && state.store.moments)
+        ? state.store.moments.slice(0, 4)
+        : [];
+      const moments = fallbackMoments.map(function (fallback, index) {
+        return Object.assign({}, fallback, remote[index] || {});
       });
-      dots.forEach(function (dot, index) {
-        dot.classList.toggle('is-active', index === activeIndex);
-        dot.setAttribute('aria-current', index === activeIndex ? 'true' : 'false');
+
+      cellar.querySelectorAll('[data-immersive-moment-slot]').forEach(function (card) {
+        const index = Number(card.dataset.immersiveMomentSlot || 0);
+        const moment = moments[index] || fallbackMoments[index % fallbackMoments.length];
+        const image = moment.imageUrl || moment.image || fallbackMoments[index % fallbackMoments.length].imageUrl;
+        const eyebrow = card.querySelector('.puzzles-immersive-card__content > span');
+        const title = card.querySelector('.puzzles-immersive-card__content h2');
+        const text = card.querySelector('.puzzles-immersive-card__content p');
+        const button = card.querySelector('[data-immersive-moment-action]');
+        card.dataset.immersiveImage = image;
+        card.style.setProperty('--immersive-card-image', "url('" + String(image).replace(/'/g, "\\'") + "')");
+        if (eyebrow) eyebrow.textContent = moment.eyebrow || fallbackMoments[index].eyebrow;
+        if (title) title.textContent = moment.title || fallbackMoments[index].title;
+        if (text) text.textContent = moment.text || fallbackMoments[index].text;
+        if (button) button.dataset.immersiveMomentAction = moment.action || fallbackMoments[index].action;
       });
     }
 
-    function schedule() {
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(update);
+    function resetCatalog() {
+      state.category = 'Todas';
+      state.brand = 'Todas';
+      state.search = '';
+      state.editorialIntent = null;
+      state.page = 1;
+      if (dom.searchInput) dom.searchInput.value = '';
+      if (dom.brandFilter) dom.brandFilter.value = 'Todas';
+    }
+
+    function refreshCatalogUi() {
+      if (typeof renderCategories === 'function') renderCategories();
+      if (typeof renderBrands === 'function') renderBrands();
+      if (typeof applyFilters === 'function') applyFilters();
+    }
+
+    function applyCollection(key) {
+      resetCatalog();
+      const terms = collectionTerms.get(key) || [];
+      if (terms.length) {
+        const categories = categoryNames().filter(function (category) {
+          const categoryText = normalize(category);
+          return terms.some(function (term) {
+            return categoryText.includes(normalize(term));
+          });
+        });
+        state.editorialIntent = categories.length
+          ? { key: 'immersive-' + key, categories: categories, sort: 'featured' }
+          : null;
+        if (!categories.length) {
+          state.search = terms[0] || '';
+          if (dom.searchInput) dom.searchInput.value = state.search;
+        }
+      }
+      document.body.dataset.catalogMood = key || 'all';
+      refreshCatalogUi();
     }
 
     function openCellar(trigger) {
+      renderMoments();
       returnFocus = trigger || document.activeElement;
       cellar.classList.add('is-open');
       cellar.setAttribute('aria-hidden', 'false');
+      document.body.classList.remove('age-gate-visible');
       document.body.classList.add('no-scroll', 'cellar-is-open');
-      viewport.scrollTop = 0;
+      if (viewport) viewport.scrollTop = 0;
+      const firstCard = cellar.querySelector('[data-immersive-mood]');
+      setBackground(
+        firstCard && firstCard.dataset.immersiveImage,
+        firstCard && firstCard.dataset.immersiveMood
+      );
+
+      if (state.initialLoadPromise && typeof state.initialLoadPromise.then === 'function') {
+        Promise.resolve(state.initialLoadPromise).then(function () {
+          if (cellar.classList.contains('is-open')) renderMoments();
+        }).catch(function () {});
+      }
+
       window.setTimeout(function () {
-        viewport.focus({ preventScroll: true });
-        update();
+        const first = cellar.querySelector('[data-immersive-collection]');
+        if (first) {
+          try { first.focus({ preventScroll: true }); }
+          catch (_) { first.focus(); }
+        }
       }, 40);
     }
 
     function closeCellar(goCatalog) {
       cellar.classList.remove('is-open');
       cellar.setAttribute('aria-hidden', 'true');
-      document.body.classList.remove('no-scroll', 'cellar-is-open');
+      document.body.classList.remove('cellar-is-open');
+      if (!document.querySelector('.modal.is-open, .drawer.is-open, .image-zoom-modal.is-open')) {
+        document.body.classList.remove('no-scroll');
+      }
+
       if (goCatalog) {
         const catalog = document.getElementById('catalogo');
         if (catalog) {
           window.setTimeout(function () {
-            catalog.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-          }, 80);
+            catalog.scrollIntoView({
+              behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+              block: 'start'
+            });
+          }, 40);
         }
       } else if (returnFocus && typeof returnFocus.focus === 'function') {
-        returnFocus.focus({ preventScroll: true });
+        try { returnFocus.focus({ preventScroll: true }); }
+        catch (_) { returnFocus.focus(); }
       }
     }
 
-    document.getElementById('btnOpenCellar')?.addEventListener('click', function (event) {
-      openCellar(event.currentTarget);
+    window.PUZZLES_OPEN_IMMERSIVE_INTRO = openCellar;
+    window.PUZZLES_CLOSE_IMMERSIVE_INTRO = closeCellar;
+
+    cellar.addEventListener('pointerover', function (event) {
+      const target = event.target.closest('[data-immersive-image]');
+      if (!target) return;
+      setBackground(target.dataset.immersiveImage, target.dataset.immersiveMood || 'moment');
     });
-    document.getElementById('btnCloseCellar')?.addEventListener('click', function () {
-      closeCellar(false);
+
+    cellar.addEventListener('focusin', function (event) {
+      const target = event.target.closest('[data-immersive-image]');
+      if (!target) return;
+      setBackground(target.dataset.immersiveImage, target.dataset.immersiveMood || 'moment');
     });
-    cellar.querySelectorAll('[data-cellar-catalog]').forEach(function (button) {
-      button.addEventListener('click', function () { closeCellar(true); });
-    });
-    dots.forEach(function (dot) {
-      dot.addEventListener('click', function () {
-        const index = Number(dot.dataset.cellarJump || 0);
-        sceneNodes[index]?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-      });
-    });
-    viewport.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', schedule, { passive: true });
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && cellar.classList.contains('is-open')) {
-        event.stopPropagation();
-        closeCellar(false);
+
+    cellar.addEventListener('click', function (event) {
+      const skip = event.target.closest('[data-cellar-catalog]');
+      if (skip) {
+        event.preventDefault();
+        resetCatalog();
+        document.body.dataset.catalogMood = 'all';
+        refreshCatalogUi();
+        closeCellar(true);
+        return;
       }
+
+      const collectionButton = event.target.closest('[data-immersive-collection]');
+      if (collectionButton) {
+        event.preventDefault();
+        applyCollection(collectionButton.dataset.immersiveCollection || 'all');
+        closeCellar(true);
+        return;
+      }
+
+      const momentButton = event.target.closest('[data-immersive-moment-action]');
+      if (momentButton) {
+        event.preventDefault();
+        const action = momentButton.dataset.immersiveMomentAction || 'catalog';
+        closeCellar(false);
+        window.setTimeout(function () {
+          if (typeof handleEditorialAction === 'function') handleEditorialAction(action);
+        }, 20);
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape' || !cellar.classList.contains('is-open')) return;
+      event.preventDefault();
+      resetCatalog();
+      refreshCatalogUi();
+      closeCellar(true);
     }, true);
-    update();
+
+    return cellar;
   }
+
+  window.PUZZLES_INSTALL_IMMERSIVE_INTRO =
+    installCellarExperience;
 
   function installRevealSystem() {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -5020,6 +5440,9 @@
     });
     document.getElementById('btnClosePuzzlesLegal')?.addEventListener('click', close);
     backdrop.addEventListener('click', close);
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) close();
+    });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && modal.classList.contains('is-open')) close();
     });
@@ -5047,12 +5470,194 @@
     });
   }
 
+function installCatalogAtmosphere() {
+  const catalog =
+    document.getElementById('catalogo') ||
+    document.querySelector(
+      '.catalog-section'
+    );
+  const hero =
+    document.getElementById(
+      'heroCarousel'
+    ) ||
+    document.querySelector(
+      '.hero-carousel'
+    );
+  const footer =
+    document.querySelector(
+      'footer, .footer'
+    );
+
+  function normalize(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
+  function syncMood() {
+    const source = normalize(
+      [
+        state.category,
+        state.search,
+        state.editorialIntent &&
+        state.editorialIntent.key
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+
+    let mood = 'collection';
+
+    if (
+      /champagne|espumoso|prosecco|cava/.test(
+        source
+      )
+    ) {
+      mood = 'bubbles';
+    } else if (
+      /vino|tinto|blanco|rosado/.test(
+        source
+      )
+    ) {
+      mood = 'wine';
+    } else if (
+      /tequila|whisky|mezcal|ron|ginebra|vodka|brandy|cognac|anis/.test(
+        source
+      )
+    ) {
+      mood = 'spirits';
+    }
+
+    document.body.dataset.catalogMood =
+      mood;
+  }
+
+  function updateProgress() {
+    if (!catalog) return;
+
+    const rect =
+      catalog.getBoundingClientRect();
+    const total = Math.max(
+      1,
+      rect.height -
+      window.innerHeight
+    );
+    const progress = Math.max(
+      0,
+      Math.min(
+        1,
+        -rect.top / total
+      )
+    );
+
+    document.documentElement.style
+      .setProperty(
+        '--puzzles-catalog-progress',
+        progress.toFixed(3)
+      );
+  }
+
+  if ('IntersectionObserver' in window) {
+    const targets = [
+      { node: hero, zone: 'hero' },
+      { node: catalog, zone: 'catalog' },
+      { node: footer, zone: 'footer' }
+    ].filter(function (item) {
+      return Boolean(item.node);
+    });
+
+    const observer =
+      new IntersectionObserver(
+        function (entries) {
+          const visible = entries
+            .filter(function (entry) {
+              return entry.isIntersecting;
+            })
+            .sort(function (a, b) {
+              return b.intersectionRatio -
+                a.intersectionRatio;
+            })[0];
+
+          if (!visible) return;
+
+          const target =
+            targets.find(
+              function (item) {
+                return item.node ===
+                  visible.target;
+              }
+            );
+
+          if (target) {
+            document.body.dataset
+              .puzzlesZone =
+              target.zone;
+          }
+        },
+        {
+          threshold: [
+            0.18,
+            0.42,
+            0.7
+          ]
+        }
+      );
+
+    targets.forEach(function (item) {
+      observer.observe(item.node);
+    });
+  }
+
+  syncMood();
+  updateProgress();
+
+  window.addEventListener(
+    'scroll',
+    updateProgress,
+    { passive: true }
+  );
+  window.addEventListener(
+    'resize',
+    updateProgress,
+    { passive: true }
+  );
+
+  document.addEventListener(
+    'click',
+    function () {
+      window.setTimeout(syncMood, 0);
+    }
+  );
+  document.addEventListener(
+    'change',
+    function () {
+      window.setTimeout(syncMood, 0);
+    }
+  );
+}
+
   ready(function () {
-    enforceCurrentInterfaceRules();
-    installCellarExperience();
-    installRevealSystem();
-    installLegalInformation();
-    installPaginationMotion();
+    const installers = [
+      installCellarExperience,
+      enforceCurrentInterfaceRules,
+      installCatalogAtmosphere,
+      installRevealSystem,
+      installLegalInformation,
+      installPaginationMotion
+    ];
+
+    installers.forEach(function (installer) {
+      try {
+        installer();
+      } catch (error) {
+        console.error(
+          'PUZZLES installer error:',
+          installer && installer.name,
+          error
+        );
+      }
+    });
   });
 })();
 
@@ -5551,73 +6156,18 @@
     scheduleMetadata();
   }
 
-  function enhanceCellarDepth() {
-    const cellar = document.getElementById('puzzlesCellar');
-    if (!cellar || cellar.dataset.finalDepthReady === 'true') return;
-    cellar.dataset.finalDepthReady = 'true';
-    cellar.setAttribute('role', 'dialog');
-    cellar.setAttribute('aria-modal', 'true');
-    cellar.setAttribute('aria-label', 'Recorrido inmersivo por la cava PUZZLES');
+function enhanceCellarDepth() {
+  const cellar = document.getElementById('puzzlesCellar');
+  if (!cellar) return;
 
-    const collections = [
-      null,
-      { label: 'EXPLORAR VINOS', terms: ['vino', 'tinto', 'blanco', 'rosado'] },
-      { label: 'VER CHAMPAGNE', terms: ['champagne', 'espumoso', 'prosecco', 'cava'] },
-      { label: 'VER DESTILADOS', terms: ['tequila', 'whisky', 'mezcal', 'ron', 'ginebra', 'vodka', 'brandy', 'cognac'] }
-    ];
-
-    cellar.querySelectorAll('[data-cellar-scene]').forEach(function (scene, index) {
-      if (!scene.querySelector('.puzzles-cellar__architecture')) {
-        scene.insertAdjacentHTML('afterbegin', [
-          '<div class="puzzles-cellar__architecture" aria-hidden="true">',
-          '<span class="puzzles-cellar__light-beam"></span>',
-          '<span class="puzzles-cellar__shelf puzzles-cellar__shelf--back"></span>',
-          '<span class="puzzles-cellar__bottles puzzles-cellar__bottles--back"></span>',
-          '<span class="puzzles-cellar__shelf puzzles-cellar__shelf--front"></span>',
-          '<span class="puzzles-cellar__bottles puzzles-cellar__bottles--front"></span>',
-          '<span class="puzzles-cellar__haze"></span>',
-          '</div>'
-        ].join(''));
-      }
-      const collection = collections[index];
-      const copy = scene.querySelector('.puzzles-cellar__copy');
-      if (collection && copy && !copy.querySelector('[data-cellar-collection]')) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'puzzles-cellar__collection-button';
-        button.dataset.cellarCollection = collection.terms.join('|');
-        button.textContent = collection.label;
-        copy.appendChild(button);
-      }
-    });
-
-    function normalizeText(value) {
-      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    }
-
-    cellar.addEventListener('click', function (event) {
-      const button = event.target.closest('[data-cellar-collection]');
-      if (!button) return;
-      const terms = String(button.dataset.cellarCollection || '').split('|').filter(Boolean);
-      const categories = Array.isArray(state.categories) ? state.categories.filter(function (category) {
-        const normalized = normalizeText(category);
-        return terms.some(function (term) { return normalized.includes(normalizeText(term)); });
-      }) : [];
-
-      state.category = 'Todas';
-      state.brand = 'Todas';
-      state.page = 1;
-      state.editorialIntent = categories.length ? { key: 'cellar-selection', categories: categories, sort: 'featured' } : null;
-      state.search = categories.length ? '' : (terms[0] || '');
-      if (dom.searchInput) dom.searchInput.value = state.search;
-      if (dom.brandFilter) dom.brandFilter.value = 'Todas';
-      if (typeof renderCategories === 'function') renderCategories();
-      if (typeof renderBrands === 'function') renderBrands();
-      if (typeof applyFilters === 'function') applyFilters();
-      const skip = cellar.querySelector('[data-cellar-catalog]');
-      if (skip) skip.click();
-    });
-  }
+  cellar.dataset.finalDepthReady = 'true';
+  cellar.setAttribute('role', 'dialog');
+  cellar.setAttribute('aria-modal', 'true');
+  cellar.setAttribute(
+    'aria-label',
+    'Introducción inmersiva de PUZZLES'
+  );
+}
 
   function installMotionDiscipline() {
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
