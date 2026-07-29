@@ -6,8 +6,8 @@
      * exterior; no se requiere una URL CORS directa aquí.
      */
     const GITHUB_GAS_URL = '';
-    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?rev=20260727-tour-recovery-1';
-    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?rev=20260727-tour-recovery-1';
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?rev=20260729-scroll-journey-1';
+    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?rev=20260729-scroll-journey-1';
 
     const STORAGE_KEYS = Object.freeze({
       CART: 'puzzles_cart_v3',
@@ -5145,23 +5145,14 @@ async function submitContactForm(event) {
       node.remove();
     });
 
-    const viewport = cellar.querySelector('.puzzles-immersive-menu__viewport');
-    const background = cellar.querySelector('.puzzles-immersive-menu__background');
-    const grid = cellar.querySelector('[data-immersive-grid]');
-    const titleNode = document.getElementById('puzzlesImmersiveTitle');
-    const kickerNode = document.getElementById('puzzlesImmersiveKicker');
-    const subtitleNode = document.getElementById('puzzlesImmersiveSubtitle');
+    const scrollHost = cellar.querySelector('[data-journey-scroll]');
+    const track = cellar.querySelector('[data-journey-track]');
+    const stage = cellar.querySelector('[data-journey-stage]');
+    const copyLayer = cellar.querySelector('[data-journey-copy]');
+    const rail = cellar.querySelector('[data-journey-rail]');
+    const counter = cellar.querySelector('[data-journey-counter]');
     const skipNode = document.getElementById('puzzlesImmersiveSkip');
-    const fallbackMoments = [
-      { eyebrow: 'CELEBRAR', title: 'Una celebración', text: 'Etiquetas para brindar, compartir y marcar una ocasión especial.', action: 'intent:celebration', value: 'celebration' },
-      { eyebrow: 'COMPARTIR', title: 'Mesa y sobremesa', text: 'Opciones para acompañar una comida, una reunión o una conversación larga.', action: 'intent:table', value: 'table' },
-      { eyebrow: 'REGALAR', title: 'Un regalo pensado', text: 'Botellas con presencia para agradecer, reconocer o celebrar a alguien.', action: 'intent:gift', value: 'gift' },
-      { eyebrow: 'DESCUBRIR', title: 'Algo diferente', text: 'Explora estilos, orígenes y perfiles que todavía no forman parte de tu colección.', action: 'intent:discovery', value: 'discovery' }
-    ];
-    const fallbackFilters = [
-      'Vinos tintos','Vinos blancos','Vinos rosados','Vinos espumosos','Whisky','Tequila',
-      'Mezcal','Ron','Ginebra','Vodka','Brandy','Cognac','Vermouth','Licores'
-    ];
+    if (!scrollHost || !track || !stage || !copyLayer || !rail) return null;
     const bannerImages = [
       'https://drgnzzo.github.io/PUZZLES/assets/banner-01-editorial.png',
       'https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png',
@@ -5170,8 +5161,24 @@ async function submitContactForm(event) {
       'https://drgnzzo.github.io/PUZZLES/assets/banner-05-editorial.png',
       'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png'
     ];
+    const fallbackMoments = [
+      { type: 'moment', value: 'celebration', kicker: 'PARA BRINDAR', title: 'Una celebración', text: 'Burbujas y etiquetas para compartir, regalar y marcar una ocasión especial.', button: 'EXPLORAR', imageUrl: bannerImages[0] },
+      { type: 'moment', value: 'table', kicker: 'MESA Y SOBREMESA', title: 'Alrededor de la mesa', text: 'Vinos y destilados para acompañar una comida, una reunión o una conversación larga.', button: 'EXPLORAR', imageUrl: bannerImages[3] },
+      { type: 'moment', value: 'gift', kicker: 'PARA REGALAR', title: 'Una pieza con presencia', text: 'Selecciones para agradecer, reconocer o celebrar a alguien con intención.', button: 'EXPLORAR', imageUrl: bannerImages[1] },
+      { type: 'moment', value: 'discovery', kicker: 'PARA DESCUBRIR', title: 'Algo diferente', text: 'Explora estilos, orígenes y perfiles que todavía no forman parte de tu colección.', button: 'EXPLORAR', imageUrl: bannerImages[4] }
+    ];
+
+    let scenes = [];
+    let activeIndex = 0;
     let returnFocus = null;
-    let renderCounter = 0;
+    let animationFrame = 0;
+    let targetProgress = 0;
+    let smoothProgress = 0;
+    let resizeTimer = 0;
+
+    function clamp(value, min, max) {
+      return Math.min(max == null ? 1 : max, Math.max(min == null ? 0 : min, value));
+    }
 
     function normalize(value) {
       return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -5179,28 +5186,21 @@ async function submitContactForm(event) {
 
     function escapeHtml(value) {
       return String(value == null ? '' : value)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-    }
-
-    function shuffle(items) {
-      const result = items.slice();
-      for (let index = result.length - 1; index > 0; index--) {
-        const randomIndex = Math.floor(Math.random() * (index + 1));
-        const temporary = result[index];
-        result[index] = result[randomIndex];
-        result[randomIndex] = temporary;
-      }
-      return result;
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     function tourConfig() {
       const configured = state.store && state.store.tour && typeof state.store.tour === 'object'
-        ? state.store.tour : {};
+        ? state.store.tour
+        : {};
       return Object.assign({
-        kicker: 'ELIGE TU RECORRIDO',
-        title: '¿Cómo quieres entrar a PUZZLES?',
-        subtitle: 'Elige una colección o una ocasión. La selección se aplicará al catálogo al entrar.',
+        kicker: 'DESCUBRE PUZZLES',
+        title: 'Un recorrido por la colección',
+        subtitle: 'Desliza para recorrer vinos, licores y destilados. Entra al catálogo desde la escena que mejor encaje contigo.',
         skipText: 'OMITIR INTRODUCCIÓN',
         buttonText: 'EXPLORAR',
         categoryKicker: 'UNA RUTA',
@@ -5211,12 +5211,13 @@ async function submitContactForm(event) {
       }, configured);
     }
 
-    function applyTourTexts() {
-      const config = tourConfig();
-      if (kickerNode) kickerNode.textContent = config.kicker || 'ELIGE TU RECORRIDO';
-      if (titleNode) titleNode.textContent = config.title || '¿Cómo quieres entrar a PUZZLES?';
-      if (subtitleNode) subtitleNode.textContent = config.subtitle || '';
-      if (skipNode) skipNode.textContent = config.skipText || 'OMITIR INTRODUCCIÓN';
+    function replaceValueTemplate(text, value) {
+      return String(text || '').replace(/\{valor\}/gi, value || '');
+    }
+
+    function configuredCards() {
+      const cards = tourConfig().cards;
+      return Array.isArray(cards) ? cards.filter(Boolean) : [];
     }
 
     function categoryRecords() {
@@ -5228,6 +5229,8 @@ async function submitContactForm(event) {
       }).filter(function (item) {
         const key = normalize(item.name);
         return item.name && key !== 'todas' && key !== 'todos' && key !== 'otros' && key !== 'otro';
+      }).sort(function (left, right) {
+        return (right.count || 0) - (left.count || 0);
       });
     }
 
@@ -5239,168 +5242,187 @@ async function submitContactForm(event) {
         counts.set(brand, (counts.get(brand) || 0) + 1);
       });
       return (Array.isArray(state.brands) ? state.brands : [])
-        .map(function (brand) { return { name: String(brand || '').trim(), count: counts.get(String(brand || '').trim()) || 0 }; })
-        .filter(function (item) { return item.name && item.count >= 1; });
+        .map(function (brand) {
+          const name = String(brand || '').trim();
+          return { name: name, count: counts.get(name) || 0 };
+        })
+        .filter(function (item) { return item.name && item.count > 0; })
+        .sort(function (left, right) { return right.count - left.count; });
     }
 
-    function remoteCards() {
-      const cards = tourConfig().cards;
-      return Array.isArray(cards) ? cards.filter(Boolean) : [];
+    function defaultImage(index) {
+      return bannerImages[index % bannerImages.length];
     }
 
-    function findOverride(kind, value) {
-      const kindKey = normalize(kind);
-      const valueKey = normalize(value);
-      return remoteCards().find(function (card) {
-        return normalize(card.type) === kindKey && normalize(card.value) === valueKey;
-      }) || null;
-    }
-
-    function replaceValueTemplate(text, value) {
-      return String(text || '').replace(/\{valor\}/gi, value || '');
-    }
-
-    function cardEditorial(name, kind, override) {
+    function editorialForValue(value, type) {
       const config = tourConfig();
-      const key = normalize(name);
-      let eyebrow = kind === 'brand' ? config.brandKicker : config.categoryKicker;
-      let text = kind === 'brand'
-        ? replaceValueTemplate(config.brandText, name)
-        : replaceValueTemplate(config.categoryText, String(name || '').toLowerCase());
+      const key = normalize(value);
+      let kicker = type === 'brand' ? config.brandKicker : config.categoryKicker;
+      let text = type === 'brand'
+        ? replaceValueTemplate(config.brandText, value)
+        : replaceValueTemplate(config.categoryText, String(value || '').toLowerCase());
 
-      if (/espum|champ|prosecco|cava/.test(key)) { eyebrow = 'PARA BRINDAR'; text = 'Burbujas y etiquetas para una celebración, un regalo o una mesa especial.'; }
-      else if (/tinto|blanco|rosado|vino/.test(key)) { eyebrow = 'DE LA BODEGA'; text = 'Vinos para la mesa, la sobremesa, el regalo y la cava personal.'; }
-      else if (/whisk/.test(key)) { eyebrow = 'CARÁCTER'; text = 'Whiskies con distintos orígenes, estilos, barricas y perfiles.'; }
-      else if (/tequila|mezcal|agave/.test(key)) { eyebrow = 'AGAVE'; text = 'Destilados de agave para descubrir perfiles jóvenes, reposados y añejos.'; }
-      else if (/gin|ginebra/.test(key)) { eyebrow = 'BOTÁNICOS'; text = 'Ginebras para coctelería, aperitivo y combinaciones de perfil aromático.'; }
-      else if (/vermouth|aperitiv/.test(key)) { eyebrow = 'APERITIVO'; text = 'Vermouths y aperitivos para abrir la mesa o alargar la sobremesa.'; }
-      else if (/licor/.test(key)) { eyebrow = 'SOBREMESA'; text = 'Licores para servir solos, con hielo o dentro de una mezcla.'; }
-      else if (/ron/.test(key)) { eyebrow = 'ORIGEN Y BARRICA'; text = 'Rones blancos, dorados y añejos para coctelería o degustación.'; }
-      else if (/vodka/.test(key)) { eyebrow = 'PUREZA'; text = 'Vodkas para mezclas limpias, coctelería y servicio frío.'; }
-      else if (/brandy|cognac/.test(key)) { eyebrow = 'SOBREMESA'; text = 'Destilados de uva con perfiles cálidos, frutales y de barrica.'; }
-
-      if (override) {
-        if (override.kicker) eyebrow = override.kicker;
-        if (override.text) text = override.text;
+      if (/espum|champ|prosecco|cava/.test(key)) {
+        kicker = 'PARA BRINDAR';
+        text = 'Burbujas y etiquetas para una celebración, un regalo o una mesa especial.';
+      } else if (/tinto|blanco|rosado|vino/.test(key)) {
+        kicker = 'DE LA BODEGA';
+        text = 'Vinos para la mesa, la sobremesa, el regalo y la cava personal.';
+      } else if (/whisk/.test(key)) {
+        kicker = 'CARÁCTER';
+        text = 'Whiskies con distintos orígenes, estilos, barricas y perfiles.';
+      } else if (/tequila|mezcal|agave/.test(key)) {
+        kicker = 'AGAVE';
+        text = 'Destilados de agave para descubrir perfiles jóvenes, reposados y añejos.';
+      } else if (/gin|ginebra/.test(key)) {
+        kicker = 'BOTÁNICOS';
+        text = 'Ginebras para coctelería, aperitivo y combinaciones de perfil aromático.';
+      } else if (/vermouth|aperitiv/.test(key)) {
+        kicker = 'APERITIVO';
+        text = 'Vermouths y aperitivos para abrir la mesa o alargar la sobremesa.';
+      } else if (/licor/.test(key)) {
+        kicker = 'SOBREMESA';
+        text = 'Licores para servir solos, con hielo o dentro de una mezcla.';
+      } else if (/ron/.test(key)) {
+        kicker = 'ORIGEN Y BARRICA';
+        text = 'Rones blancos, dorados y añejos para coctelería o degustación.';
       }
-      return { eyebrow: eyebrow || 'UNA RUTA', text: text || '' };
+      return { kicker: kicker || 'UNA RUTA', text: text || '' };
     }
 
-    function boardProfile() {
-      const width = window.innerWidth || document.documentElement.clientWidth || 1280;
-      const height = window.innerHeight || document.documentElement.clientHeight || 800;
-      if (width < 600) {
-        return { name: 'phone', count: height < 650 ? 4 : 5, tiles: ['hero','standard','standard','wide','small'] };
-      }
-      if (width < 980 || height < 720) {
-        return { name: 'tablet', count: 6, tiles: ['hero','wide','standard','standard','wide','small'] };
-      }
-      return { name: 'desktop', count: 7, tiles: ['hero','tall','tall','wide','wide','small','small'] };
-    }
+    function sceneFromCard(card, index) {
+      const type = normalize(card.type || 'category');
+      const value = String(card.value || '').trim();
+      const editorial = editorialForValue(value, type);
+      let action = '';
+      if (type === 'moment') action = 'intent:' + (value || 'discovery');
+      else if (type === 'all' || type === 'catalog') action = 'catalog';
 
-    function makeFilterPool() {
-      const categories = categoryRecords().map(function (item) {
-        return { kind: 'category', value: item.name, count: item.count };
-      });
-      const brands = brandRecords().map(function (item) {
-        return { kind: 'brand', value: item.name, count: item.count };
-      });
-      const pool = categories.concat(brands.length ? shuffle(brands).slice(0, Math.max(3, Math.ceil(categories.length / 3))) : []);
-      if (pool.length) return shuffle(pool);
-      return shuffle(fallbackFilters.map(function (name) { return { kind: 'search', value: name, count: 0 }; }));
-    }
-
-    function currentMoments() {
-      const configuredMoments = remoteCards().filter(function (card) { return normalize(card.type) === 'moment'; });
-      const editorialMoments = Array.isArray(state.store && state.store.moments) ? state.store.moments : [];
-      const base = configuredMoments.length ? configuredMoments.map(function (card) {
-        return {
-          kind: 'moment', value: card.value || '', eyebrow: card.kicker || '', title: card.title || '',
-          text: card.text || '', action: 'intent:' + (card.value || 'discovery'), imageUrl: card.imageUrl || '',
-          button: card.button || '', featured: Boolean(card.featured), showMobile: card.showMobile !== false
-        };
-      }) : fallbackMoments.map(function (fallback, index) {
-        return Object.assign({ kind: 'moment' }, fallback, editorialMoments[index] || {});
-      });
-      return shuffle(base);
-    }
-
-    function allCard() {
-      const override = findOverride('all', 'Todas') || remoteCards().find(function (card) { return normalize(card.type) === 'all'; });
       return {
-        kind: 'all', value: 'Todas', title: override && override.title || 'Catálogo completo',
-        eyebrow: override && override.kicker || 'TODAS LAS PIEZAS',
-        text: override && override.text || 'Entra sin filtros y recorre la colección completa.',
-        imageUrl: override && override.imageUrl || bannerImages[(renderCounter + 4) % bannerImages.length],
-        button: override && override.button || '', featured: override ? Boolean(override.featured) : true,
-        showMobile: !override || override.showMobile !== false
+        label: String(card.title || value || ('Escena ' + (index + 1))),
+        kicker: String(card.kicker || editorial.kicker || ''),
+        title: String(card.title || value || 'Explora la colección'),
+        body: String(card.text || editorial.text || ''),
+        note: String(card.button || tourConfig().buttonText || 'EXPLORAR'),
+        imageUrl: String(card.imageUrl || defaultImage(index)),
+        type: type,
+        value: value,
+        action: action,
+        button: String(card.button || tourConfig().buttonText || 'EXPLORAR')
       };
     }
 
-    function composeCards(profile) {
-      const isMobile = profile.name === 'phone';
-      const moments = currentMoments().filter(function (card) { return !isMobile || card.showMobile !== false; });
-      const filters = makeFilterPool().map(function (card) {
-        const override = findOverride(card.kind, card.value);
-        if (override && isMobile && override.showMobile === false) return null;
-        return Object.assign({}, card, override ? {
-          title: override.title || card.value,
-          eyebrow: override.kicker || '', text: override.text || '', imageUrl: override.imageUrl || '',
-          button: override.button || '', featured: Boolean(override.featured)
-        } : {});
-      }).filter(Boolean);
-
-      const result = [];
-      const catalog = allCard();
-      const momentCount = profile.name === 'desktop' ? 2 : 1;
-      const selectedMoments = moments.slice(0, momentCount);
-      const filterTarget = Math.max(1, profile.count - selectedMoments.length - 1);
-      result.push.apply(result, filters.slice(0, filterTarget));
-      result.splice(Math.min(2, result.length), 0, catalog);
-      selectedMoments.forEach(function (moment, index) {
-        result.splice(Math.min(3 + index * 2, result.length), 0, moment);
+    function buildScenes() {
+      const config = tourConfig();
+      const mobile = window.matchMedia('(max-width: 760px)').matches;
+      const remote = configuredCards().filter(function (card) {
+        return !mobile || card.showMobile !== false;
       });
-      while (result.length < profile.count && filters[result.length]) result.push(filters[result.length]);
-      return result.slice(0, profile.count);
+      const allCards = remote.filter(function (card) {
+        const type = normalize(card.type);
+        return type === 'all' || type === 'catalog';
+      });
+      const contentCards = remote.filter(function (card) {
+        const type = normalize(card.type);
+        return type !== 'all' && type !== 'catalog';
+      });
+
+      const intro = {
+        label: 'Inicio',
+        kicker: String(config.kicker || 'DESCUBRE PUZZLES'),
+        title: String(config.title || 'Un recorrido por la colección'),
+        body: String(config.subtitle || 'Desliza para recorrer la colección.'),
+        note: 'DESLIZA PARA CONTINUAR',
+        imageUrl: String(contentCards[0] && contentCards[0].imageUrl || defaultImage(0)),
+        type: 'next',
+        value: '',
+        action: '',
+        button: 'COMENZAR'
+      };
+
+      let middle = contentCards.map(sceneFromCard);
+      if (!middle.length) {
+        middle = fallbackMoments.slice(0, 4).map(sceneFromCard);
+      }
+
+      const categories = categoryRecords();
+      let categoryIndex = 0;
+      while (middle.length < 4 && categoryIndex < categories.length) {
+        const item = categories[categoryIndex++];
+        middle.push(sceneFromCard({
+          type: 'category',
+          value: item.name,
+          title: item.name,
+          imageUrl: defaultImage(middle.length + 1)
+        }, middle.length + 1));
+      }
+
+      if (middle.length < 4) {
+        const brands = brandRecords();
+        let brandIndex = 0;
+        while (middle.length < 4 && brandIndex < brands.length) {
+          const item = brands[brandIndex++];
+          middle.push(sceneFromCard({
+            type: 'brand',
+            value: item.name,
+            title: item.name,
+            imageUrl: defaultImage(middle.length + 1)
+          }, middle.length + 1));
+        }
+      }
+
+      const allScene = sceneFromCard(allCards[0] || {
+        type: 'all',
+        value: 'Todas',
+        kicker: 'TODAS LAS PIEZAS',
+        title: 'Abre el catálogo',
+        text: 'Entra sin filtros y recorre la colección completa. Después podrás afinar por categoría, marca, precio y presentación.',
+        button: 'ENTRAR AL CATÁLOGO',
+        imageUrl: defaultImage(5)
+      }, 5);
+
+      const maxMiddle = mobile ? 4 : 5;
+      const result = [intro].concat(middle.slice(0, maxMiddle), [allScene]);
+      return result.slice(0, mobile ? 6 : 7);
     }
 
-    function cardMarkup(card, index, tile) {
-      const override = findOverride(card.kind, card.value);
-      const image = card.imageUrl || override && override.imageUrl || bannerImages[(index + renderCounter) % bannerImages.length];
-      const title = card.title || override && override.title || card.value;
-      const editorial = card.kind === 'moment' || card.kind === 'all'
-        ? { eyebrow: card.eyebrow || override && override.kicker || 'UN MOMENTO', text: card.text || override && override.text || '' }
-        : cardEditorial(title, card.kind, override);
-      const buttonText = card.button || override && override.button || tourConfig().buttonText || 'EXPLORAR';
-      const action = card.kind === 'moment' ? (card.action || ('intent:' + (card.value || 'discovery'))) : (card.kind === 'all' ? 'catalog' : '');
-      const attrs = action
-        ? 'data-immersive-action="' + escapeHtml(action) + '"'
-        : 'data-immersive-filter-kind="' + escapeHtml(card.kind) + '" data-immersive-filter-value="' + escapeHtml(card.value) + '"';
-      return '<article class="puzzles-immersive-card puzzles-immersive-card--' + escapeHtml(tile) + ' puzzles-immersive-card--tile-' + index + '" role="button" tabindex="0" ' + attrs +
-        ' data-immersive-image="' + escapeHtml(image) + '" style="--immersive-card-image:url(\'' + escapeHtml(image) + '\')">' +
-        '<div class="puzzles-immersive-card__image" aria-hidden="true"></div><div class="puzzles-immersive-card__shade" aria-hidden="true"></div>' +
-        '<div class="puzzles-immersive-card__content"><span>' + escapeHtml(editorial.eyebrow) + '</span><h2>' + escapeHtml(title) + '</h2><p>' + escapeHtml(editorial.text) + '</p>' +
-        '<button type="button" tabindex="-1" ' + attrs + '><span>' + escapeHtml(buttonText) + '</span><b aria-hidden="true">→</b></button></div></article>';
+    function sceneActionAttributes(scene, index) {
+      if (scene.type === 'next') return 'data-journey-next="' + String(Math.min(index + 1, scenes.length - 1)) + '"';
+      if (scene.action) return 'data-immersive-action="' + escapeHtml(scene.action) + '"';
+      return 'data-immersive-filter-kind="' + escapeHtml(scene.type) + '" data-immersive-filter-value="' + escapeHtml(scene.value) + '"';
     }
 
-    function renderCards() {
-      if (!grid) return;
-      renderCounter++;
-      applyTourTexts();
-      const profile = boardProfile();
-      const cards = composeCards(profile);
-      cellar.dataset.boardProfile = profile.name;
-      grid.innerHTML = cards.map(function (card, index) {
-        return cardMarkup(card, index, profile.tiles[index] || 'standard');
+    function renderJourney() {
+      scenes = buildScenes();
+      const count = Math.max(2, scenes.length);
+      track.style.height = String(Math.max(520, count * 108)) + 'dvh';
+      track.style.setProperty('--puzzles-journey-scenes', String(count));
+
+      stage.innerHTML = scenes.map(function (scene, index) {
+        return '<img class="puzzles-journey__poster' + (index === 0 ? ' is-visible' : '') + '" data-journey-poster="' + index + '" src="' + escapeHtml(scene.imageUrl) + '" alt="" loading="' + (index < 2 ? 'eager' : 'lazy') + '">';
       }).join('');
-      cellar.dataset.renderSource = categoryRecords().length ? 'catalog' : 'fallback';
-      const first = grid.querySelector('[data-immersive-image]');
-      if (first) setBackground(first.dataset.immersiveImage, 'tour');
-    }
 
-    function setBackground(image, mood) {
-      if (background && image) background.style.setProperty('--immersive-active-image', "url('" + String(image).replace(/'/g, "\\'") + "')");
-      cellar.dataset.immersiveMood = mood || 'all';
+      copyLayer.innerHTML = scenes.map(function (scene, index) {
+        const attrs = sceneActionAttributes(scene, index);
+        return '<article class="puzzles-journey__copy' + (index === 0 ? ' is-active' : '') + '" data-journey-copy-index="' + index + '" aria-hidden="' + (index === 0 ? 'false' : 'true') + '">' +
+          '<div class="puzzles-journey__kicker">' + escapeHtml(scene.kicker) + '</div>' +
+          '<h1 id="' + (index === 0 ? 'puzzlesImmersiveTitle' : 'puzzlesJourneyTitle' + index) + '" class="puzzles-journey__title">' + escapeHtml(scene.title) + '</h1>' +
+          '<p class="puzzles-journey__body">' + escapeHtml(scene.body) + '</p>' +
+          '<span class="puzzles-journey__note">' + escapeHtml(scene.note) + '</span>' +
+          '<button class="puzzles-journey__cta" type="button" ' + attrs + '>' + escapeHtml(scene.button) + '<span aria-hidden="true">→</span></button>' +
+        '</article>';
+      }).join('');
+
+      rail.innerHTML = scenes.map(function (scene, index) {
+        return '<button class="puzzles-journey__dot' + (index === 0 ? ' is-active' : '') + '" type="button" data-journey-jump="' + index + '" aria-label="Ir a: ' + escapeHtml(scene.label) + '"' + (index === 0 ? ' aria-current="step"' : '') + '><span>' + escapeHtml(scene.label) + '</span></button>';
+      }).join('');
+
+      if (skipNode) skipNode.textContent = tourConfig().skipText || 'OMITIR INTRODUCCIÓN';
+      activeIndex = 0;
+      targetProgress = 0;
+      smoothProgress = 0;
+      paintJourney(0, true);
+      cellar.dataset.renderSource = configuredCards().length ? 'sheet' : 'fallback';
     }
 
     function resetCatalog() {
@@ -5432,39 +5454,118 @@ async function submitContactForm(event) {
       refreshCatalogUi();
     }
 
+    function maxScroll() {
+      return scrollHost ? Math.max(0, scrollHost.scrollHeight - scrollHost.clientHeight) : 0;
+    }
+
+    function readProgress() {
+      const maximum = maxScroll();
+      targetProgress = maximum > 0 ? clamp(scrollHost.scrollTop / maximum, 0, 1) : 0;
+    }
+
+    function paintJourney(progress, immediate) {
+      if (!scenes.length) return;
+      const lastIndex = Math.max(0, scenes.length - 1);
+      const exact = clamp(progress, 0, 1) * lastIndex;
+      const segment = Math.min(lastIndex, Math.floor(exact));
+      const local = segment >= lastIndex ? 0 : exact - segment;
+      const fade = segment >= lastIndex ? 0 : clamp((local - 0.72) / 0.28, 0, 1);
+
+      stage.querySelectorAll('[data-journey-poster]').forEach(function (poster, index) {
+        let opacity = 0;
+        if (index === segment) opacity = segment >= lastIndex ? 1 : 1 - fade;
+        if (index === segment + 1) opacity = fade;
+        poster.style.opacity = String(opacity);
+        poster.style.transform = 'scale(' + String(1.025 + local * 0.018) + ')';
+        poster.classList.toggle('is-visible', opacity > 0.01);
+      });
+
+      const nextActive = Math.min(lastIndex, Math.round(exact));
+      if (immediate || nextActive !== activeIndex) {
+        activeIndex = nextActive;
+        copyLayer.querySelectorAll('[data-journey-copy-index]').forEach(function (copy, index) {
+          const active = index === activeIndex;
+          copy.classList.toggle('is-active', active);
+          copy.setAttribute('aria-hidden', active ? 'false' : 'true');
+        });
+        rail.querySelectorAll('[data-journey-jump]').forEach(function (dot, index) {
+          const active = index === activeIndex;
+          dot.classList.toggle('is-active', active);
+          if (active) dot.setAttribute('aria-current', 'step');
+          else dot.removeAttribute('aria-current');
+        });
+        if (counter) {
+          counter.textContent = String(activeIndex + 1).padStart(2, '0') + ' / ' + String(scenes.length).padStart(2, '0');
+        }
+      }
+
+      cellar.style.setProperty('--puzzles-journey-progress', String(clamp(progress, 0, 1)));
+      cellar.style.setProperty('--puzzles-journey-local', String(local));
+    }
+
+    function animateJourney() {
+      if (!cellar.classList.contains('is-open')) {
+        animationFrame = 0;
+        return;
+      }
+      smoothProgress += (targetProgress - smoothProgress) * 0.16;
+      if (Math.abs(targetProgress - smoothProgress) < 0.0001) smoothProgress = targetProgress;
+      paintJourney(smoothProgress, false);
+      animationFrame = window.requestAnimationFrame(animateJourney);
+    }
+
+    function jumpTo(index) {
+      const maximum = maxScroll();
+      const denominator = Math.max(1, scenes.length - 1);
+      const destination = (clamp(Number(index) || 0, 0, scenes.length - 1) / denominator) * maximum;
+      scrollHost.scrollTo({
+        top: destination,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+      });
+    }
+
     function openCellar(trigger) {
       returnFocus = trigger || document.activeElement;
-      renderCards();
+      renderJourney();
+      scrollHost.scrollTop = 0;
       cellar.classList.add('is-open');
       cellar.setAttribute('aria-hidden', 'false');
       document.body.classList.remove('age-gate-visible');
       document.body.classList.add('no-scroll', 'cellar-is-open');
+      readProgress();
+      if (!animationFrame) animationFrame = window.requestAnimationFrame(animateJourney);
 
       if (state.initialLoadPromise && typeof state.initialLoadPromise.then === 'function') {
         Promise.resolve(state.initialLoadPromise).then(function () {
-          if (cellar.classList.contains('is-open') && cellar.dataset.renderSource === 'fallback') renderCards();
+          if (!cellar.classList.contains('is-open') || cellar.dataset.renderSource !== 'fallback') return;
+          const previous = activeIndex;
+          renderJourney();
+          window.setTimeout(function () { jumpTo(Math.min(previous, scenes.length - 1)); }, 30);
         }).catch(function () {});
       }
 
       window.setTimeout(function () {
-        const firstCard = cellar.querySelector('.puzzles-immersive-card');
-        if (firstCard) {
-          try { firstCard.focus({ preventScroll: true }); }
-          catch (_) { firstCard.focus(); }
-        }
-      }, 360);
+        if (!cellar.classList.contains('is-open')) return;
+        try { scrollHost.focus({ preventScroll: true }); }
+        catch (_) { scrollHost.focus(); }
+      }, 420);
     }
 
     function closeCellar(goCatalog) {
       cellar.classList.remove('is-open');
       cellar.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('cellar-is-open');
-      if (!document.querySelector('.modal.is-open, .drawer.is-open, .image-zoom-modal.is-open')) document.body.classList.remove('no-scroll');
+      if (!document.querySelector('.modal.is-open, .drawer.is-open, .image-zoom-modal.is-open')) {
+        document.body.classList.remove('no-scroll');
+      }
       if (goCatalog) {
         const catalog = document.getElementById('catalogo');
         if (catalog) window.setTimeout(function () {
-          catalog.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-        }, 60);
+          catalog.scrollIntoView({
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+            block: 'start'
+          });
+        }, 80);
       } else if (returnFocus && typeof returnFocus.focus === 'function') {
         try { returnFocus.focus({ preventScroll: true }); }
         catch (_) { returnFocus.focus(); }
@@ -5474,21 +5575,31 @@ async function submitContactForm(event) {
     function activateTarget(target) {
       if (!target) return;
       if (target.matches('[data-cellar-catalog]')) {
-        resetCatalog(); refreshCatalogUi(); closeCellar(true); return;
+        resetCatalog();
+        refreshCatalogUi();
+        closeCellar(true);
+        return;
+      }
+      if (target.dataset.journeyNext != null) {
+        jumpTo(Number(target.dataset.journeyNext));
+        return;
       }
       if (target.dataset.immersiveFilterKind) {
         applyFilter(target.dataset.immersiveFilterKind, target.dataset.immersiveFilterValue || '');
-        closeCellar(true); return;
+        closeCellar(true);
+        return;
       }
       if (target.dataset.immersiveAction) {
         const action = target.dataset.immersiveAction || 'catalog';
         if (action === 'catalog') {
-          resetCatalog(); refreshCatalogUi(); closeCellar(true);
+          resetCatalog();
+          refreshCatalogUi();
+          closeCellar(true);
         } else {
           closeCellar(false);
           window.setTimeout(function () {
             if (typeof handleEditorialAction === 'function') handleEditorialAction(action);
-          }, 30);
+          }, 40);
         }
       }
     }
@@ -5496,41 +5607,49 @@ async function submitContactForm(event) {
     window.PUZZLES_OPEN_IMMERSIVE_INTRO = openCellar;
     window.PUZZLES_CLOSE_IMMERSIVE_INTRO = closeCellar;
 
-    cellar.addEventListener('pointerover', function (event) {
-      const target = event.target.closest('[data-immersive-image]');
-      if (target) setBackground(target.dataset.immersiveImage, 'tour');
-    });
-    cellar.addEventListener('focusin', function (event) {
-      const target = event.target.closest('[data-immersive-image]');
-      if (target) setBackground(target.dataset.immersiveImage, 'tour');
-    });
+    scrollHost.addEventListener('scroll', readProgress, { passive: true });
     cellar.addEventListener('click', function (event) {
-      const target = event.target.closest('[data-cellar-catalog], .puzzles-immersive-card');
+      const jump = event.target.closest('[data-journey-jump]');
+      if (jump) {
+        event.preventDefault();
+        jumpTo(Number(jump.dataset.journeyJump));
+        return;
+      }
+      const target = event.target.closest('[data-cellar-catalog], [data-journey-next], [data-immersive-filter-kind], [data-immersive-action]');
       if (!target) return;
       event.preventDefault();
       activateTarget(target);
     });
-    cellar.addEventListener('keydown', function (event) {
-      const card = event.target.closest('.puzzles-immersive-card');
-      if (!card || (event.key !== 'Enter' && event.key !== ' ')) return;
-      event.preventDefault();
-      activateTarget(card);
-    });
 
     document.addEventListener('keydown', function (event) {
-      if (event.key !== 'Escape' || !cellar.classList.contains('is-open')) return;
-      event.preventDefault();
-      resetCatalog(); refreshCatalogUi(); closeCellar(true);
+      if (!cellar.classList.contains('is-open')) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        resetCatalog();
+        refreshCatalogUi();
+        closeCellar(true);
+      }
+      if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+        event.preventDefault();
+        jumpTo(Math.min(scenes.length - 1, activeIndex + 1));
+      }
+      if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+        event.preventDefault();
+        jumpTo(Math.max(0, activeIndex - 1));
+      }
     }, true);
 
-    let resizeTimer = null;
     window.addEventListener('resize', function () {
       if (!cellar.classList.contains('is-open')) return;
       window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(renderCards, 180);
+      resizeTimer = window.setTimeout(function () {
+        const previous = activeIndex;
+        renderJourney();
+        window.setTimeout(function () { jumpTo(Math.min(previous, scenes.length - 1)); }, 30);
+      }, 180);
     }, { passive: true });
 
-    applyTourTexts();
+    if (skipNode) skipNode.textContent = tourConfig().skipText || 'OMITIR INTRODUCCIÓN';
     return cellar;
   }
 
