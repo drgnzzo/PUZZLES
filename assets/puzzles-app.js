@@ -6,8 +6,8 @@
      * exterior; no se requiere una URL CORS directa aquí.
      */
     const GITHUB_GAS_URL = '';
-    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?rev=20260729-integrated-journey-1';
-    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?rev=20260729-integrated-journey-1';
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?rev=20260729-editorial-pdp-2';
+    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?rev=20260729-editorial-pdp-2';
 
     const STORAGE_KEYS = Object.freeze({
       CART: 'puzzles_cart_v3',
@@ -2566,9 +2566,9 @@ function closeIntentWelcome(
       setText(dom.productDetailTitle, 'Detalle del producto');
 
       dom.productDetailContent.innerHTML = `
-        <article class="pdp-story">
-          <header class="pdp-story__purchase">
-            <div class="pdp-story__identity">
+        <article class="pdp-marketplace">
+          <header class="pdp-marketplace__masthead">
+            <div class="pdp-marketplace__identity">
               <div class="pdp-editorial__kickers">
                 <span class="pdp-category">${escapeHtml(product.category || 'Producto')}</span>
                 ${product.brand ? `<span class="pdp-brand">${escapeHtml(product.brand)}</span>` : ''}
@@ -2580,15 +2580,18 @@ function closeIntentWelcome(
                 ${product.origin ? `<span>${escapeHtml(product.origin)}</span>` : ''}
               </div>
             </div>
-            <div class="pdp-story__commerce" aria-label="Compra del producto">
-              <div class="pdp-buybox__price">
-                ${canBuy
-                  ? `${compare > sale ? `<div class="price-compare">${money(compare)}</div>` : ''}<div class="price-net">${money(sale)}</div>`
-                  : '<div class="consult-price">Precio a consultar</div>'}
-                ${renderAdminPrice(adminCost)}
+
+            <div class="pdp-marketplace__commerce" aria-label="Compra del producto">
+              <div class="pdp-marketplace__price-row">
+                <div>
+                  ${canBuy
+                    ? `${compare > sale ? `<div class="price-compare">${money(compare)}</div>` : ''}<div class="price-net">${money(sale)}</div>`
+                    : '<div class="consult-price">Precio a consultar</div>'}
+                  ${renderAdminPrice(adminCost)}
+                </div>
+                <span class="pdp-marketplace__availability">${product.stock === null ? 'Disponibilidad sujeta a confirmación' : escapeHtml(String(product.stock)) + ' disponibles'}</span>
               </div>
-              <span class="pdp-story__availability">${product.stock === null ? 'Disponibilidad sujeta a confirmación' : escapeHtml(String(product.stock)) + ' disponibles'}</span>
-              <div class="pdp-actions">
+              <div class="pdp-actions pdp-marketplace__actions">
                 <div class="qty-control pdp-qty-control">
                   <button type="button" data-pdp-minus aria-label="Restar una unidad">−</button>
                   <span id="pdpQuantityValue">${state.detailQuantity}</span>
@@ -2601,8 +2604,8 @@ function closeIntentWelcome(
             </div>
           </header>
 
-          <div class="pdp-story__body">
-            <aside class="pdp-story__media">
+          <div class="pdp-marketplace__body">
+            <aside class="pdp-marketplace__media">
               <button class="pdp-image-button" type="button" data-pdp-zoom aria-label="Ampliar imagen de ${escapeAttr(product.displayName)}">
                 <span class="product-image-fallback" aria-hidden="true"><span>${escapeHtml(categoryLetter(product.category))}</span></span>
                 ${productImageMarkup(product, 'pdp-image', product.displayName)}
@@ -2610,16 +2613,15 @@ function closeIntentWelcome(
               <button class="pdp-image-link" type="button" data-pdp-zoom>Ampliar imagen</button>
             </aside>
 
-            <section class="pdp-story__editorial">
-              <div class="pdp-story__lead">
-                <span class="pdp-story__eyebrow">LA HISTORIA DE ESTA PIEZA</span>
-                <h4>Una elección para compartir, regalar o sumar a tu colección.</h4>
-                ${description ? `<p>${escapeHtml(description)}</p>` : '<p>Consulta sus datos principales y agrega la cantidad que necesitas a tu selección.</p>'}
-              </div>
+            <section class="pdp-marketplace__content">
+              <section class="pdp-marketplace__description">
+                <span class="pdp-section-kicker">DESCRIPCIÓN</span>
+                <p>${description ? escapeHtml(description) : 'Esta publicación está pendiente de descripción editorial específica.'}</p>
+              </section>
 
-              ${highlights.length ? `<section class="pdp-highlights" aria-label="Puntos destacados">
-                ${highlights.map(item => `<div><span aria-hidden="true">◆</span><p>${escapeHtml(item)}</p></div>`).join('')}
-              </section>` : ''}
+              ${highlights.length ? `<ul class="pdp-marketplace__highlights" aria-label="Puntos destacados">
+                ${highlights.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+              </ul>` : ''}
 
               <section class="pdp-editorial__accordions">
                 ${summary && summary !== description ? renderPdpAccordion('Resumen editorial', summary, false) : ''}
@@ -4043,12 +4045,9 @@ async function confirmAge() {
     }
 
     if (hero && controls) {
-      controls.classList.remove(
-        'hero-carousel__controls--external'
-      );
-
-      if (controls.parentElement !== hero) {
-        hero.appendChild(controls);
+      controls.classList.add('hero-carousel__controls--external');
+      if (controls.previousElementSibling !== hero || controls.parentElement !== hero.parentElement) {
+        hero.insertAdjacentElement('afterend', controls);
       }
     }
 

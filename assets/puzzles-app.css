@@ -9150,15 +9150,15 @@ body.age-gate-visible > #puzzlesAmbientJourney {
   will-change: opacity, transform !important;
 }
 .puzzles-ambient-journey__layer.is-active {
-  opacity: .34 !important;
+  opacity: .46 !important;
   transform: scale(1) !important;
 }
 .puzzles-ambient-journey__veil {
   position: absolute !important;
   inset: 0 !important;
   background:
-    radial-gradient(circle at 76% 20%, transparent 0 18%, rgba(0,0,0,.28) 58%, rgba(0,0,0,.72) 100%),
-    linear-gradient(180deg, rgba(0,0,0,.68), rgba(0,0,0,.86) 46%, rgba(0,0,0,.95)) !important;
+    radial-gradient(circle at 76% 20%, transparent 0 24%, rgba(0,0,0,.18) 60%, rgba(0,0,0,.54) 100%),
+    linear-gradient(180deg, rgba(0,0,0,.36), rgba(0,0,0,.56) 46%, rgba(0,0,0,.72)) !important;
 }
 body > .announcement,
 body > .site-header,
@@ -9181,27 +9181,49 @@ main,
   width: 100% !important;
   max-width: none !important;
   padding: clamp(34px, 4vw, 64px) clamp(14px, 2.1vw, 38px) clamp(72px, 7vw, 118px) !important;
-  background: linear-gradient(180deg, rgba(5,5,5,.78), rgba(5,5,5,.91) 22%, rgba(5,5,5,.95)) !important;
+  background: linear-gradient(180deg, rgba(5,5,5,.58), rgba(5,5,5,.72) 22%, rgba(5,5,5,.80)) !important;
   backdrop-filter: none !important;
 }
 .section-heading {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  justify-items: center !important;
   width: 100% !important;
-  max-width: none !important;
-  margin: 0 0 clamp(22px, 2.5vw, 38px) !important;
+  max-width: 1480px !important;
+  margin: 0 auto clamp(24px, 2.7vw, 42px) !important;
   padding: 0 !important;
-  gap: clamp(22px, 4vw, 72px) !important;
+  gap: 12px !important;
+  text-align: center !important;
+}
+.section-heading > div {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+.section-heading .eyebrow {
+  display: inline-flex !important;
+  justify-content: center !important;
+  margin-bottom: 10px !important;
 }
 .section-heading h2 {
-  max-width: 18ch !important;
-  font-size: clamp(36px, 4.2vw, 72px) !important;
-  line-height: .94 !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  font-size: clamp(34px, 3.65vw, 66px) !important;
+  line-height: .98 !important;
+  text-align: center !important;
   text-wrap: balance !important;
 }
 .section-heading > p {
-  max-width: 54ch !important;
-  margin-inline-start: auto !important;
+  width: min(100%, 980px) !important;
+  max-width: 980px !important;
+  margin: 0 auto !important;
   font-size: clamp(14px, 1.05vw, 18px) !important;
   line-height: 1.55 !important;
+  text-align: center !important;
+  text-wrap: pretty !important;
+}
+@media (min-width: 1380px) {
+  .section-heading h2 { white-space: nowrap !important; }
 }
 
 /* Filtros: seguimiento acotado exclusivamente al catálogo. */
@@ -9397,123 +9419,210 @@ main,
   line-height: 1.12 !important;
 }
 
-/* PDP: compra breve arriba; relato y ficha ocupan el espacio principal. */
+/* PDP editorial tipo marketplace: una sola jerarquía, imagen protagonista. */
 .product-detail-modal {
   position: fixed !important;
   inset: 0 !important;
   z-index: 9020 !important;
   display: none !important;
   place-items: center !important;
-  padding: clamp(12px, 2vw, 28px) !important;
+  padding: clamp(10px, 1.6vw, 24px) !important;
   overflow: hidden !important;
-  background: rgba(0,0,0,.78) !important;
+  background: rgba(0,0,0,.80) !important;
 }
 .product-detail-modal.is-open { display: grid !important; }
 .product-detail-card {
   display: grid !important;
   grid-template-rows: auto minmax(0, 1fr) !important;
-  width: min(1120px, calc(100vw - 28px)) !important;
-  height: min(88dvh, 790px) !important;
-  max-height: min(88dvh, 790px) !important;
+  width: min(1280px, calc(100vw - 24px)) !important;
+  height: min(91dvh, 850px) !important;
+  max-height: min(91dvh, 850px) !important;
   overflow: hidden !important;
-  border: 1px solid rgba(255,255,255,.17) !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
   background: #101010 !important;
-  box-shadow: 0 34px 100px rgba(0,0,0,.62) !important;
+  box-shadow: 0 34px 100px rgba(0,0,0,.64) !important;
 }
 .product-detail-head {
   position: relative !important;
   z-index: 4 !important;
-  min-height: 64px !important;
-  padding: 14px 18px !important;
-  border-bottom: 1px solid rgba(255,255,255,.12) !important;
+  min-height: 56px !important;
+  padding: 11px 16px !important;
+  border-bottom: 1px solid rgba(255,255,255,.11) !important;
   background: #101010 !important;
+}
+.product-detail-head .eyebrow { margin: 0 !important; }
+#productDetailTitle {
+  margin: 2px 0 0 !important;
+  font-size: 16px !important;
+  line-height: 1.15 !important;
+  letter-spacing: .02em !important;
 }
 .product-detail-content {
   min-height: 0 !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important;
+  height: 100% !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
-.pdp-story { min-height: 100% !important; }
-.pdp-story__purchase {
+.pdp-marketplace {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 430px) !important;
-  gap: clamp(18px, 2.5vw, 36px) !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  background: #101010 !important;
+}
+.pdp-marketplace__masthead {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px) !important;
+  gap: clamp(22px, 3vw, 48px) !important;
   align-items: center !important;
-  padding: clamp(18px, 2.2vw, 28px) !important;
+  padding: clamp(18px, 2.2vw, 30px) clamp(20px, 2.7vw, 38px) !important;
   border-bottom: 1px solid rgba(255,255,255,.12) !important;
   background: #121212 !important;
 }
-.pdp-story__identity { min-width: 0 !important; }
-.pdp-story__identity h3 {
+.pdp-marketplace__identity { min-width: 0 !important; }
+.pdp-marketplace__identity h3 {
+  max-width: none !important;
   margin: 8px 0 0 !important;
-  font-size: clamp(30px, 3.2vw, 50px) !important;
-  line-height: .98 !important;
+  font-size: clamp(30px, 3vw, 48px) !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.025em !important;
   text-wrap: balance !important;
+  overflow-wrap: normal !important;
 }
-.pdp-story__commerce {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) !important;
-  gap: 8px !important;
+.pdp-marketplace__commerce {
   min-width: 0 !important;
+  padding-left: clamp(18px, 2vw, 30px) !important;
+  border-left: 1px solid rgba(255,255,255,.13) !important;
 }
-.pdp-story__commerce .price-net {
-  font-size: clamp(32px, 4vw, 54px) !important;
+.pdp-marketplace__price-row {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+}
+.pdp-marketplace__commerce .price-net {
+  max-width: 100% !important;
+  font-size: clamp(34px, 3.8vw, 54px) !important;
+  line-height: .92 !important;
+  white-space: nowrap !important;
   overflow: visible !important;
 }
-.pdp-story__commerce .pdp-actions {
+.pdp-marketplace__availability {
+  max-width: 150px !important;
+  padding-bottom: 4px !important;
+  color: #b9b9b9 !important;
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+  text-align: right !important;
+}
+.pdp-marketplace__actions {
   display: grid !important;
   grid-template-columns: auto minmax(0, 1fr) !important;
   gap: 10px !important;
+  margin-top: 13px !important;
 }
-.pdp-story__commerce .pdp-add-button { width: 100% !important; min-width: 0 !important; }
-.pdp-story__body {
+.pdp-marketplace__actions .pdp-add-button {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+.pdp-marketplace__body {
   display: grid !important;
-  grid-template-columns: minmax(280px, 36%) minmax(0, 1fr) !important;
+  grid-template-columns: minmax(420px, 48%) minmax(0, 1fr) !important;
   min-height: 0 !important;
+  overflow: hidden !important;
 }
-.pdp-story__media {
+.pdp-marketplace__media {
   display: grid !important;
   place-items: center !important;
   align-content: center !important;
-  gap: 14px !important;
+  gap: 12px !important;
+  min-width: 0 !important;
   min-height: 0 !important;
-  padding: clamp(22px, 3vw, 42px) !important;
+  padding: clamp(18px, 2.4vw, 34px) !important;
   border-right: 1px solid rgba(0,0,0,.12) !important;
-  background: #f7f6f1 !important;
+  background: #f8f7f2 !important;
   color: #111 !important;
 }
-.pdp-story__media .pdp-image-button {
-  width: min(320px, 100%) !important;
-  aspect-ratio: 1 / 1 !important;
-  border: 1px solid #d4d1c8 !important;
+.pdp-marketplace__media .pdp-image-button {
+  position: relative !important;
+  width: min(520px, 100%) !important;
+  height: min(520px, 58dvh) !important;
+  min-height: 360px !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
 }
-.pdp-story__media .pdp-image,
-.pdp-story__media img {
+.pdp-marketplace__media .pdp-image,
+.pdp-marketplace__media img {
+  position: absolute !important;
+  inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  padding: 7% !important;
+  padding: 3.5% !important;
   object-fit: contain !important;
+  background: #fff !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  box-shadow: none !important;
 }
-.pdp-story__editorial {
+.pdp-marketplace__content {
   min-width: 0 !important;
-  padding: clamp(24px, 3.2vw, 48px) !important;
+  min-height: 0 !important;
+  padding: clamp(26px, 3vw, 46px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
   background: #111 !important;
 }
-.pdp-story__lead h4 {
-  margin: 0 0 16px !important;
-  font-size: clamp(31px, 3.2vw, 48px) !important;
-  line-height: 1 !important;
+.pdp-marketplace__description {
+  padding-bottom: 22px !important;
+  border-bottom: 1px solid rgba(255,255,255,.12) !important;
 }
-.pdp-story__lead p,
-.pdp-summary,
-.pdp-accordion__body p {
-  font-size: clamp(15px, 1.15vw, 18px) !important;
-  line-height: 1.7 !important;
+.pdp-marketplace__description .pdp-section-kicker {
+  display: block !important;
+  margin-bottom: 12px !important;
+  color: #e3a900 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: .14em !important;
+}
+.pdp-marketplace__description p {
+  margin: 0 !important;
+  max-width: 72ch !important;
+  font-size: clamp(16px, 1.25vw, 19px) !important;
+  line-height: 1.72 !important;
   white-space: pre-line !important;
   overflow-wrap: anywhere !important;
 }
-.pdp-accordion { border-top: 1px solid rgba(255,255,255,.12) !important; }
-.pdp-accordion summary { min-height: 56px !important; }
+.pdp-marketplace__highlights {
+  display: grid !important;
+  gap: 10px !important;
+  margin: 22px 0 10px !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+.pdp-marketplace__highlights li {
+  position: relative !important;
+  margin: 0 !important;
+  padding-left: 18px !important;
+  color: #ececec !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+.pdp-marketplace__highlights li::before {
+  content: '' !important;
+  position: absolute !important;
+  top: .72em !important;
+  left: 0 !important;
+  width: 6px !important;
+  height: 6px !important;
+  background: #d89a00 !important;
+  transform: translateY(-50%) rotate(45deg) !important;
+}
+.pdp-marketplace .pdp-editorial__accordions { margin-top: 12px !important; }
+.pdp-marketplace .pdp-accordion { border-top: 1px solid rgba(255,255,255,.12) !important; }
+.pdp-marketplace .pdp-accordion summary { min-height: 56px !important; }
 
 /* Modales, carrito y checkout por encima de la tienda; superficies legibles. */
 body > .backdrop,
@@ -9534,11 +9643,14 @@ body > .modal { z-index: 9020 !important; }
 @media (max-width: 960px) {
   .catalog-section { padding-inline: 12px !important; }
   .section-heading {
-    display: block !important;
+    display: grid !important;
+    justify-items: center !important;
+    text-align: center !important;
   }
   .section-heading > p {
     max-width: 100% !important;
-    margin: 14px 0 0 !important;
+    margin: 0 auto !important;
+    text-align: center !important;
   }
   .catalog-layout {
     display: block !important;
@@ -9593,23 +9705,54 @@ body > .modal { z-index: 9020 !important; }
     min-height: 58px !important;
     padding: max(10px, env(safe-area-inset-top)) 12px 10px !important;
   }
-  .product-detail-content { height: calc(100dvh - 58px) !important; }
-  .pdp-story__purchase {
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
-    padding: 16px 14px !important;
+  .product-detail-content {
+    height: calc(100dvh - 58px) !important;
+    overflow-y: auto !important;
   }
-  .pdp-story__identity h3 { font-size: clamp(28px, 9vw, 39px) !important; }
-  .pdp-story__commerce .price-net { font-size: clamp(32px, 11vw, 44px) !important; }
-  .pdp-story__body { display: block !important; }
-  .pdp-story__media {
-    padding: 18px !important;
+  .pdp-marketplace {
+    display: block !important;
+    height: auto !important;
+    min-height: 100% !important;
+  }
+  .pdp-marketplace__masthead {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    padding: 17px 14px !important;
+  }
+  .pdp-marketplace__identity h3 {
+    font-size: clamp(27px, 8.4vw, 39px) !important;
+    line-height: 1.02 !important;
+  }
+  .pdp-marketplace__commerce {
+    padding: 15px 0 0 !important;
+    border-left: 0 !important;
+    border-top: 1px solid rgba(255,255,255,.13) !important;
+  }
+  .pdp-marketplace__price-row { align-items: center !important; }
+  .pdp-marketplace__commerce .price-net { font-size: clamp(32px, 11vw, 44px) !important; }
+  .pdp-marketplace__availability { max-width: 132px !important; }
+  .pdp-marketplace__body {
+    display: block !important;
+    overflow: visible !important;
+  }
+  .pdp-marketplace__media {
+    padding: 12px 14px 18px !important;
     border-right: 0 !important;
     border-bottom: 1px solid rgba(0,0,0,.12) !important;
   }
-  .pdp-story__media .pdp-image-button { width: min(250px, 78vw) !important; }
-  .pdp-story__editorial { padding: 24px 16px calc(34px + env(safe-area-inset-bottom)) !important; }
-  .pdp-story__lead h4 { font-size: clamp(31px, 10vw, 43px) !important; }
+  .pdp-marketplace__media .pdp-image-button {
+    width: min(440px, 92vw) !important;
+    height: min(440px, 92vw) !important;
+    min-height: 0 !important;
+  }
+  .pdp-marketplace__content {
+    padding: 24px 16px calc(42px + env(safe-area-inset-bottom)) !important;
+    overflow: visible !important;
+  }
+  .pdp-marketplace__description p {
+    font-size: 16px !important;
+    line-height: 1.65 !important;
+  }
 }
 
 @media (max-width: 420px) {
