@@ -26,9 +26,9 @@
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <link rel="preload" as="image" href="./assets/banner-01-editorial.png">
-  <link rel="manifest" href="./manifest.webmanifest?rev=stable">
-  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png?rev=stable">
-  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png?rev=stable">
+  <link rel="manifest" href="./manifest.webmanifest?rev=20260729-integrated-journey-1">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png?rev=20260729-integrated-journey-1">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png?rev=20260729-integrated-journey-1">
   <title>PUZZLES · Vinos, licores y destilados</title>
   <script type="application/ld+json">
   {
@@ -43,14 +43,14 @@
   <style>
     * { box-sizing: border-box; }
     html, body { position: fixed; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden; background: #000; color: #fff; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    iframe { position: fixed; inset: 0; display: block; width: 100vw; height: 100dvh; border: 0; background: #000; opacity: 0; transition: opacity 140ms ease; }
+    iframe { position: fixed; inset: 0; display: block; width: 100vw; height: 100dvh; border: 0; background: #000; opacity: 0; transition: opacity 420ms cubic-bezier(.22,1,.36,1); }
     body.is-ready iframe { opacity: 1; }
-    #puzzlesShellSplash { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; background: #000; opacity: 1; visibility: visible; transition: opacity 140ms ease, visibility 140ms ease; }
+    #puzzlesShellSplash { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; background: #000; opacity: 1; visibility: visible; transition: opacity 420ms cubic-bezier(.22,1,.36,1), visibility 420ms ease; }
     body.is-ready #puzzlesShellSplash { opacity: 0; visibility: hidden; pointer-events: none; }
     .shell-splash__inner { width: min(390px, 82vw); text-align: center; }
-    .shell-splash__inner img { display: block; width: min(250px, 58vw); max-height: 230px; margin: 0 auto 20px; object-fit: contain; }
+    .shell-splash__inner img { display: block; width: min(220px, 50vw); max-height: 205px; margin: 0 auto 20px; object-fit: contain; }
     .shell-splash__track { width: min(320px, 72vw); height: 3px; margin: 0 auto; overflow: hidden; background: #272727; }
-    .shell-splash__track span { display: block; width: 100%; height: 100%; background: #d89a00; transform-origin: left; animation: shellProgress .65s cubic-bezier(.22,1,.36,1) both; }
+    .shell-splash__track span { display: block; width: 100%; height: 100%; background: #d89a00; transform-origin: left; animation: shellProgress .48s cubic-bezier(.22,1,.36,1) both; }
     @keyframes shellProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
     noscript { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: #000; text-align: center; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
@@ -59,13 +59,13 @@
 <body>
   <div id="puzzlesShellSplash" aria-label="Preparando PUZZLES">
     <div class="shell-splash__inner">
-      <img src="./assets/puzzles_logo.png?rev=20260727-consolidated-1" alt="PUZZLES · Vinos, licores y destilados">
+      <img src="./assets/puzzles_logo.png?rev=20260729-integrated-journey-1" alt="PUZZLES · Vinos, licores y destilados">
       <div class="shell-splash__track" aria-hidden="true"><span></span></div>
     </div>
   </div>
   <iframe
     id="puzzlesAppFrame"
-    src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&rev=20260727-consolidated-1"
+    src="https://script.google.com/macros/s/AKfycbzPpqH7nIKS81dk-_ZCJym-VoqpPFDicwQ-1BWzhHuL-_D5WV2Mz8wXQ0Xi7peLTcL3Dw/exec?embed=1&rev=20260729-integrated-journey-1"
     title="PUZZLES · Vinos, licores y destilados"
     allow="clipboard-write"
     referrerpolicy="strict-origin-when-cross-origin"
