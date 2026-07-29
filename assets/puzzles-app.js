@@ -6,8 +6,8 @@
      * exterior; no se requiere una URL CORS directa aquí.
      */
     const GITHUB_GAS_URL = '';
-    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?rev=20260729-editorial-pdp-2';
-    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?rev=20260729-editorial-pdp-2';
+    const PUZZLES_OFFICIAL_LOGO_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo.png?rev=20260729-selector-journey-1';
+    const PUZZLES_OFFICIAL_MARK_URL = 'https://drgnzzo.github.io/PUZZLES/assets/puzzles_logo_mark.png?rev=20260729-selector-journey-1';
 
     const STORAGE_KEYS = Object.freeze({
       CART: 'puzzles_cart_v3',
@@ -1269,7 +1269,14 @@ async function finishInitialEntrySplash() {
 
 function openImmersiveIntro() {
   hideLegacyIntentWelcome();
-  document.body.classList.remove('age-gate-visible', 'cellar-is-open');
+  document.body.classList.remove('age-gate-visible');
+
+  if (typeof window.PUZZLES_OPEN_IMMERSIVE_INTRO === 'function') {
+    state.immersiveIntroShown = true;
+    window.PUZZLES_OPEN_IMMERSIVE_INTRO(dom.btnAgeYes || document.activeElement);
+    return;
+  }
+
   document.body.classList.add('integrated-journey-ready');
   if (typeof window.PUZZLES_START_INTEGRATED_JOURNEY === 'function') {
     window.PUZZLES_START_INTEGRATED_JOURNEY();
@@ -5152,8 +5159,8 @@ async function submitContactForm(event) {
   }
 
   function installCellarExperience() {
-    const obsolete = document.getElementById('puzzlesCellar');
-    if (obsolete) obsolete.remove();
+    const selector = document.getElementById('puzzlesCellar');
+    if (selector && !selector.classList.contains('is-open')) selector.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('cellar-is-open');
 
     const ambient = document.getElementById('puzzlesAmbientJourney');
@@ -5285,8 +5292,10 @@ async function submitContactForm(event) {
       sync(Boolean(force));
     };
     window.PUZZLES_FIT_PRICES = fitPrices;
-    window.PUZZLES_OPEN_IMMERSIVE_INTRO = window.PUZZLES_START_INTEGRATED_JOURNEY;
-    window.PUZZLES_CLOSE_IMMERSIVE_INTRO = function () {};
+    if (!document.getElementById('puzzlesCellar')) {
+      window.PUZZLES_OPEN_IMMERSIVE_INTRO = window.PUZZLES_START_INTEGRATED_JOURNEY;
+      window.PUZZLES_CLOSE_IMMERSIVE_INTRO = function () {};
+    }
 
     document.addEventListener('click', function () { window.setTimeout(function () { sync(false); }, 0); }, true);
     document.addEventListener('change', function () { window.setTimeout(function () { sync(false); }, 0); }, true);
@@ -6221,4 +6230,330 @@ function enhanceCellarDepth() {
     enhanceCellarDepth();
     installEditorialDetails();
   });
+})();
+
+
+/* ============================================================
+   PUZZLES · SELECTOR INICIAL RESTAURADO + JOURNEY INTEGRADO
+   La cuadrícula sólo elige la ruta de entrada. Después, el viaje
+   ambiental continúa dentro del catálogo, PDP, carrito y checkout.
+   ============================================================ */
+(function installPuzzlesEntrySelector() {
+  'use strict';
+
+  function ready(callback) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', callback, { once: true });
+    else callback();
+  }
+
+  function safeText(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function normalize(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function selectorConfig() {
+    const configured = state.store && state.store.tour && typeof state.store.tour === 'object' ? state.store.tour : {};
+    return Object.assign({
+      kicker: 'ELIGE TU RECORRIDO',
+      title: '¿Cómo quieres entrar a PUZZLES?',
+      subtitle: 'Elige una colección o una ocasión. La selección se aplicará al catálogo al entrar.',
+      skipText: 'OMITIR INTRODUCCIÓN',
+      buttonText: 'EXPLORAR',
+      cards: []
+    }, configured);
+  }
+
+  function categoryRows() {
+    return (Array.isArray(state.categories) ? state.categories : [])
+      .map(function (item) {
+        return {
+          name: String(typeof item === 'string' ? item : item && item.name || '').trim(),
+          count: Number(typeof item === 'object' && item ? item.count || 0 : 0)
+        };
+      })
+      .filter(function (item) {
+        const key = normalize(item.name);
+        return item.name && key !== 'todas' && key !== 'otros' && key !== 'otro';
+      })
+      .sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name, 'es'); });
+  }
+
+  function brandRows() {
+    const counts = new Map();
+    (Array.isArray(state.products) ? state.products : []).forEach(function (product) {
+      const brand = String(product && product.brand || '').trim();
+      if (brand) counts.set(brand, (counts.get(brand) || 0) + 1);
+    });
+    return (Array.isArray(state.brands) ? state.brands : [])
+      .map(function (name) { return { name: String(name || '').trim(), count: counts.get(String(name || '').trim()) || 0 }; })
+      .filter(function (item) { return item.name && item.count > 0; })
+      .sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name, 'es'); });
+  }
+
+  function configuredCards() {
+    const rows = selectorConfig().cards;
+    if (!Array.isArray(rows)) return [];
+    return rows.filter(function (row) {
+      if (!row) return false;
+      const active = row.active !== undefined ? row.active : row.Activo;
+      return active !== false && normalize(active) !== 'no' && normalize(active) !== 'false';
+    }).map(function (row) {
+      return {
+        kind: normalize(row.type || row.Tipo || 'category'),
+        value: String(row.value || row['Valor filtro'] || '').trim(),
+        kicker: String(row.kicker || row.Kicker || '').trim(),
+        title: String(row.title || row['Título'] || '').trim(),
+        text: String(row.text || row['Descripción'] || '').trim(),
+        button: String(row.button || row['Texto botón'] || '').trim(),
+        image: String(row.imageUrl || row['Imagen URL'] || '').trim(),
+        mobile: row.showMobile !== false && normalize(row['Mostrar móvil']) !== 'no'
+      };
+    });
+  }
+
+  const images = [
+    'https://drgnzzo.github.io/PUZZLES/assets/banner-01-editorial.png',
+    'https://drgnzzo.github.io/PUZZLES/assets/banner-02-botellas.png',
+    'https://drgnzzo.github.io/PUZZLES/assets/banner-03-editorial.png',
+    'https://drgnzzo.github.io/PUZZLES/assets/banner-04-botellas.png',
+    'https://drgnzzo.github.io/PUZZLES/assets/banner-05-editorial.png',
+    'https://drgnzzo.github.io/PUZZLES/assets/banner-06-botellas.png'
+  ];
+
+  function editorialFor(name, kind) {
+    const key = normalize(name);
+    if (kind === 'brand') return { kicker: 'MARCA DESTACADA', text: 'Explora las etiquetas disponibles de ' + name + ' y encuentra la presentación que encaja contigo.' };
+    if (/espum|champ|prosecco|cava|sidra/.test(key)) return { kicker: 'PARA BRINDAR', text: 'Burbujas y etiquetas para una celebración, un regalo o una mesa especial.' };
+    if (/tinto|blanco|rosado|vino/.test(key)) return { kicker: 'DE LA BODEGA', text: 'Vinos para la mesa, la sobremesa, el regalo y la cava personal.' };
+    if (/whisk/.test(key)) return { kicker: 'CARÁCTER', text: 'Whiskies con distintos orígenes, estilos, barricas y perfiles.' };
+    if (/tequila|mezcal|agave/.test(key)) return { kicker: 'AGAVE', text: 'Destilados de agave para descubrir perfiles jóvenes, reposados y añejos.' };
+    if (/gin|ginebra/.test(key)) return { kicker: 'BOTÁNICOS', text: 'Ginebras para coctelería, aperitivo y combinaciones aromáticas.' };
+    if (/vermouth|aperitiv/.test(key)) return { kicker: 'APERITIVO', text: 'Vermouths y aperitivos para abrir la mesa o alargar la sobremesa.' };
+    if (/licor|anis/.test(key)) return { kicker: 'SOBREMESA', text: 'Licores para servir solos, con hielo o dentro de una mezcla.' };
+    if (/ron/.test(key)) return { kicker: 'ORIGEN Y BARRICA', text: 'Rones blancos, dorados y añejos para coctelería o degustación.' };
+    if (/brandy|cognac/.test(key)) return { kicker: 'SOBREMESA', text: 'Destilados de uva con perfiles cálidos, frutales y de barrica.' };
+    return { kicker: 'UNA RUTA', text: 'Entra directamente a la selección de ' + String(name || '').toLowerCase() + ' disponible en el catálogo.' };
+  }
+
+  function chooseCards() {
+    const configured = configuredCards();
+    const mobile = window.innerWidth < 680;
+    const desired = mobile ? 4 : (window.innerWidth < 1050 ? 5 : 6);
+    const result = [];
+
+    configured.forEach(function (row) {
+      if (result.length >= desired || (mobile && !row.mobile)) return;
+      if (!row.title && !row.value) return;
+      result.push({
+        kind: row.kind || 'category', value: row.value,
+        title: row.title || row.value, kicker: row.kicker || 'UNA RUTA', text: row.text || '',
+        button: row.button || selectorConfig().buttonText, image: row.image || images[result.length % images.length]
+      });
+    });
+
+    const preferred = ['Vinos tintos','Vinos blancos','Vinos rosados','Champagne','Vinos espumosos','Whisky','Tequila','Mezcal','Ginebra','Vermouth','Licores','Cognac','Brandy','Ron'];
+    const categories = categoryRows();
+    const ordered = [];
+    preferred.forEach(function (wanted) {
+      const wantedKey = normalize(wanted);
+      const match = categories.find(function (row) { return normalize(row.name) === wantedKey || normalize(row.name).includes(wantedKey) || wantedKey.includes(normalize(row.name)); });
+      if (match && !ordered.some(function (row) { return row.name === match.name; })) ordered.push(match);
+    });
+    categories.forEach(function (row) { if (!ordered.some(function (item) { return item.name === row.name; })) ordered.push(row); });
+
+    ordered.forEach(function (row) {
+      if (result.length >= desired - 1) return;
+      if (result.some(function (card) { return normalize(card.value) === normalize(row.name); })) return;
+      const editorial = editorialFor(row.name, 'category');
+      result.push({ kind: 'category', value: row.name, title: row.name, kicker: editorial.kicker, text: editorial.text, button: selectorConfig().buttonText, image: images[result.length % images.length] });
+    });
+
+    if (!ordered.length && result.length < desired - 1) {
+      [
+        { value: 'vino', title: 'Vinos', kicker: 'DE LA BODEGA', text: 'Tintos, blancos, rosados y etiquetas para la mesa, el regalo o la cava.' },
+        { value: 'champagne espumoso', title: 'Champagne y espumosos', kicker: 'PARA BRINDAR', text: 'Burbujas para celebrar, compartir y marcar una ocasión.' },
+        { value: 'whisky tequila mezcal ron ginebra', title: 'Destilados', kicker: 'CARÁCTER', text: 'Whisky, tequila, mezcal, ron, ginebra y otras expresiones.' }
+      ].forEach(function (row) {
+        if (result.length >= desired - 1) return;
+        result.push({ kind: 'search', value: row.value, title: row.title, kicker: row.kicker, text: row.text, button: selectorConfig().buttonText, image: images[result.length % images.length] });
+      });
+    }
+
+    if (result.length < desired - 1) {
+      brandRows().slice(0, 3).forEach(function (row) {
+        if (result.length >= desired - 1) return;
+        const editorial = editorialFor(row.name, 'brand');
+        result.push({ kind: 'brand', value: row.name, title: row.name, kicker: editorial.kicker, text: editorial.text, button: selectorConfig().buttonText, image: images[result.length % images.length] });
+      });
+    }
+
+    result.push({
+      kind: 'all', value: 'Todas', title: 'Catálogo completo', kicker: 'TODAS LAS PIEZAS',
+      text: 'Entra sin filtros y recorre la colección completa.', button: 'ENTRAR', image: images[5]
+    });
+
+    return result.slice(0, desired);
+  }
+
+  function install() {
+    const selector = document.getElementById('puzzlesCellar');
+    if (!selector || selector.dataset.entrySelectorInstalled === 'true') return selector;
+    selector.dataset.entrySelectorInstalled = 'true';
+
+    const grid = selector.querySelector('[data-entry-selector-grid]');
+    const background = selector.querySelector('.puzzles-entry-selector__background');
+    const title = document.getElementById('puzzlesImmersiveTitle');
+    const kicker = document.getElementById('puzzlesImmersiveKicker');
+    const subtitle = document.getElementById('puzzlesImmersiveSubtitle');
+    const skip = document.getElementById('puzzlesImmersiveSkip');
+    let returnFocus = null;
+    let resizeTimer = 0;
+
+    function setBackground(image) {
+      if (background && image) background.style.setProperty('--entry-selector-image', 'url("' + String(image).replace(/"/g, '\\"') + '")');
+    }
+
+    function render() {
+      const config = selectorConfig();
+      if (title) title.textContent = config.title;
+      if (kicker) kicker.textContent = config.kicker;
+      if (subtitle) subtitle.textContent = config.subtitle;
+      if (skip) skip.textContent = config.skipText;
+      const cards = chooseCards();
+      selector.dataset.cardCount = String(cards.length);
+      grid.innerHTML = cards.map(function (card, index) {
+        const attrs = 'data-entry-kind="' + safeText(card.kind) + '" data-entry-value="' + safeText(card.value) + '" data-entry-image="' + safeText(card.image) + '"';
+        return '<article class="puzzles-entry-card puzzles-entry-card--' + index + '" role="button" tabindex="0" ' + attrs + '>' +
+          '<div class="puzzles-entry-card__image" style="background-image:url(\'' + safeText(card.image) + '\')" aria-hidden="true"></div>' +
+          '<div class="puzzles-entry-card__shade" aria-hidden="true"></div>' +
+          '<div class="puzzles-entry-card__content"><span>' + safeText(card.kicker) + '</span><h2>' + safeText(card.title) + '</h2><p>' + safeText(card.text) + '</p>' +
+          '<button type="button" tabindex="-1"><span>' + safeText(card.button) + '</span><b aria-hidden="true">→</b></button></div></article>';
+      }).join('');
+      const first = grid.querySelector('[data-entry-image]');
+      if (first) setBackground(first.dataset.entryImage);
+    }
+
+    function resetCatalog() {
+      state.editorialIntent = null;
+      state.category = 'Todas';
+      state.brand = 'Todas';
+      state.search = '';
+      state.minPrice = '';
+      state.maxPrice = '';
+      state.page = 1;
+      if (dom.searchInput) dom.searchInput.value = '';
+      if (dom.priceMin) dom.priceMin.value = '';
+      if (dom.priceMax) dom.priceMax.value = '';
+      if (dom.brandFilter) dom.brandFilter.value = 'Todas';
+    }
+
+    function refreshCatalog() {
+      if (typeof renderCategories === 'function') renderCategories();
+      if (typeof renderBrands === 'function') renderBrands();
+      if (typeof applyFilters === 'function') applyFilters();
+    }
+
+    function startJourney() {
+      document.body.classList.add('integrated-journey-ready');
+      if (typeof window.PUZZLES_START_INTEGRATED_JOURNEY === 'function') window.PUZZLES_START_INTEGRATED_JOURNEY();
+      if (typeof window.PUZZLES_SYNC_INTEGRATED_JOURNEY === 'function') window.PUZZLES_SYNC_INTEGRATED_JOURNEY(true);
+    }
+
+    function close(goCatalog) {
+      selector.classList.remove('is-open');
+      selector.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('cellar-is-open');
+      if (!document.querySelector('.modal.is-open, .drawer.is-open, .image-zoom-modal.is-open')) document.body.classList.remove('no-scroll');
+      startJourney();
+      if (goCatalog) {
+        const catalog = document.getElementById('catalogo');
+        if (catalog) window.setTimeout(function () { catalog.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }, 80);
+      } else if (returnFocus && typeof returnFocus.focus === 'function') {
+        try { returnFocus.focus({ preventScroll: true }); } catch (_) { returnFocus.focus(); }
+      }
+    }
+
+    function applyChoice(card) {
+      const kind = card.dataset.entryKind || 'all';
+      const value = card.dataset.entryValue || 'Todas';
+      resetCatalog();
+      if (kind === 'category') state.category = value;
+      else if (kind === 'brand') state.brand = value;
+      else if (kind === 'search') { state.search = value; if (dom.searchInput) dom.searchInput.value = value; }
+      else if (kind === 'intent') {
+        close(false);
+        if (typeof handleEditorialAction === 'function') window.setTimeout(function () { handleEditorialAction('intent:' + value); startJourney(); }, 20);
+        return;
+      }
+      refreshCatalog();
+      close(true);
+    }
+
+    function open(trigger) {
+      returnFocus = trigger || document.activeElement;
+      render();
+      selector.classList.add('is-open');
+      selector.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('no-scroll', 'cellar-is-open');
+      document.body.classList.remove('age-gate-visible');
+      window.setTimeout(function () {
+        const first = grid.querySelector('.puzzles-entry-card');
+        if (first) { try { first.focus({ preventScroll: true }); } catch (_) { first.focus(); } }
+      }, 280);
+      if (state.initialLoadPromise && typeof state.initialLoadPromise.then === 'function') {
+        Promise.resolve(state.initialLoadPromise).then(function () {
+          if (selector.classList.contains('is-open')) render();
+        }).catch(function () {});
+      }
+    }
+
+    selector.addEventListener('pointerover', function (event) {
+      const card = event.target.closest('[data-entry-image]');
+      if (card) setBackground(card.dataset.entryImage);
+    });
+    selector.addEventListener('focusin', function (event) {
+      const card = event.target.closest('[data-entry-image]');
+      if (card) setBackground(card.dataset.entryImage);
+    });
+    selector.addEventListener('click', function (event) {
+      const skipTarget = event.target.closest('[data-entry-catalog]');
+      if (skipTarget) { event.preventDefault(); resetCatalog(); refreshCatalog(); close(true); return; }
+      const card = event.target.closest('.puzzles-entry-card');
+      if (!card) return;
+      event.preventDefault(); applyChoice(card);
+    });
+    selector.addEventListener('keydown', function (event) {
+      const card = event.target.closest('.puzzles-entry-card');
+      if (!card || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault(); applyChoice(card);
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape' || !selector.classList.contains('is-open')) return;
+      event.preventDefault(); resetCatalog(); refreshCatalog(); close(true);
+    }, true);
+    window.addEventListener('resize', function () {
+      if (!selector.classList.contains('is-open')) return;
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(render, 160);
+    }, { passive: true });
+
+    window.PUZZLES_OPEN_IMMERSIVE_INTRO = open;
+    window.PUZZLES_CLOSE_IMMERSIVE_INTRO = close;
+    window.PUZZLES_INSTALL_IMMERSIVE_INTRO = install;
+    return selector;
+  }
+
+  ready(install);
 })();
