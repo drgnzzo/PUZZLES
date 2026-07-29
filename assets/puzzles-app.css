@@ -7315,8 +7315,8 @@ a,
    ============================================================ */
 :root {
   --puzzles-announcement-real-h: 28px;
-  --puzzles-header-real-h: 76px;
-  --puzzles-fixed-chrome-real-h: 104px;
+  --puzzles-header-real-h: 64px;
+  --puzzles-fixed-chrome-real-h: 92px;
   --puzzles-motion-fast: 180ms;
   --puzzles-motion-normal: 280ms;
   --puzzles-motion-slow: 420ms;
@@ -7329,6 +7329,9 @@ body > .announcement {
   inset: 0 0 auto 0 !important;
   top: 0 !important;
   width: 100% !important;
+  height: var(--puzzles-announcement-real-h) !important;
+  min-height: var(--puzzles-announcement-real-h) !important;
+  padding: 4px 14px !important;
   z-index: 5100 !important;
   transform: translateZ(0);
 }
@@ -7338,9 +7341,11 @@ body > .site-header {
   inset: auto 0 auto 0 !important;
   top: var(--puzzles-announcement-real-h) !important;
   width: 100% !important;
+  height: var(--puzzles-header-real-h) !important;
+  min-height: var(--puzzles-header-real-h) !important;
   z-index: 5090 !important;
   transform: translateZ(0);
-  box-shadow: 0 10px 30px rgba(0,0,0,.28) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.24) !important;
 }
 
 body > main {
@@ -7351,9 +7356,71 @@ body > main {
   scroll-margin-top: calc(var(--puzzles-fixed-chrome-real-h) + 18px) !important;
 }
 
+body > .site-header .site-header__inner {
+  width: min(1480px, calc(100% - 24px)) !important;
+  height: 100% !important;
+  padding-inline: 8px !important;
+  gap: 12px !important;
+}
+
+body > .site-header .header-side {
+  gap: 10px !important;
+}
+
+body > .site-header .site-header__logo-link {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  max-height: 46px !important;
+  padding: 2px !important;
+}
+
+body > .site-header #siteHeaderLogo {
+  max-width: 42px !important;
+  max-height: 42px !important;
+}
+
+body > .site-header .icon-button {
+  min-height: 42px !important;
+  height: 42px !important;
+}
+
 /* Firma textual real, no imagen, dentro del hero. */
 .hero-carousel {
   isolation: isolate;
+  margin: 0 !important;
+  min-height: clamp(390px, 52vw, 560px) !important;
+  overflow: hidden !important;
+}
+
+.hero-slide--controlled {
+  align-items: stretch !important;
+}
+
+.hero-slide--controlled .hero-slide__content {
+  min-height: 100% !important;
+  padding-top: clamp(76px, 8vw, 112px) !important;
+  padding-bottom: clamp(54px, 6vw, 86px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+.hero-slide--controlled .hero-slide__cta {
+  display: inline-flex !important;
+  align-self: flex-start !important;
+  width: auto !important;
+  min-width: 190px !important;
+  max-width: min(320px, 100%) !important;
+  min-height: 46px !important;
+  margin-top: 22px !important;
+  padding: 0 22px !important;
+  overflow: visible !important;
+  color: #050505 !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
 }
 
 .hero-brand-signature {
@@ -7396,9 +7463,9 @@ body > main {
   left: auto !important;
   bottom: auto !important;
   width: 100% !important;
-  min-height: 58px !important;
+  min-height: 54px !important;
   margin: 0 !important;
-  padding: 10px 20px !important;
+  padding: 8px 16px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -7670,8 +7737,28 @@ body > main {
 @media (max-width: 760px) {
   :root {
     --puzzles-announcement-real-h: 26px;
-    --puzzles-header-real-h: 60px;
-    --puzzles-fixed-chrome-real-h: 86px;
+    --puzzles-header-real-h: 58px;
+    --puzzles-fixed-chrome-real-h: 84px;
+  }
+
+  body > .site-header .site-header__inner {
+    width: 100% !important;
+    padding-inline: 10px !important;
+    gap: 8px !important;
+  }
+
+  body > .site-header .site-header__logo-link {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+  }
+
+  body > .site-header #siteHeaderLogo {
+    max-width: 38px !important;
+    max-height: 38px !important;
   }
 
   .hero-brand-signature {
@@ -7686,6 +7773,25 @@ body > main {
   .hero-brand-signature span {
     font-size: 8px;
     white-space: normal;
+  }
+
+  .hero-carousel {
+    min-height: 470px !important;
+  }
+
+  .hero-slide--controlled .hero-slide__content,
+  .hero-slide--controlled .hero-slide__content--right {
+    min-height: 100% !important;
+    margin: 0 max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left)) !important;
+    padding: 92px 0 42px !important;
+    justify-content: flex-end !important;
+  }
+
+  .hero-slide--controlled .hero-slide__cta {
+    min-width: 160px !important;
+    max-width: 100% !important;
+    min-height: 44px !important;
+    margin-top: 18px !important;
   }
 
   .hero-carousel__controls--external {
@@ -9160,18 +9266,31 @@ body.age-gate-visible > #puzzlesAmbientJourney {
     radial-gradient(circle at 76% 20%, transparent 0 24%, rgba(0,0,0,.18) 60%, rgba(0,0,0,.54) 100%),
     linear-gradient(180deg, rgba(0,0,0,.36), rgba(0,0,0,.56) 46%, rgba(0,0,0,.72)) !important;
 }
-body > .announcement,
-body > .site-header,
-body > main,
-body > footer,
+body > .announcement {
+  position: fixed !important;
+  inset: 0 0 auto 0 !important;
+  top: 0 !important;
+  z-index: 5100 !important;
+}
+body > .site-header {
+  position: fixed !important;
+  inset: auto 0 auto 0 !important;
+  top: var(--puzzles-announcement-real-h) !important;
+  z-index: 5090 !important;
+}
+body > main {
+  position: relative !important;
+  z-index: 1 !important;
+  padding-top: var(--puzzles-fixed-chrome-real-h) !important;
+}
+body > footer {
+  position: relative !important;
+  z-index: 1 !important;
+}
 body > #floatingCart {
   position: relative !important;
+  z-index: 1180 !important;
 }
-body > .announcement { z-index: 1200 !important; }
-body > .site-header { z-index: 1190 !important; }
-body > main,
-body > footer { z-index: 1 !important; }
-body > #floatingCart { z-index: 1180 !important; }
 main,
 .catalog-section,
 .catalog-layout,
